@@ -8,5 +8,7 @@ namespace xwcs.core.evt
 {
     class EventType
     {
+        public static readonly object CloseEvent = new object();
+        public static readonly object GenericEvent = new object();
     }
 }
