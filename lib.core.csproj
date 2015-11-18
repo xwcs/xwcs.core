@@ -40,7 +40,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="core\PluginsLoader.cs" />
+    <Compile Include="core\evt\EventProxy.cs" />
+    <Compile Include="core\evt\EventType.cs" />
+    <Compile Include="core\evt\IEvent.cs" />
+    <Compile Include="core\plgs\IPlugin.cs" />
+    <Compile Include="core\plgs\IPluginHost.cs" />
+    <Compile Include="core\plgs\PluginsLoader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
