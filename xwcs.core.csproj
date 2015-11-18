@@ -7,8 +7,8 @@
     <ProjectGuid>{64DD06EA-E442-4101-99B5-351C6A160472}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>core</RootNamespace>
-    <AssemblyName>core</AssemblyName>
+    <RootNamespace>xwcs</RootNamespace>
+    <AssemblyName>xwcs.core</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
