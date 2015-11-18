@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace core
+namespace xwcs.core.plgs
 {
     public class PluginsLoader
     {

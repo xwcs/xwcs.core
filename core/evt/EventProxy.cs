@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace core.core.evt
+namespace xwcs.core.evt
 {
     class EventProxy
     {

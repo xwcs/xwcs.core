@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace core.core.plgs
+namespace xwcs.core.plgs
 {
     interface IPluginHost
     {
