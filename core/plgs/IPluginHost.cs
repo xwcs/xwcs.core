@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using xwcs.core.evt;
 
 namespace xwcs.core.plgs
 {
-    interface IPluginHost
+    public interface IPluginHost
     {
+        EventProxy proxy { get; }
     }
 }

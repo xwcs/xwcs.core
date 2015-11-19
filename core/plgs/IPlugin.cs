@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace xwcs.core.plgs
+﻿namespace xwcs.core.plgs
 {
-    interface IPlugin
+    public interface IPlugin
     {
+        string name { get; }
+        void init(IPluginHost host);
+
+
+        //Just for test
+        void testFireEvent();
     }
 }

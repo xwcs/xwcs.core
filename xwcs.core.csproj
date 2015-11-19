@@ -40,6 +40,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="core\evt\GenericEvent.cs" />
+    <Compile Include="core\evt\EventData.cs" />
     <Compile Include="core\evt\EventProxy.cs" />
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
