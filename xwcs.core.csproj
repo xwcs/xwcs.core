@@ -41,11 +41,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="core\cfg\attr\Config.cs" />
+    <Compile Include="core\cfg\Config.cs" />
+    <Compile Include="core\cfg\ConfigData.cs" />
+    <Compile Include="core\cfg\Configurable.cs" />
     <Compile Include="core\evt\GenericEvent.cs" />
     <Compile Include="core\evt\EventData.cs" />
-    <Compile Include="core\cfg\KeyValueMap.cs" />
-    <Compile Include="core\cfg\KeyValuePair.cs" />
-    <Compile Include="core\cfg\XDocConfig.cs" />
     <Compile Include="core\evt\EventProxy.cs" />
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
