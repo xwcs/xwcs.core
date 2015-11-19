@@ -31,6 +31,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -40,6 +41,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="core\cfg\ConfigData.cs" />
+    <Compile Include="core\cfg\Configurable.cs" />
+    <Compile Include="core\cfg\KeyValueMap.cs" />
+    <Compile Include="core\cfg\KeyValuePair.cs" />
+    <Compile Include="core\cfg\XDocConfig.cs" />
     <Compile Include="core\evt\EventProxy.cs" />
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
@@ -47,6 +53,12 @@
     <Compile Include="core\plgs\IPluginHost.cs" />
     <Compile Include="core\plgs\PluginsLoader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="core\user\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
