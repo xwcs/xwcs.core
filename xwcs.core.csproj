@@ -30,6 +30,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="DevExpress.Data.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.Utils.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraBars.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraEditors.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
@@ -45,11 +49,13 @@
     <Compile Include="core\cfg\Config.cs" />
     <Compile Include="core\cfg\ConfigData.cs" />
     <Compile Include="core\cfg\Configurable.cs" />
+    <Compile Include="core\evt\AddToolBarRequestEvent.cs" />
+    <Compile Include="core\evt\Event.cs" />
     <Compile Include="core\evt\GenericEvent.cs" />
-    <Compile Include="core\evt\EventData.cs" />
     <Compile Include="core\evt\EventProxy.cs" />
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
+    <Compile Include="core\evt\OpenPanelRequestEvent.cs" />
     <Compile Include="core\plgs\IPlugin.cs" />
     <Compile Include="core\plgs\IPluginHost.cs" />
     <Compile Include="core\plgs\PluginsLoader.cs" />

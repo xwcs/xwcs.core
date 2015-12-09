@@ -5,7 +5,7 @@ namespace xwcs.core.evt
     public class EventProxy
     {
         protected EventHandlerList listEventDelegates = new EventHandlerList();
-        public delegate void EventHandler(EventData e);
+        public delegate void EventHandler(Event e);
 
         public void addEventHandler(object type, EventHandler value)
         {
@@ -17,7 +17,7 @@ namespace xwcs.core.evt
             listEventDelegates.RemoveHandler(type, value);
         }
 
-        public void fireEvent(EventData e)
+        public void fireEvent(Event e)
         {
             EventHandler handler = (EventHandler)listEventDelegates[e.type];
             if (handler != null)

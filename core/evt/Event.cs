@@ -2,13 +2,13 @@
 
 namespace xwcs.core.evt
 {
-    public class EventData : EventArgs, IEvent
+    public class Event : EventArgs, IEvent
     {
         private object _sender;
         private object _type;
-        private object _data;
+        protected object _data;
 
-        public EventData(object s, object t, object d)
+        public Event(object s, object t, object d)
         {
             sender = s;
             type = t;
