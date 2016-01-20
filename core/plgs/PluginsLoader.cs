@@ -5,9 +5,11 @@ using System.Reflection;
 
 namespace xwcs.core.plgs
 {
-    public static class PluginsLoader<T>
+    public class PluginsLoader
     {
-        public static ICollection<T> LoadPlugins(string path)
+        private Dictionary<Guid, IPlugin> _plugins = new Dictionary<Guid, IPlugin>();
+
+        public void LoadPlugins(IPluginHost host, string path)
         {
             string[] dllFileNames = null;
 
@@ -23,42 +25,64 @@ namespace xwcs.core.plgs
                     assemblies.Add(assembly);
                 }
 
-                Type pluginType = typeof(T);
+                Type pluginType = typeof(IPlugin);
                 ICollection<Type> pluginTypes = new List<Type>();
                 foreach (Assembly assembly in assemblies)
                 {
                     if (assembly != null)
                     {
-                        Type[] types = assembly.GetTypes();
-
-                        foreach (Type type in types)
+                        string nameSpace = getNamespace(assembly);
+                        Type typeInfo = assembly.GetType(nameSpace + ".Info");
+                        if (typeInfo != null)
                         {
-                            if (type.IsInterface || type.IsAbstract)
+                            IPluginInfo info = (IPluginInfo)Activator.CreateInstance(typeInfo);
+                            string[] plugins = info.Plugins;
+                            foreach(string name in plugins)
                             {
-                                continue;
-                            }
-                            else
-                            {
-                                if (type.GetInterface(pluginType.FullName) != null)
+                                Type typePlugin = assembly.GetType(name);
+                                if (typePlugin != null)
                                 {
-                                    pluginTypes.Add(type);
+                                    pluginTypes.Add(typePlugin);
                                 }
                             }
                         }
                     }
                 }
 
-                ICollection<T> plugins = new List<T>(pluginTypes.Count);
                 foreach (Type type in pluginTypes)
                 {
-                    T plugin = (T)Activator.CreateInstance(type);
-                    plugins.Add(plugin);
-                }
+                    IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
+                    plugin.init(host);
 
-                return plugins;
+                    Dictionary<string, Guid> controls = plugin.pluginInfo.controls;
+                    foreach(Guid guid in controls.Values)
+                    {
+                        _plugins.Add(guid, plugin);
+                    }
+                }
+            }
+        }
+
+        public string getNamespace(Assembly assembly)
+        {
+            string[] ar = assembly.FullName.Split(',');
+            if (ar.Length > 0)
+            {
+                return ar[0];
+            }
+            return string.Empty;
+        }
+
+        public IPlugin getPluginByGuid(Guid guid)
+        {
+            if (_plugins.ContainsKey(guid))
+            {
+                IPlugin plugin = _plugins[guid];
+                if (plugin != null) return plugin;
             }
 
             return null;
         }
+
     }
 }

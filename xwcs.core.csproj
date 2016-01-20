@@ -38,6 +38,8 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Windows" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -57,17 +59,30 @@
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
     <Compile Include="core\evt\OpenPanelRequestEvent.cs" />
+    <Compile Include="core\manager\ManagerWithStateBase.cs" />
+    <Compile Include="core\plgs\INonVisualPlugin.cs" />
     <Compile Include="core\plgs\IPlugin.cs" />
     <Compile Include="core\plgs\IPluginHost.cs" />
+    <Compile Include="core\plgs\IVisualPlugin.cs" />
+    <Compile Include="core\plgs\PluginInfo.cs" />
     <Compile Include="core\plgs\PluginsLoader.cs" />
+    <Compile Include="core\user\IUser.cs" />
+    <Compile Include="core\user\IUserProfileProvider.cs" />
+    <Compile Include="core\user\IUserProvider.cs" />
+    <Compile Include="core\user\IUserProviderProfile.cs" />
+    <Compile Include="core\user\User.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ui\controls\DocumentManagerSupport.cs" />
+    <Compile Include="ui\controls\IControl.cs" />
+    <Compile Include="ui\controls\ControlInfo.cs" />
+    <Compile Include="ui\controls\VisualControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="core\user\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

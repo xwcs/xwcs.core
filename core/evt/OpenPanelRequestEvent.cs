@@ -1,18 +1,41 @@
-﻿namespace xwcs.core.evt
-{
+﻿using System;
+using DevExpress.XtraBars.Docking;
+using DevExpress.XtraEditors;
 
+namespace xwcs.core.evt
+{
     public class OpenPanelRequest
     {
+        //Private
+        private DockingStyle _position;
+        private XtraUserControl _control;
+        private Guid _guid;
 
-        public DevExpress.XtraBars.Docking.DockingStyle where { get; set; }
-        public DevExpress.XtraEditors.XtraUserControl control {get; set;}
-        public string guid { get; set; }
-
-        public OpenPanelRequest(DevExpress.XtraBars.Docking.DockingStyle where, DevExpress.XtraEditors.XtraUserControl control, string guid)
+        //Public getters, setters
+        public DockingStyle position
         {
-            this.where = where;
-            this.control = control;
-            this.guid = guid;
+            get { return _position;  }
+            set { _position = position;  }
+        }
+
+        public XtraUserControl control
+        {
+            get { return _control; }
+            set { _control = control;  }
+        }
+
+        public Guid guid
+        {
+            get { return _guid; }
+            set { _guid = guid;  }
+        }
+
+        //Contructors
+        public OpenPanelRequest(DockingStyle position, XtraUserControl control, Guid guid)
+        {
+            _position = position;
+            _control = control;
+            _guid = guid;
         }
     }
 
@@ -24,8 +47,8 @@
 
         public OpenPanelRequest requestData
         {
-            set { _data = value; }
             get { return (OpenPanelRequest) _data; }
+            set { _data = value; }
         }
     }
 }

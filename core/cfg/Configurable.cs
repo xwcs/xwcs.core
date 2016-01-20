@@ -50,7 +50,7 @@ namespace xwcs.core.cfg
 
             if (n != null)
             {
-                return n.Value;
+                return n.InnerText;
             }
 
             return defVal;
