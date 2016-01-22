@@ -5,7 +5,7 @@ namespace xwcs.core.plgs
 {
     public interface IPluginHost
     {
-        EventProxy eventProxy { get; }
+        SEventProxy eventProxy { get; }
         IUser currentUser { get;  }
     }
 }

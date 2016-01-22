@@ -23,7 +23,7 @@ namespace xwcs.core.plgs
         }
     }    
 
-    public class PluginInfo
+    public class PluginInfo 
     {
         //Private
         private string _name;
@@ -34,34 +34,34 @@ namespace xwcs.core.plgs
         private Dictionary<string, WidgetDescriptor> _widgets = null;
 
         //Public getters, setters
-        public string name
+        public string Name
         {
             get { return _name; }
-            set { _name = name; }
         }
 
-        public string version
+        public string Version
         {
             get { return _version; }
-            set { _version = value;  }
         }
 
-        public pluginType type
+        public pluginType Type
         {
             get { return _type; }
-            set { _type = value; }
         }
 
-        public Dictionary<pluginAbility, bool> abilities
+        public Dictionary<pluginAbility, bool> Abilities
         {
             get { return _abilities; }
-            set { _abilities = value; }
         }
 
-        public Dictionary<string, Guid> controls
+        public Dictionary<string, Guid> Controls
         {
             get { return _controls;  }
-            set { _controls = value; }
+        }
+
+        public Dictionary<string, WidgetDescriptor> Widgets
+        {
+            get{ return _widgets; }
         }
 
         //Constructors
@@ -85,20 +85,20 @@ namespace xwcs.core.plgs
         //Public functions
         public Guid getGuidControlByName(string name)
         {
-            if (controls.ContainsKey(name)) return controls[name];
+            if (Controls.ContainsKey(name)) return Controls[name];
             return Guid.Empty;
         }
 
         public void addAbility(pluginAbility ability)
         {
             if (_abilities == null) _abilities = new Dictionary<pluginAbility, bool>();
-            abilities.Add(ability, true);
+            Abilities.Add(ability, true);
         }
 
         public void addControl(string name, Guid guid)
         {
             if (_controls == null) _controls = new Dictionary<string, Guid>();
-            controls.Add(name, guid);
+            Controls.Add(name, guid);
         }
         
         public void addWidget(WidgetDescriptor desc)

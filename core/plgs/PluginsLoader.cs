@@ -21,7 +21,8 @@ namespace xwcs.core.plgs
                 foreach (string dllFile in dllFileNames)
                 {
                     AssemblyName an = AssemblyName.GetAssemblyName(dllFile);
-                    Assembly assembly = Assembly.Load(an);
+                    //Assembly assembly = Assembly.Load(an);
+                    Assembly assembly = AppDomain.CurrentDomain.Load(an); //this is need to have Singletons shared!!!!
                     assemblies.Add(assembly);
                 }
 
@@ -32,10 +33,10 @@ namespace xwcs.core.plgs
                     if (assembly != null)
                     {
                         string nameSpace = getNamespace(assembly);
-                        Type typeInfo = assembly.GetType(nameSpace + ".Info");
+                        Type typeInfo = assembly.GetType(nameSpace + ".AssemblyInfo");
                         if (typeInfo != null)
                         {
-                            IPluginInfo info = (IPluginInfo)Activator.CreateInstance(typeInfo);
+                            IAssemblyInfo info = (IAssemblyInfo)Activator.CreateInstance(typeInfo);
                             string[] plugins = info.Plugins;
                             foreach(string name in plugins)
                             {
@@ -52,9 +53,9 @@ namespace xwcs.core.plgs
                 foreach (Type type in pluginTypes)
                 {
                     IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
-                    plugin.init(host);
+                    plugin.init();
 
-                    Dictionary<string, Guid> controls = plugin.pluginInfo.controls;
+                    Dictionary<string, Guid> controls = plugin.Info.Controls;
                     foreach(Guid guid in controls.Values)
                     {
                         _plugins.Add(guid, plugin);
