@@ -12,7 +12,9 @@ namespace xwcs.core.cfg
     /// </summary>
     public class ConfigData : ConfigurationSection
     {
-        private ConfigData() { }
+        private ConfigData() {
+            _configs = null;
+        }
 
         #region Public Methods
 
@@ -93,6 +95,12 @@ namespace xwcs.core.cfg
         /// <returns></returns>
         public XmlNode getConfig(string name)
         {
+            if(_configs == null)
+            {
+                //probably design or missing
+                return null;
+            }
+
             //return this[name] as KeyValueMap;
             if (_configs.DocumentElement == null)
             {

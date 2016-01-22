@@ -1,14 +1,24 @@
 ﻿namespace xwcs.core.evt
 {
+    /*
+        NOTE:  MENU_tool_bar is toolbar under menu
+    */
+    public enum MenuDestination { MENU_file_open = 0, MENU_tools, MENU_about , MENU_tool_bar};
+
+    public class MenuAddRequest
+    {
+        public MenuDestination destination { get; set; }
+        public DevExpress.XtraBars.BarItem content { get; set; }
+    }
 
     public class AddToolBarRequest
     {
 
-        public DevExpress.XtraBars.BarButtonItem button {get; set;}
+        public MenuAddRequest[] content {get; set;}
        
-        public AddToolBarRequest(DevExpress.XtraBars.BarButtonItem button)
+        public AddToolBarRequest(MenuAddRequest[] content)
         {
-            this.button = button;
+            this.content = content;
         }
     }
 

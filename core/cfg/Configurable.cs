@@ -46,6 +46,13 @@ namespace xwcs.core.cfg
         /// <returns></returns>
         public string getCfgParam(string key, string defVal = "")
         {
+            if(_cfg == null)
+            {
+                //design mode or missing
+                return defVal;
+            }
+
+
             XmlNode n = _cfg.SelectSingleNode(key);
 
             if (n != null)
@@ -63,6 +70,12 @@ namespace xwcs.core.cfg
         /// <returns></returns>
         public XmlNode getCfgParamNode(string key)
         {
+            if (_cfg == null)
+            {
+                //design mode or missing
+                return null;
+            }
+
             XmlNode n = _cfg.SelectSingleNode(key);
 
             if (n == null)
