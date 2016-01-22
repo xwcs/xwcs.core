@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using DevExpress.XtraBars.Docking;
 using DevExpress.XtraEditors;
 
@@ -14,20 +15,20 @@ namespace xwcs.core.evt
         //Public getters, setters
         public DockingStyle position
         {
-            get { return _position;  }
-            set { _position = position;  }
+            get { return _position; }
+            set { _position = position; }
         }
 
         public XtraUserControl control
         {
             get { return _control; }
-            set { _control = control;  }
+            set { _control = control; }
         }
 
         public Guid guid
         {
             get { return _guid; }
-            set { _guid = guid;  }
+            set { _guid = guid; }
         }
 
         //Contructors
@@ -47,7 +48,7 @@ namespace xwcs.core.evt
 
         public OpenPanelRequest requestData
         {
-            get { return (OpenPanelRequest) _data; }
+            get { return (OpenPanelRequest)_data; }
             set { _data = value; }
         }
     }

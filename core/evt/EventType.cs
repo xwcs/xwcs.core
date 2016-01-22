@@ -6,5 +6,6 @@
         public static readonly object CloseEvent = new object();
         public static readonly object OpenPanelRequestEvent = new object();
         public static readonly object AddToolBarRequestEvent = new object();
+        public static readonly object RegisterWidgetRequestEvent = new object();
     }
 }

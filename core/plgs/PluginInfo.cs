@@ -7,6 +7,22 @@ namespace xwcs.core.plgs
     public enum pluginType { PLGT_undef = 0, PLGT_nonvisual, PLGT_visual };
     public enum pluginAbility { PLGABLT_undef = 0, PLGABLT_submenu, PLGABLT_mainmenu, PLGABLT_toolbar, PLGABLT_usercontrol };
 
+    public struct WidgetDescriptor
+    {
+        public string name;
+        public string descriptor;
+        public Guid guidNormal;
+        public Guid guidMax;
+
+        public WidgetDescriptor(string name, string descriptor, Guid guidNormal, Guid guidMax)
+        {
+            this.name = name;
+            this.descriptor = descriptor;
+            this.guidNormal = guidNormal;
+            this.guidMax = guidMax;
+        }
+    }    
+
     public class PluginInfo
     {
         //Private
@@ -15,6 +31,7 @@ namespace xwcs.core.plgs
         private pluginType _type;
         private Dictionary<pluginAbility, bool> _abilities = null;
         private Dictionary<string, Guid> _controls = null;
+        private Dictionary<string, WidgetDescriptor> _widgets = null;
 
         //Public getters, setters
         public string name
@@ -82,6 +99,30 @@ namespace xwcs.core.plgs
         {
             if (_controls == null) _controls = new Dictionary<string, Guid>();
             controls.Add(name, guid);
+        }
+        
+        public void addWidget(WidgetDescriptor desc)
+        {
+            if (_widgets == null) _widgets = new Dictionary<string, WidgetDescriptor>();
+            _widgets.Add(desc.name, desc);
+        }
+
+        public Guid getGuidNormalByName(string name)
+        {
+            if (_widgets.ContainsKey(name)) return _widgets[name].guidNormal;
+            return Guid.Empty;
+        }
+
+        public Guid getGuidMaxByName(string name)
+        {
+            if (_widgets.ContainsKey(name)) return _widgets[name].guidMax;
+            return Guid.Empty;
+        }
+
+        public WidgetDescriptor getWidgetByName(string name)
+        {
+            return _widgets[name];            
+            //TODO : return NULL if not exists
         }
     }
 }

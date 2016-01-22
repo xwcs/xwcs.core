@@ -66,8 +66,10 @@
     <Compile Include="core\evt\EventProxy.cs" />
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
+    <Compile Include="core\evt\RegisterWidgetRequestEvent.cs" />
     <Compile Include="core\evt\OpenPanelRequestEvent.cs" />
     <Compile Include="core\manager\ManagerWithStateBase.cs" />
+    <Compile Include="core\manager\WidgetManager.cs" />
     <Compile Include="core\plgs\INonVisualPlugin.cs" />
     <Compile Include="core\plgs\IPlugin.cs" />
     <Compile Include="core\plgs\IPluginHost.cs" />
