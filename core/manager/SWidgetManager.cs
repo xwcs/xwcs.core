@@ -16,7 +16,6 @@ namespace xwcs.core.manager
 
         //singleton need private ctor
         private SWidgetManager(){
-            int i = 0;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -35,17 +34,14 @@ namespace xwcs.core.manager
             MAIN methods
         */
 
-        private List<WidgetDescriptor> _widgets = new List<WidgetDescriptor>();
-        
-        /*
-        public SWidgetManager()
-        {
-            _proxy = EventProxy.getInstance();
-            //_proxy.addEventHandler(EventType.OpenPanelRequestEvent, HandleOpenPanelRequestEvent);
-        }
-        */
+        private List<xwcs.core.controls.WidgetDescriptor> _widgets = new List<xwcs.core.controls.WidgetDescriptor>();
 
-        public void addWidget(WidgetDescriptor wdscr)
+        public List<xwcs.core.controls.WidgetDescriptor> Widgets
+        {
+            get { return _widgets; }
+        }
+
+        public void addWidget(xwcs.core.controls.WidgetDescriptor wdscr)
         {
             _widgets.Add(wdscr);
         }

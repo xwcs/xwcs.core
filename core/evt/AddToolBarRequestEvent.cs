@@ -3,7 +3,7 @@
     /*
         NOTE:  MENU_tool_bar is toolbar under menu
     */
-    public enum MenuDestination { MENU_file_open = 0, MENU_tools, MENU_about , MENU_tool_bar};
+    public enum MenuDestination { MENU_file_open = 0, MENU_tools, MENU_about , MENU_tool_bar, MENU_ViewOtherWindows };
 
     public class MenuAddRequest
     {

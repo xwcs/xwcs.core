@@ -10,7 +10,10 @@ namespace xwcs.core.plgs
     public abstract class VisualPluginBase : PluginBase, IVisualPlugin
     {
         //this should be overriden
-        abstract public DevExpress.XtraEditors.XtraUserControl getControlByGuid(Guid guid);
+        public DevExpress.XtraEditors.XtraUserControl getControlByGuid(Guid guid)
+        {
+            return (DevExpress.XtraEditors.XtraUserControl) Info.getVisualControlInfoByGuid(guid).createInstance();
+        }
 
         //should be overriden
         abstract public void afterInit();
@@ -22,7 +25,7 @@ namespace xwcs.core.plgs
             if(Info.Widgets != null)
             {
                 xwcs.core.manager.SWidgetManager man = xwcs.core.manager.SWidgetManager.getInstance();
-                foreach (WidgetDescriptor w in Info.Widgets.Values)
+                foreach (xwcs.core.controls.WidgetDescriptor w in Info.Widgets.Values)
                 {
                     man.addWidget(w);
                 }
