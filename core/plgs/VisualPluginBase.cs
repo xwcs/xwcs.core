@@ -12,7 +12,10 @@ namespace xwcs.core.plgs
         //this should be overriden
         public DevExpress.XtraEditors.XtraUserControl getControlByGuid(Guid guid)
         {
-            return (DevExpress.XtraEditors.XtraUserControl) Info.getVisualControlInfoByGuid(guid).createInstance();
+            xwcs.core.controls.VisualControlInfo info = Info.getVisualControlInfoByGuid(guid);
+            if (info != null) return (DevExpress.XtraEditors.XtraUserControl)info.createInstance();
+
+            return null;
         }
 
         //should be overriden

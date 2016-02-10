@@ -30,21 +30,43 @@ namespace xwcs.core.manager
         public void save()
         {
             beforeSave();
-            String path = getCfgParam("StateData/path", "") + "\\" + statusFileName();
-            TextWriter writer = new StreamWriter(path);
-            XmlSerializer serial = new XmlSerializer(_managerState.GetType());
-            serial.Serialize(writer, _managerState);
-            writer.Close();
+
+            Stream writer = null;
+            try
+            {
+                XmlSerializer serial = new XmlSerializer(_managerState.GetType());
+                writer = SPersistenceManager.getInstance().getWriter(statusFileName());
+                serial.Serialize(writer, _managerState);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                writer.Close();
+            }
         }
 
         public void load()
         {
-            String path = getCfgParam("StateData/path", "") + "\\" + statusFileName();
-            FileStream myFileStream = new FileStream(path, FileMode.Open);
-            XmlSerializer serial = new XmlSerializer(_managerState.GetType());
-            _managerState = (ManagerStateBase)serial.Deserialize(myFileStream);
-            myFileStream.Close();
-            afterLoad();
+            Stream reader = null;
+            try
+            {
+                reader = SPersistenceManager.getInstance().getReader(statusFileName());
+                XmlSerializer serial = new XmlSerializer(_managerState.GetType());
+                _managerState = (ManagerStateBase)serial.Deserialize(reader);
+                
+                afterLoad();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                reader.Close();
+            }
         }
     }
 }

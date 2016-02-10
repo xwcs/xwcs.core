@@ -83,14 +83,14 @@ namespace xwcs.core.plgs
 
         public xwcs.core.controls.WidgetDescriptor getWidgetByGuid(Guid guid)
         {
-            return _widgets[guid];            
-            //TODO : return NULL if not exists
+            if (_widgets.ContainsKey(guid)) return _widgets[guid];
+            return null;            
         }
 
         public xwcs.core.controls.VisualControlInfo getVisualControlInfoByGuid(Guid guid)
         {
-            return _controls[guid];
-            //TODO : return NULL if not exists
+            if (_controls.ContainsKey(guid))  return _controls[guid];
+            return null;
         }
     }
 }

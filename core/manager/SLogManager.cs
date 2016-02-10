@@ -39,6 +39,7 @@ namespace xwcs.core.manager
         public void log(string msg)
         {
             _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+            Console.WriteLine(msg);
         }
     }
 }

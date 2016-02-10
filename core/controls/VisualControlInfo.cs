@@ -25,6 +25,27 @@ namespace xwcs.core.controls
             return vc;
         }
 
+        public static Type GetType(string typeName)
+        {
+            var type = Type.GetType(typeName);
+            if (type != null) return type;
+            foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                type = a.GetType(typeName);
+                if (type != null)
+                    return type;
+            }
+            return null;
+        }
+
+        public string TypeStr
+        {
+            get { return _classType.FullName;  }
+            set {
+                _classType = GetType(value);
+            }
+        }
+
         //Public getters, setters
         public string Name
         {
@@ -50,6 +71,7 @@ namespace xwcs.core.controls
             set { _GUID = value; }
         }
 
+        [XmlIgnore]
         public Type ClassType
         {
             get
@@ -63,14 +85,11 @@ namespace xwcs.core.controls
             }
         }
 
+        public VisualControlInfo() {; }
+
         public VisualControlInfo(string name, Type t)
         {
             Name = name;
-
-            //FieldInfo info = t.GetField("GUID", BindingFlags.Static | BindingFlags.Public);
-
-            //string tmp = (string)info.GetValue(null);
-
             
             _GUID = Guid.Parse( (string)t.GetField("GUID", BindingFlags.Static | BindingFlags.Public).GetValue(null) );
             _version = (string)t.GetField("VERSION", BindingFlags.Static | BindingFlags.Public).GetValue(null);
