@@ -7,5 +7,7 @@
         public static readonly object OpenPanelRequestEvent = new object();
         public static readonly object AddToolBarRequestEvent = new object();
         public static readonly object OutputMessageEvent = new object();
+        public static readonly object DocumentChangedEvent = new object();
+        public static readonly object DocumentActivatedEvent = new object();
     }
 }
