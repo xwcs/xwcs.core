@@ -9,5 +9,6 @@
         public static readonly object OutputMessageEvent = new object();
         public static readonly object DocumentChangedEvent = new object();
         public static readonly object DocumentActivatedEvent = new object();
+        public static readonly object WorkSpaceLoadedEvent = new object();
     }
 }

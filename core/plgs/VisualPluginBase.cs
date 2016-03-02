@@ -18,11 +18,12 @@ namespace xwcs.core.plgs
             return null;
         }
 
+
         //should be overriden
         abstract public void afterInit();
 
         public override void init()
-        {
+        {            
             setup();
 
             if(Info.Widgets != null)
@@ -34,7 +35,17 @@ namespace xwcs.core.plgs
                 }
             }           
 
+            EventProxy.addEventHandler(EventType.WorkSpaceLoadedEvent, HandleWorkspaceLoaded);
+
             afterInit();            
         }
+
+        private void HandleWorkspaceLoaded(Event e)
+        {
+            AfterWorkSpaceLoaded();
+        }
+
+        protected virtual void AfterWorkSpaceLoaded() {;}
+        
     }
 }
