@@ -2,6 +2,7 @@
 {
     public interface IUserProfileProvider
     {
+		void loadCurrentUserProfile(IUser user);
     }
 }
 

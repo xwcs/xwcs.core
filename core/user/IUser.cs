@@ -7,9 +7,11 @@ namespace xwcs.core.user
         int	ID { get;  }
 		string Name { get; }
         string Login { get; }
-        bool isAdmin();
-		bool hasTag();
-		List<string> GetTags();
+		List<string> Tags { get; }
+
+		bool isAdmin();
+		bool hasTag(string tag);
+		
     }
 }
 
