@@ -2,6 +2,7 @@
 {
     public interface IUserProvider
     {
+		IUser getCurrentUser();
     }
 }
 

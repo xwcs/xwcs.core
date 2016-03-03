@@ -103,7 +103,6 @@
     <Compile Include="core\user\IUserProfileProvider.cs" />
     <Compile Include="core\user\IUserProvider.cs" />
     <Compile Include="core\user\IUserProviderProfile.cs" />
-    <Compile Include="core\user\User.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
