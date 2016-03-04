@@ -60,6 +60,10 @@ namespace xwcs.core.manager
         public Stream getWriter(String key)
         {
             String path = getCfgParam("StateData/path", "") + "\\" + key + ".xml";
+            if (File.Exists(path))
+            {
+                return new FileStream(path, FileMode.Truncate);
+            }
             return new FileStream(path, FileMode.OpenOrCreate);
         }
 
