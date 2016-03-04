@@ -55,6 +55,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -84,6 +85,7 @@
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
     <Compile Include="core\evt\OpenPanelRequestEvent.cs" />
+    <Compile Include="core\linq\filter\FilterPredicate.cs" />
     <Compile Include="core\manager\ManagerWithStateBase.cs" />
     <Compile Include="core\manager\SLogManager.cs" />
     <Compile Include="core\manager\SPersistenceManager.cs" />
