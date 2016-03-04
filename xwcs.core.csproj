@@ -105,6 +105,12 @@
     <Compile Include="core\user\IUserProviderProfile.cs" />
     <Compile Include="core\user\SecurityContext.cs" />
     <Compile Include="core\user\User.cs" />
+    <Compile Include="LinqKit\ExpandableQuery.cs" />
+    <Compile Include="LinqKit\ExpressionExpander.cs" />
+    <Compile Include="LinqKit\ExpressionVisitor.cs" />
+    <Compile Include="LinqKit\Extensions.cs" />
+    <Compile Include="LinqKit\Linq.cs" />
+    <Compile Include="LinqKit\PredicateBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -114,7 +120,9 @@
     <None Include="packages.config" />
     <None Include="Sign.snk" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="LinqKit\license.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
