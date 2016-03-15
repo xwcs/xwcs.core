@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using xwcs.core.evt;
+using System.Drawing;
+using xwcs.core.manager;
 
 namespace xwcs.core.plgs
 {
@@ -39,5 +41,33 @@ namespace xwcs.core.plgs
         }
 
         abstract public void init();
+
+
+
+        private string getAssestsDirectory()
+        {
+            return AppDomain.CurrentDomain.BaseDirectory + "/plugins/" + _pluginInfo.Name;
+        }
+
+        private Bitmap getBitmapFromFile(string fileName)
+        {
+            Bitmap bitmap = null;
+            try
+            {
+                bitmap = (Bitmap)Image.FromFile(getAssestsDirectory() + "/" + fileName, true);
+            }
+            catch(Exception e)
+            {
+                SLogManager.getInstance().Error(e.Message);
+                return null;
+            }
+            return bitmap;
+        }
+
+        public void setImageToButtonItem(DevExpress.XtraBars.BarButtonItem buttonItem, string fileName)
+        {
+            Bitmap bmp = getBitmapFromFile("images/" + fileName);
+            if (bmp != null) buttonItem.Glyph = bmp;
+        }
     }
 }
