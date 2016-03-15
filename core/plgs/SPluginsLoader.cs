@@ -10,29 +10,48 @@ namespace xwcs.core.plgs
     public class SPluginsLoader
     {
         private static SPluginsLoader instance;
+		private static Dictionary<string, Type> typeCache = null;
 
-        //singleton need private ctor
-        private SPluginsLoader()
+		//singleton need private ctor
+		private SPluginsLoader()
         {
-        }
+			typeCache = new Dictionary<string, Type>();
+		}
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static SPluginsLoader getInstance()
         {
             if (instance == null)
             {
-                instance = new SPluginsLoader();
-            }
+                instance = new SPluginsLoader();				
+			}
             return instance;
-        }
+        }		
 
+		public bool TryFindType(string typeName, out Type t)
+		{
+			lock (typeCache)
+			{
+				if (!typeCache.TryGetValue(typeName, out t))
+				{
+					foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+					{
+						t = a.GetType(typeName);
+						if (t != null)
+							break;
+					}
+					typeCache[typeName] = t; // perhaps null
+				}
+			}
+			return t != null;
+		}
 
-        /****
+		/****
 
             MAIN methods
         */
 
-        private Dictionary<Guid, IPlugin> _plugins = new Dictionary<Guid, IPlugin>();
+		private Dictionary<Guid, IPlugin> _plugins = new Dictionary<Guid, IPlugin>();
 
         public void LoadPlugins(IPluginHost host, string path)
         {
