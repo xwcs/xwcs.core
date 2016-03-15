@@ -43,18 +43,19 @@
     <Reference Include="DevExpress.XtraBars.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="DevExpress.XtraEditors.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="Es.Logging, Version=0.0.4.0, Culture=neutral, PublicKeyToken=776b289507df5578, processorArchitecture=MSIL">
-      <HintPath>..\app.main\packages\Es.Logging.0.0.4\lib\net45\Es.Logging.dll</HintPath>
+      <HintPath>..\packages\Es.Logging.0.0.4\lib\net45\Es.Logging.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Es.Logging.Log4, Version=0.0.4.0, Culture=neutral, PublicKeyToken=776b289507df5578, processorArchitecture=MSIL">
-      <HintPath>..\app.main\packages\Es.Logging.Log4.0.0.4\lib\net45\Es.Logging.Log4.dll</HintPath>
+      <HintPath>..\packages\Es.Logging.Log4.0.0.4\lib\net45\Es.Logging.Log4.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\app.main\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
+      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -84,6 +85,7 @@
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
     <Compile Include="core\evt\OpenPanelRequestEvent.cs" />
+    <Compile Include="core\linq\filter\FilterPredicate.cs" />
     <Compile Include="core\manager\ManagerWithStateBase.cs" />
     <Compile Include="core\manager\SLogManager.cs" />
     <Compile Include="core\manager\SPersistenceManager.cs" />

@@ -13,17 +13,79 @@ using log4net;
 
 namespace xwcs.core.manager
 {
-    public class SLogManager
+	public interface ILogger {
+		void Debug(string msg);
+		void Info(string msg);
+		void Warn(string msg);
+		void Error(string msg);
+		void Fatal(string msg);
+	}
+	
+    public class SLogManager : ILogger
     {
         private static SLogManager instance;
-        private static SEventProxy _proxy;
+		private ILogger global = null;
 
-        private ILog logger = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        //singleton need private ctor
-        private SLogManager()
+		private class SimpleLogger : ILogger
+		{
+
+			private static SEventProxy _proxy;
+			private ILog logger = null;
+
+			public SimpleLogger() : this("Global")
+			{
+			}
+
+			public SimpleLogger(string name)
+			{
+				_proxy = SEventProxy.getInstance();
+				logger = LogManager.GetLogger(name);
+			}
+
+			public SimpleLogger(Type t) : this(t.Name) { }
+
+			public void Debug(string msg)
+			{
+				if (!logger.IsDebugEnabled) return;
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				logger.Debug(msg);
+			}
+
+			public void Info(string msg)
+			{
+				if (!logger.IsInfoEnabled) return;
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				logger.Info(msg);
+			}
+
+			public void Warn(string msg)
+			{
+				if (!logger.IsWarnEnabled) return;
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				logger.Warn(msg);
+			}
+
+			public void Error(string msg)
+			{
+				if (!logger.IsErrorEnabled) return;
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				logger.Error(msg);
+			}
+
+			public void Fatal(string msg)
+			{
+				if (!logger.IsFatalEnabled) return;
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				logger.Fatal(msg);
+			}
+		}
+
+
+		//singleton need private ctor
+		private SLogManager()
         {
-            _proxy = SEventProxy.getInstance();
+			global = new SimpleLogger();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -36,45 +98,38 @@ namespace xwcs.core.manager
             return instance;
         }
 
+		public ILogger getClassLogger(Type t) {
+			return new SimpleLogger(t);
+		}
 
-        /****
+
+		/****
 
             MAIN methods
         */
+		public void Debug(string msg)
+		{
+			global.Debug(msg);
+		}
 
-        public void Debug(string msg)
-        {
-            _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
-            Console.WriteLine("D:" + msg);
-            logger.Debug(msg);
-        }
+		public void Info(string msg)
+		{
+			global.Info(msg);
+		}
 
-        public void Info(string msg)
-        {
-            _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
-            Console.WriteLine("I:" + msg);
-            logger.Info(msg);
-        }
+		public void Warn(string msg)
+		{
+			global.Warn(msg);
+		}
 
-        public void Warn(string msg)
-        {
-            _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
-            Console.WriteLine("W:" + msg);
-            logger.Warn(msg);
-        }
+		public void Error(string msg)
+		{
+			global.Error(msg);
+		}
 
-        public void Error(string msg)
-        {
-            _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
-            Console.WriteLine("E:" + msg);
-            logger.Error(msg);
-        }
-
-        public void Fatal(string msg)
-        {
-            _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
-            Console.WriteLine("F:" + msg);
-            logger.Fatal(msg);
-        }
-    }
+		public void Fatal(string msg)
+		{
+			global.Fatal(msg);
+		}
+	}
 }
