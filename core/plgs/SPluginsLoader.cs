@@ -30,7 +30,9 @@ namespace xwcs.core.plgs
 
 		public bool TryFindType(string typeName, out Type t)
 		{
-			lock (typeCache)
+			t = null;
+			if (typeName == "") return false;
+            lock (typeCache)
 			{
 				if (!typeCache.TryGetValue(typeName, out t))
 				{
