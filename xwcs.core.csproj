@@ -75,6 +75,7 @@
     <Compile Include="core\cfg\Configurable.cs" />
     <Compile Include="core\controls\IVisualControl.cs" />
     <Compile Include="core\controls\WidgetDescriptor.cs" />
+    <Compile Include="core\db\EntityBase.cs" />
     <Compile Include="core\evt\DocumentActivatedEvent.cs" />
     <Compile Include="core\evt\DocumentChangedEvent.cs" />
     <Compile Include="core\evt\AddToolBarRequestEvent.cs" />
@@ -119,11 +120,17 @@
     <EmbeddedResource Include="Properties\licenses.licx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="core\db\EF6.Model.Replace.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
     <None Include="Sign.snk" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="LinqKit\license.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
