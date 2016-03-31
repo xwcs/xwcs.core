@@ -42,6 +42,7 @@
     <Reference Include="DevExpress.Utils.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="DevExpress.XtraBars.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="DevExpress.XtraEditors.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraLayout.v15.1, Version=15.1.8.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="Es.Logging, Version=0.0.4.0, Culture=neutral, PublicKeyToken=776b289507df5578, processorArchitecture=MSIL">
       <HintPath>..\packages\Es.Logging.0.0.4\lib\net45\Es.Logging.dll</HintPath>
       <Private>True</Private>
@@ -75,7 +76,19 @@
     <Compile Include="core\cfg\Configurable.cs" />
     <Compile Include="core\controls\IVisualControl.cs" />
     <Compile Include="core\controls\WidgetDescriptor.cs" />
+    <Compile Include="core\db\binding\attributes\CustomAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\DbLookup.cs" />
+    <Compile Include="core\db\binding\attributes\Style.cs" />
+    <Compile Include="core\db\binding\attributes\TokenEdit.cs" />
+    <Compile Include="core\db\binding\DataLayoutBindingSource.cs" />
+    <Compile Include="core\db\NotifyStructureChanged.cs" />
+    <Compile Include="core\db\model\attributes\Serialized.cs" />
+    <Compile Include="core\db\model\ChainingPropertyDescriptor.cs" />
+    <Compile Include="core\db\model\HyperTypeDescriptionProvider.cs" />
+    <Compile Include="core\db\model\HyperTypeDescriptor.cs" />
+    <Compile Include="core\db\model\ReflectionHelper.cs" />
     <Compile Include="core\db\EntityBase.cs" />
+    <Compile Include="core\db\model\serialize\XmlWriterExt.cs" />
     <Compile Include="core\evt\DocumentActivatedEvent.cs" />
     <Compile Include="core\evt\DocumentChangedEvent.cs" />
     <Compile Include="core\evt\AddToolBarRequestEvent.cs" />
@@ -132,6 +145,7 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
