@@ -38,25 +38,20 @@ namespace xwcs.core.db.binding
 
 	public class DataLayoutBindingSource<T> : BindingSource, IDataLayoutExtender, IDisposable
 	{
-		private xwcs.core.manager.ILogger _logger;
+		private manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource<T>));
 
 		private DataLayoutControl _cnt;
-
-		private Type _currentDataSourceType;
-
-		private Dictionary<string, IList<CustomAttribute>> _attributesCache;
+		
+		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
+		private object _oldCurrent = null;
+		private bool _layoutIsValid = true;
+		private bool _resetLayoutRequest = false;
+		private int _lastTypeHash = -1;
 		
 		public EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
         public EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
 
-        private object _oldCurrent = null;
-
-		private bool _layoutIsValid;
-
-		private Int64 _oldSerializedHash = -1;
-
-		private bool _layoutIsOn = false;
-
+        
 		public DataLayoutBindingSource() : base()
         {
 			start();
@@ -72,24 +67,19 @@ namespace xwcs.core.db.binding
 
 		private void start()
 		{
-			//register handlers
 			CurrentChanged += handleCurrentChanged;
-			EntityBase<T>.StructureChanged += _StructureChanged;
-			
-			_attributesCache = new Dictionary<string, IList<CustomAttribute>>();
-			_logger = xwcs.core.manager.SLogManager.getInstance().getClassLogger(GetType());// System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 		}
 
-		private void _StructureChanged(NotifyStructureChanged<T> sender, StructureChangedEventArgs e)
+		private void structureChanged(NotifyStructureChanged<T> sender, StructureChangedEventArgs e)
 		{
-			if(_layoutIsOn) {
-				_layoutIsValid = false;
-			}	
-		
+			//ask for reset layout in case layout is valid
+			_resetLayoutRequest = _layoutIsValid;
 		}
 
 		private void resetDataLayout() {
-			if (_cnt != null && DataSource != null)
+			// reset layout if
+			// there is one active
+			if (_cnt != null && DataSource != null && _layoutIsValid)
 			{
 				if (_logger != null && CurrencyManager.Position >= 0)
 					_logger.Debug("Reset layout");
@@ -97,59 +87,12 @@ namespace xwcs.core.db.binding
 				_cnt.DataSource = null;
 				_cnt.DataBindings.Clear();
 				_cnt.Clear();
+				_resetLayoutRequest = false;
+				_layoutIsValid = false;
+				// now set new source
 				_cnt.DataSource = this;
-				_layoutIsValid = true;
-            }
+            }			
 		}
-
-		protected override void OnListChanged(ListChangedEventArgs e)
-		{
-			if (_logger != null && CurrencyManager.Position >= 0)
-				_logger.Debug("LC-Current " + e.ListChangedType);
-			else
-				{
-				_logger = xwcs.core.manager.SLogManager.getInstance().getClassLogger(GetType());
-				_logger.Debug("LC-Current " + e.ListChangedType);
-			}			
-
-			switch (e.ListChangedType)
-			{
-				case ListChangedType.PropertyDescriptorChanged:
-					{
-						//we have to refresh attributes cache
-						if (DataSource != null && e.PropertyDescriptor == null)
-						{
-							init();
-						}
-						//(base.Current as EntityBase<T>).DeserializeFields();
-						break;
-					}
-				case ListChangedType.Reset:
-					if(CurrencyManager.Position >= 0) {
-						//(base.Current as EntityBase<T>).DeserializeFields();
-					}
-					break;	
-			}
-
-			//orig call
-			try {
-				base.OnListChanged(e);
-			}catch(Exception ex) {
-				// we can have problems to bind at form cause it can not match new data
-				// so stop exception here, cause we are moving to new record
-				if (_logger != null && CurrencyManager.Position >= 0) {
-					_logger.Debug("LC-EXCEPT-Current: (" + ex.Message + ")");
-				}
-            }
-			
-
-			if (_logger != null && CurrencyManager.Position >= 0)
-				_logger.Debug("LC-OUT-Current");
-
-			
-		}
-
-		
 
         public void addNewRecord(object rec)
         {
@@ -158,47 +101,99 @@ namespace xwcs.core.db.binding
            
         }
 
-		private void handleCurrentChanged(object sender, object args)
-		{	
-			
+		protected override void OnListChanged(ListChangedEventArgs e)
+		{
+			if (_logger != null && CurrencyManager.Position >= 0)
+				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
 
-			_logger.Debug("CC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+			/* eventual possible use
+					
+			switch (e.ListChangedType)
+			{
+				case ListChangedType.PropertyDescriptorChanged:
+					{
+						//we have to refresh attributes cache
+						if (DataSource != null && e.PropertyDescriptor == null)
+						{
+						}
 
-
-			if (_oldCurrent == base.Current) return;
-
-			//deserialize if necessary
-			(base.Current as EntityBase<T>).DeserializeFields();
-
-			/*
-			Int64 newHash = EntityBase<T>.InternalTypesVersion;
-			_layoutIsValid = _oldSerializedHash == newHash;
-			_oldSerializedHash = newHash;
+						break;
+					}
+			}
 			*/
 
-			_oldCurrent = base.Current;
-
-
-			//if there is no more valid layout reset is
-			if (!_layoutIsValid)
+			//orig call
+			try
 			{
-				resetDataLayout();
+				base.OnListChanged(e);
+			}
+			catch (Exception ex)
+			{
+				// we can have problems to bind at form cause it can not match new data
+				// so stop exception here, cause we are moving to new record
+				if (_logger != null && CurrencyManager.Position >= 0)
+				{
+					_logger.Debug("LC-EXCEPT-Current: (" + ex.Message + ") " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+				}
+			}
+			if (_logger != null && CurrencyManager.Position >= 0)
+				_logger.Debug("LC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+
+
+		}
+
+		private void handleCurrentChanged(object sender, object args)
+		{	
+			_logger.Debug("CC-Current ["+sender+"] : " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+
+
+			if (_oldCurrent != base.Current) {
+				//de-serialize if necessary
+				_logger.Debug("CC-Current Deserialize");
+
+				if(base.Current is SerializedEntityBase) {
+					(base.Current as SerializedEntityBase).DeserializeFields();
+					int typeHash = (base.Current as SerializedEntityBase).GetTypeHash();
+
+					if(_lastTypeHash != typeHash) {
+						//we have object morphing
+						_resetLayoutRequest = true;
+						_lastTypeHash = typeHash;
+					}
+				}				
+
+				_oldCurrent = base.Current;
+
+				//if there is no more valid layout reset is
+				if (_resetLayoutRequest)
+				{
+					resetDataLayout();
+				}
 			}
 
 			_logger.Debug("CC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
 		}
 
-		
+		public new object DataSource {
+			get {
+				return base.DataSource; 
+			}
 
-		private void init()
-		{
+			set {
+				//register type
+				Type t = GetType();
 
-			
+				if (t.BaseType != null && t.Namespace == "System.Data.Entity.DynamicProxies")
+				{
+					HyperTypeDescriptionProvider.Add(t.BaseType);
+				}
+				else
+				{
+					HyperTypeDescriptionProvider.Add(t);
+				}
+				base.DataSource = value;	
+			}
 		}
-
-
-
-		
 
 		
 		public DataLayoutControl DataLayout
@@ -231,8 +226,12 @@ namespace xwcs.core.db.binding
 				//_cnt.AllowCustomizationMenu = false;
 				_cnt.FieldRetrieved += FieldRetrievedHandler;
 				_cnt.FieldRetrieving += FieldRetrievingHandler;
+				//variables first
+				_resetLayoutRequest = false;
+				_layoutIsValid = false;
+				//connect
 				_cnt.DataSource = this;
-				_layoutIsValid = true;
+				
             }
 		}
 
@@ -247,6 +246,10 @@ namespace xwcs.core.db.binding
 				}
 			}
 			onFieldRetrieved(e);
+			
+			// at the end say that layout is valid
+			// TODO: verify what happen if there is a change in the middle, this is called for each field separately
+			_layoutIsValid = true;
 		}
 
 		private void FieldRetrievingHandler(object sender, FieldRetrievingEventArgs e)
@@ -273,8 +276,6 @@ namespace xwcs.core.db.binding
 			// fixed things
 			e.DataSourceUpdateMode = DataSourceUpdateMode.OnPropertyChanged;
 			e.Handled = true;
-
-			_layoutIsOn = true; //first time loaded
 		}
 
 		public void onGetQueryable(GetFieldQueryableEventData qd)
@@ -299,7 +300,6 @@ namespace xwcs.core.db.binding
 
 		#region IDisposable Support
 		private bool disposedValue = false; // To detect redundant calls
-
 		protected override void Dispose(bool disposing)
 		{
 			if (!disposedValue)

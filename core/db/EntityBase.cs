@@ -6,32 +6,60 @@ namespace xwcs.core.db
 {
 	using model;
 	using model.attributes;
-
-	public abstract class EntityBase<T> : NotifyStructureChanged<T>, INotifyPropertyChanged
+	using System.Collections.Generic;
+	public class PropertyDeserialized : EventArgs
 	{
-		public event PropertyChangedEventHandler PropertyChanged;		
-
-		public EntityBase() {
-			// handle type registering
-			// we have to unbox from eventual entity proxy
-			Type t = GetType();
-
-			if (t.BaseType != null && t.Namespace == "System.Data.Entity.DynamicProxies")
-			{
-				HyperTypeDescriptionProvider.Add(t.BaseType);
-			}
-			else
-			{
-				HyperTypeDescriptionProvider.Add(t);
-			}
+		public PropertyDeserialized(object property, string propertyName)
+		{
+			SourceProperty = property;
+			SourcePropertyName = propertyName;
 		}
+		public object SourceProperty { get; private set; }
+		public string SourcePropertyName { get; private set; }
+	}
 
+	public delegate void PropertyDeserializedEventHandler(EntityBase sender, PropertyDeserialized e);
+
+	public abstract class EntityBase : INotifyPropertyChanged
+	{
+		public event PropertyChangedEventHandler PropertyChanged;	
+		
 		protected bool SetProperty<VT>(ref VT storage, VT value, [CallerMemberName] string propertyName = null)
 		{
 			if (Equals(storage, value)) return false;
 			storage = value;
-			OnPropertyChanged(propertyName);
+
+			if (PropertyChanged != null)
+			{
+				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+			}
+
 			return true;
+		}
+
+		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+		{
+			if (PropertyChanged != null)
+			{
+				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+			}
+		}
+	}
+
+	public abstract class SerializedEntityBase : EntityBase
+	{
+		
+		public event PropertyDeserializedEventHandler PropertyDeserialized;
+
+		public SerializedEntityBase()
+		{
+
+		}
+
+		public virtual int GetTypeHash() { return -1; }
+
+		protected void RegisterType(Type t) {
+			HyperTypeDescriptionProvider.Add(t);
 		}
 
 		// return string : we will dump object to string, but we will do it only if source is not NULL
@@ -49,22 +77,22 @@ namespace xwcs.core.db
 		// cause we use lazy de-serializing, we do this just first time called
 		protected object GetOrDeserialize(string source, string sourcePropertyName, ref object storage, [CallerMemberName] string propertyName = null)
 		{
-			if(storage == null && source != null && source.Length > 0) {
+			if (storage == null && source != null && source.Length > 0)
+			{
 				storage = source.TypedDeserialize(sourcePropertyName, SerializeKind.XmlSerialization);
-			}else 
-			if (storage == null && (source == null || source.Length == 0)){
+			}
+			else
+			if (storage == null && (source == null || source.Length == 0))
+			{
 				storage = null;
 			}
-			CheckType(storage, propertyName);
-			return storage;	
-		}
 
-		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-		{
-			if (PropertyChanged != null)
+			if (PropertyDeserialized != null)
 			{
-				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+				PropertyDeserialized(this, new PropertyDeserialized(storage, propertyName));
 			}
+
+			return storage;
 		}
 
 		public virtual void DeserializeFields()
@@ -73,5 +101,5 @@ namespace xwcs.core.db
 		public virtual void SerializeFields()
 		{
 		}
-	}	
+	}
 }

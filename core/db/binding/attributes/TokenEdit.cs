@@ -22,7 +22,7 @@ namespace xwcs.core.db.binding.attributes
 			{
                 foreach (KeyValuePair pair in qd.List)
                 {
-                    rle.Properties.Tokens.Add(new DevExpress.XtraEditors.TokenEditToken(pair.Value, pair.Key));
+                    rle.Tokens.Add(new DevExpress.XtraEditors.TokenEditToken(pair.Value, pair.Key));
                 }
             }
 		}

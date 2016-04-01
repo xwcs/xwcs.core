@@ -29,6 +29,26 @@ namespace xwcs.core.db
 
 		public static Int64 InternalTypesVersion { get; }
 
+		private static bool _typeDone = false;
+
+		protected NotifyStructureChanged() {
+			if(!_typeDone) {
+				// handle type registering
+				// we have to unbox from eventual entity proxy
+				Type t = GetType();
+
+				if (t.BaseType != null && t.Namespace == "System.Data.Entity.DynamicProxies")
+				{
+					HyperTypeDescriptionProvider.Add(t.BaseType);
+				}
+				else
+				{
+					HyperTypeDescriptionProvider.Add(t);
+				}
+				_typeDone = true;
+			}
+		}
+
 		public ChainingPropertyDescriptor GetPropertyDescriptor(string PropertyName)
 		{
 			lock (_descriptorsCache)

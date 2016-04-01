@@ -44,6 +44,8 @@ namespace xwcs.core.db.model
 
 		}
 
+		private static Dictionary<int, Type> _registeredTypes = new Dictionary<int, Type>();
+
 		public static void Add(Type type)
         {
 			//Avoid some base types!!!!!!
@@ -55,10 +57,18 @@ namespace xwcs.core.db.model
                 !type.IsClass
 				)
 				return;
-			
-			// TODO: make smarter filter	
-			TypeDescriptionProvider parent = TypeDescriptor.GetProvider(type);
-            TypeDescriptor.AddProvider(new HyperTypeDescriptionProvider(parent), type);
+			int hc = type.GetHashCode();
+			bool doRegister = false;
+			lock (_registeredTypes) {
+				if(!_registeredTypes.ContainsKey(hc)) {
+					_registeredTypes.Add(hc, type);
+					doRegister = true;
+				}
+			}
+			if(doRegister) {
+				TypeDescriptionProvider parent = TypeDescriptor.GetProvider(type);
+				TypeDescriptor.AddProvider(new HyperTypeDescriptionProvider(parent), type);
+			}
         }
 
         public HyperTypeDescriptionProvider() : this(typeof (object))
