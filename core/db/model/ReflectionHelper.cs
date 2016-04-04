@@ -7,12 +7,33 @@ using System.Linq;
 using System.Text;
 using xwcs.core.db.binding.attributes;
 
-namespace xwcs.core.db.model
-{
-    /// <summary>
-    /// Contains helper functions related to reflection
-    /// </summary>
-    public static class ReflectionHelper
+namespace xwcs.core.db.model{
+
+	static class ExtensionMethods
+	{
+		public static bool TryGetInterfaceGenericParameters(this Type type, Type @interface, out Type[] typeParameters)
+		{
+			typeParameters = null;
+
+			if (type.IsGenericType && type.GetGenericTypeDefinition() == @interface)
+			{
+				typeParameters = type.GetGenericArguments();
+				return true;
+			}
+
+			var implements = type.FindInterfaces((ty, obj) => ty.IsGenericType && ty.GetGenericTypeDefinition() == @interface, null).FirstOrDefault();
+			if (implements == null)
+				return false;
+
+			typeParameters = implements.GetGenericArguments();
+			return true;
+		}
+	}
+
+	/// <summary>
+	/// Contains helper functions related to reflection
+	/// </summary>
+	public static class ReflectionHelper
     {
         /// <summary>
         /// Searches for a property in the given property path

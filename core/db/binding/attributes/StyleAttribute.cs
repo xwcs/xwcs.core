@@ -4,14 +4,14 @@ using DevExpress.XtraDataLayout;
 namespace xwcs.core.db.binding.attributes
 {
 	[AttributeUsage(AttributeTargets.Property,	AllowMultiple = true)]
-	public class Style : CustomAttribute
+	public class StyleAttribute : CustomAttribute
 	{
 		UInt32 _backGrndColor;
 		bool _backGrndColorUsed;
 
 		public override bool Equals(object obj)
 		{
-			Style o = obj as Style;
+			StyleAttribute o = obj as StyleAttribute;
 			if(o != null) {
 				return _backGrndColor == o._backGrndColor && _backGrndColorUsed == o._backGrndColorUsed;
 			}
@@ -30,7 +30,7 @@ namespace xwcs.core.db.binding.attributes
 			}
 			return hashCode;
 		}
-		public Style() {
+		public StyleAttribute() {
 			_backGrndColorUsed = false; //default
 		}
 

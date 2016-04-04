@@ -15,7 +15,7 @@ namespace xwcs.core.db.model.attributes
 	}
 
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-	public class Serialized : Attribute
+	public class SerializedAttribute : Attribute
 	{
 		public SerializeKind Kind { get; set; } = SerializeKind.Undef;
 		public string DestinationPropertyName { get; set; } = "";	

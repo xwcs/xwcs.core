@@ -6,11 +6,13 @@ using System.ComponentModel;
 using xwcs.core.db.model;
 using System.Diagnostics;
 using DevExpress.XtraDataLayout;
+using xwcs.core.db.model;
 
 namespace xwcs.core.db.binding
 {
 	using attributes;
-
+	using System.Collections;
+	using System.Data;
 	public class GetFieldQueryableEventData
 	{
 		public object DataSource { get; set; }
@@ -46,7 +48,8 @@ namespace xwcs.core.db.binding
 		private object _oldCurrent = null;
 		private bool _layoutIsValid = true;
 		private bool _resetLayoutRequest = false;
-		private int _lastTypeHash = -1;
+		
+		private IStructureWatcher _structureWatcher = null;
 		
 		public EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
         public EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
@@ -68,12 +71,6 @@ namespace xwcs.core.db.binding
 		private void start()
 		{
 			CurrentChanged += handleCurrentChanged;
-		}
-
-		private void structureChanged(NotifyStructureChanged<T> sender, StructureChangedEventArgs e)
-		{
-			//ask for reset layout in case layout is valid
-			_resetLayoutRequest = _layoutIsValid;
 		}
 
 		private void resetDataLayout() {
@@ -151,15 +148,9 @@ namespace xwcs.core.db.binding
 				//de-serialize if necessary
 				_logger.Debug("CC-Current Deserialize");
 
-				if(base.Current is SerializedEntityBase) {
+				if(_structureWatcher != null) {
 					(base.Current as SerializedEntityBase).DeserializeFields();
-					int typeHash = (base.Current as SerializedEntityBase).GetTypeHash();
-
-					if(_lastTypeHash != typeHash) {
-						//we have object morphing
-						_resetLayoutRequest = true;
-						_lastTypeHash = typeHash;
-					}
+					_resetLayoutRequest = _structureWatcher.CheckStructure(base.Current as SerializedEntityBase);
 				}				
 
 				_oldCurrent = base.Current;
@@ -180,18 +171,75 @@ namespace xwcs.core.db.binding
 			}
 
 			set {
-				//register type
-				Type t = GetType();
+				Type t = null;
 
-				if (t.BaseType != null && t.Namespace == "System.Data.Entity.DynamicProxies")
+				object tmpDs = null;
+
+				//read annotations
+				//here it depends what we have as DataSource, it can be Object, Type or IList Other we will ignore
+				BindingSource bs = value as BindingSource;
+				if (bs == null)
 				{
-					HyperTypeDescriptionProvider.Add(t.BaseType);
+					//no binding source
+					tmpDs = value;
 				}
 				else
 				{
-					HyperTypeDescriptionProvider.Add(t);
+					tmpDs = bs.DataSource;
 				}
-				base.DataSource = value;	
+
+				Type tmpT = tmpDs as Type;
+				if (tmpT == null)
+				{
+					//lets try another way, maybe IList
+					if (tmpDs as IList != null)
+					{
+						//try to obtain element type
+						t = (tmpDs as IList).GetType().GetGenericArguments()[0];
+					}
+					else if (tmpDs as IEnumerable != null)
+					{
+						//try to obtain element type
+						t = (tmpDs as IEnumerable).GetType().GetGenericArguments()[0];
+					}
+					else if (tmpDs as IListSource != null)
+					{
+						//try to obtain element type
+						t = (tmpDs as IListSource).GetType().GetGenericArguments()[0];
+					}
+					else
+					{
+						//it should be plain object and try to take type
+						if ((tmpDs as object) != null)
+						{
+							t = tmpDs.GetType();
+						}
+						else
+						{
+							_logger.Error("Missing DataSource for data layout");
+							return; // no valid binding arrived so we skip 
+						}
+					}
+				}
+				else {
+					t = tmpT;
+				}
+				if(t.IsInstanceOfType(typeof(SerializedEntityBase))) {
+					Type generic = typeof(StructureWatcher<>);
+					Type[] typeArgs = { t };
+					Type tg = generic.MakeGenericType(typeArgs);
+					_structureWatcher = (IStructureWatcher)Activator.CreateInstance(tg);
+				}
+				else {
+					_structureWatcher = null;
+				}
+				// make generic Structure watch basing on type of DataSource element
+								
+				base.DataSource = value;
+				//load fields eventually
+				if(!_layoutIsValid) {
+					_cnt.RetrieveFields();
+				}				
 			}
 		}
 

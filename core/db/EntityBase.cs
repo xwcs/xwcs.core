@@ -20,6 +20,8 @@ namespace xwcs.core.db
 
 	public delegate void PropertyDeserializedEventHandler(EntityBase sender, PropertyDeserialized e);
 
+
+	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
 	public abstract class EntityBase : INotifyPropertyChanged
 	{
 		public event PropertyChangedEventHandler PropertyChanged;	
@@ -56,11 +58,9 @@ namespace xwcs.core.db
 
 		}
 
-		public virtual int GetTypeHash() { return -1; }
+		
 
-		protected void RegisterType(Type t) {
-			HyperTypeDescriptionProvider.Add(t);
-		}
+		public abstract void GetMutablePropertiesType(Dictionary<string, Type> dest);
 
 		// return string : we will dump object to string, but we will do it only if source is not NULL
 		// we cant reset value using object, this can be reset just setting empty string in dump property
@@ -95,11 +95,7 @@ namespace xwcs.core.db
 			return storage;
 		}
 
-		public virtual void DeserializeFields()
-		{
-		}
-		public virtual void SerializeFields()
-		{
-		}
+		public abstract void DeserializeFields();
+		public abstract void SerializeFields();
 	}
 }

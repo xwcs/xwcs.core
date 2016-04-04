@@ -5,7 +5,7 @@ using DevExpress.XtraEditors.Repository;
 namespace xwcs.core.db.binding.attributes
 {
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-	public class TokenEdit : CustomAttribute
+	public class TokenEditAttribute : CustomAttribute
 	{
 		
 		public override void applyRetrievingAttribute(IDataLayoutExtender host, FieldRetrievingEventArgs e)

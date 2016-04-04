@@ -5,7 +5,7 @@ using DevExpress.XtraEditors.Repository;
 namespace xwcs.core.db.binding.attributes
 {
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-	public class DbLookup : CustomAttribute
+	public class DbLookupAttribute : CustomAttribute
 	{
 		
 		public string DisplayMember { set; get; }
@@ -13,7 +13,7 @@ namespace xwcs.core.db.binding.attributes
 
 		public override bool Equals(object obj)
 		{
-			DbLookup o = obj as DbLookup;
+			DbLookupAttribute o = obj as DbLookupAttribute;
 			if (o != null)
 			{
 				return DisplayMember.Equals(o.DisplayMember) && ValueMember.Equals(o.ValueMember);
