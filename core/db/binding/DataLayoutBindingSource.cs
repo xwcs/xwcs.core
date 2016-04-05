@@ -97,7 +97,13 @@ namespace xwcs.core.db.binding
             base.Current.CopyFrom(rec);           
         }
 
-		protected override void OnListChanged(ListChangedEventArgs e)
+
+        public void setCurrentRecord(object rec)
+        {
+            base.Current.CopyFrom(rec);
+        }
+
+        protected override void OnListChanged(ListChangedEventArgs e)
 		{
 			if (_logger != null && CurrencyManager.Position >= 0)
 				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
