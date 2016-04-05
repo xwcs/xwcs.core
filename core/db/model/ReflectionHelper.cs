@@ -30,6 +30,8 @@ namespace xwcs.core.db.model{
 		}
 	}
 
+	
+
 	/// <summary>
 	/// Contains helper functions related to reflection
 	/// </summary>

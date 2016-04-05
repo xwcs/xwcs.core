@@ -6,7 +6,6 @@ using System.ComponentModel;
 using xwcs.core.db.model;
 using System.Diagnostics;
 using DevExpress.XtraDataLayout;
-using xwcs.core.db.model;
 
 namespace xwcs.core.db.binding
 {
@@ -38,18 +37,19 @@ namespace xwcs.core.db.binding
     }
 
 
-	public class DataLayoutBindingSource<T> : BindingSource, IDataLayoutExtender, IDisposable
+	public class DataLayoutBindingSource : BindingSource, IDataLayoutExtender, IDisposable
 	{
-		private manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource<T>));
+		private manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
 		private DataLayoutControl _cnt;
 		
 		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
 		private object _oldCurrent = null;
-		private bool _layoutIsValid = true;
+		private bool _fieldsAreRetrieved = true;
 		private bool _resetLayoutRequest = false;
 		
-		private IStructureWatcher _structureWatcher = null;
+		//if we work with serialized entities
+		private StructureWatcher _structureWatcher = null;
 		
 		public EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
         public EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
@@ -76,7 +76,7 @@ namespace xwcs.core.db.binding
 		private void resetDataLayout() {
 			// reset layout if
 			// there is one active
-			if (_cnt != null && DataSource != null && _layoutIsValid)
+			if (_cnt != null && DataSource != null && _fieldsAreRetrieved)
 			{
 				if (_logger != null && CurrencyManager.Position >= 0)
 					_logger.Debug("Reset layout");
@@ -85,7 +85,7 @@ namespace xwcs.core.db.binding
 				_cnt.DataBindings.Clear();
 				_cnt.Clear();
 				_resetLayoutRequest = false;
-				_layoutIsValid = false;
+				_fieldsAreRetrieved = false;
 				// now set new source
 				_cnt.DataSource = this;
             }			
@@ -94,8 +94,7 @@ namespace xwcs.core.db.binding
         public void addNewRecord(object rec)
         {
             AddNew();
-            base.Current.CopyFrom(rec);
-           
+            base.Current.CopyFrom(rec);           
         }
 
 		protected override void OnListChanged(ListChangedEventArgs e)
@@ -145,10 +144,10 @@ namespace xwcs.core.db.binding
 
 
 			if (_oldCurrent != base.Current) {
-				//de-serialize if necessary
-				_logger.Debug("CC-Current Deserialize");
-
+				
 				if(_structureWatcher != null) {
+					//de-serialize if necessary
+					_logger.Debug("CC-Current Deserialize");
 					(base.Current as SerializedEntityBase).DeserializeFields();
 					_resetLayoutRequest = _structureWatcher.CheckStructure(base.Current as SerializedEntityBase);
 				}				
@@ -225,19 +224,30 @@ namespace xwcs.core.db.binding
 					t = tmpT;
 				}
 				if(t.IsInstanceOfType(typeof(SerializedEntityBase))) {
+					/*
 					Type generic = typeof(StructureWatcher<>);
 					Type[] typeArgs = { t };
 					Type tg = generic.MakeGenericType(typeArgs);
 					_structureWatcher = (IStructureWatcher)Activator.CreateInstance(tg);
+					*/
+					if(_structureWatcher != null) {
+						if(!_structureWatcher.IsCompatible(t)) {
+							_structureWatcher = new StructureWatcher(t);
+						}
+					}
+					else {
+						_structureWatcher = new StructureWatcher(t);
+					}
 				}
 				else {
 					_structureWatcher = null;
 				}
 				// make generic Structure watch basing on type of DataSource element
-								
 				base.DataSource = value;
-				//load fields eventually
-				if(!_layoutIsValid) {
+
+				// load fields eventually, layout should be assigned before
+				// so we need do eventually also this
+				if(!_fieldsAreRetrieved) {
 					_cnt.RetrieveFields();
 				}				
 			}
@@ -276,10 +286,9 @@ namespace xwcs.core.db.binding
 				_cnt.FieldRetrieving += FieldRetrievingHandler;
 				//variables first
 				_resetLayoutRequest = false;
-				_layoutIsValid = false;
+				_fieldsAreRetrieved = false;
 				//connect
-				_cnt.DataSource = this;
-				
+				_cnt.DataSource = this;				
             }
 		}
 
@@ -297,7 +306,7 @@ namespace xwcs.core.db.binding
 			
 			// at the end say that layout is valid
 			// TODO: verify what happen if there is a change in the middle, this is called for each field separately
-			_layoutIsValid = true;
+			_fieldsAreRetrieved = true;
 		}
 
 		private void FieldRetrievingHandler(object sender, FieldRetrievingEventArgs e)

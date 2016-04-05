@@ -7,18 +7,7 @@ using xwcs.core.db.model;
 namespace xwcs.core.db
 {
 
-	static class ExtensionMethods
-	{
-		/*
-			this method serialize some object into xml with full type name in 
-			__content_type__="<object type>" attribute
-			so we can reread it later and it use also specific root element name
-		*/
-		public static IStructureWatcher GetStructureWatcher<T>(this T objectInstance)
-		{
-			return new StructureWatcher<T>();
-		}
-	}
+	
 
 	/*
 	int ret = 5381;
@@ -28,24 +17,29 @@ namespace xwcs.core.db
     		ret = ((ret << 5) + ret) ^ t.GetHashCode();
 	*/
 
+	/*
 	public interface IStructureWatcher {
 		// this method check types for all [Mutable] properties of a target
 		// it will return true if state of types changed vs alts call
 		bool CheckStructure(SerializedEntityBase target);
-	}	
+	}
+	*/	
 
-	public class StructureWatcher<T> : IStructureWatcher
+	public class StructureWatcher//<T> //: IStructureWatcher
 	{
-		private static Dictionary<string, ChainingPropertyDescriptor> _descriptorsCache = new Dictionary<string, ChainingPropertyDescriptor>();
+		private Dictionary<string, ChainingPropertyDescriptor> _descriptorsCache = new Dictionary<string, ChainingPropertyDescriptor>();
 		
 		// if any internal field type change this will grow
-		private static int _lastTypeHash = -1;
+		private int _lastTypeHash = -1;
 
-		private static bool _typeInitialized = false;
-		
-		public StructureWatcher() {
+		private Type _targetType;
+
+		public StructureWatcher(Type t) {
+			if(!t.IsInstanceOfType(typeof(SerializedEntityBase))) {
+				throw new InvalidEnumArgumentException("StructureWatcher need SerializableEntityBase!");
+			}
 			//read structure of type
-			PropertyDescriptorCollection pdc = TypeDescriptor.GetProperties(typeof(T));
+			PropertyDescriptorCollection pdc = TypeDescriptor.GetProperties(t);
 			foreach(ChainingPropertyDescriptor pd in pdc.OfType<ChainingPropertyDescriptor>()) {
 				if(pd.Attributes.OfType<model.attributes.MutableAttribute>().ToList().Count > 0) {
 					//we have one mutable filed
@@ -57,6 +51,7 @@ namespace xwcs.core.db
 					}					
 				}
 			}
+			_targetType = t;
 		}
 
 		public ChainingPropertyDescriptor GetPropertyDescriptor(string PropertyName)
@@ -77,6 +72,11 @@ namespace xwcs.core.db
 				}
 				return pd;
 			}
+		}
+
+		// try if this checker is valid for type
+		public bool IsCompatible(Type t) {
+			return t == _targetType;	
 		}
 
 
