@@ -117,6 +117,13 @@
     <Compile Include="core\plgs\SPluginsLoader.cs" />
     <Compile Include="core\controls\VisualControlInfo.cs" />
     <Compile Include="core\plgs\VisualPluginBase.cs" />
+    <Compile Include="core\statemachine\StateMachineBase.cs" />
+    <Compile Include="core\statemachine\test\TestFormBase.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="core\statemachine\test\TestFormBase.Designer.cs">
+      <DependentUpon>TestFormBase.cs</DependentUpon>
+    </Compile>
     <Compile Include="core\user\IUser.cs" />
     <Compile Include="core\user\IUserProfileProvider.cs" />
     <Compile Include="core\user\IUserProvider.cs" />
@@ -132,9 +139,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="core\statemachine\test\TestFormBase.resx">
+      <DependentUpon>TestFormBase.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\licenses.licx" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="core\statemachine\MultipleOutputHelper.ttinclude" />
+    <None Include="core\statemachine\StateMachineGenerator.ttinclude" />
     <None Include="packages.config" />
     <None Include="Sign.snk" />
   </ItemGroup>

@@ -1,0 +1,561 @@
+﻿// Template that includes this file must provide 'ns' and 'path' variables
+<#@ Assembly Name="System.Core" #>
+<#@ Assembly Name="System.Xml" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #> 
+<#
+var Header = "using System;\r\nusing System.Collections.Generic;\r\nusing System.ComponentModel;\r\nusing System.Windows.Forms;\r\nusing xwcs.core.statemachine;\r\n\r\nnamespace " + ns + " { // StateMachineNamespace\r\n" ;
+var Footer = "\r\n}\r\n// End of Tempate" ;
+bool overWriteImpl = true ;
+#>
+<#@ include file="MultipleOutputHelper.ttinclude"
+#><# var manager = Manager.Create(this.Host, GenerationEnvironment); #>
+
+// Converting <#= path #> into .cs file
+<#
+StateGraph sg = new StateGraph(path) ;
+#>
+<#= Header #>
+<#
+	// Create all Triggers
+	foreach(var triggerName in GetTriggerNames(sg))
+    {
+		// Dictionary<string, condition> triggerConditions = GetTriggerConditionNames(sg, triggerName) ;
+
+#><# manager.StartNewFile(triggerName+"Triggers.cs") ;
+#>
+<#= Header #>
+	public partial class <#= triggerName #>Trigger : TriggerBase {
+		public <#= triggerName #>Trigger(StateMachine machine) : base (machine) {}
+	}	
+<#= Footer #>
+<# manager.EndBlock();
+#><#
+    }
+	// Create all Guards
+	foreach(var guardName in GetGuardNames(sg))
+    {
+#><# manager.StartNewFile(guardName+"Guard.cs") ;
+#>
+<#= Header #>
+	public partial class <#= guardName #>Guard : GuardBase {
+		public <#= guardName #>Guard(StateMachine machine) : base (machine) {}
+	}	
+<#= Footer #>
+<# manager.EndBlock();
+#><#
+	var guardPath = System.IO.Path.GetDirectoryName(this.Host.TemplateFile);
+	guardPath = System.IO.Path.Combine(guardPath, guardName+"Guard.impl.cs");
+
+	manager.StartNewFile(guardName+"Guard.impl.cs") ;
+	
+	// now only create the file, if it does not exist yet
+	if (overWriteImpl || !System.IO.File.Exists(guardPath)) 
+	{
+#>
+<#= Header #>
+	public partial class <#= guardName #>Guard {
+        public override void Execute()
+        {
+            // Will throw a GuardException when condition goes wrong
+			// Check <#= guardName #>
+			var confirmResult =  MessageBox.Show("Please confirm that condition '<#= guardName #>' is valid",
+                                    "Confirm Status Change",
+                                    MessageBoxButtons.YesNo);
+			if (confirmResult != DialogResult.Yes) {
+				throw new GuardException(-1, "Condition '<#= guardName #>' not valid") ;
+			}
+            return;
+        }
+	}
+<#= Footer #>
+<#	
+	}
+	else{
+		//file exists so read it from disk
+			IEnumerable<string> readText = File.ReadLines(guardPath);
+			foreach(string line in readText){
+			#><#=line + "\r\n"#><#
+			}
+	} // end IF file exists
+#>
+<# manager.EndBlock();
+#><#  }
+#>
+<#
+	// Create all States
+	XmlNamespaceManager nsmgr = new XmlNamespaceManager(sg.doc.NameTable);
+	XmlElement root = sg.doc.DocumentElement;
+	nsmgr.AddNamespace("x", root.NamespaceURI);
+	// XmlNodeList stateList = root.SelectNodes("//x:flowElements/x:state", nsmgr) ;
+	XmlNodeList stateList = root.SelectNodes("//x:flowElements/*[name()='startPoint' or name()='state' or name()='endPoint']", nsmgr) ;
+	foreach(XmlElement state in stateList)
+    {
+		// find all entry and exit actions
+		string inAction = GetAttValue(state, "entryAction") ;
+		string outAction = GetAttValue(state, "exitAction") ;
+
+#><# manager.StartNewFile(state.Attributes["name"].InnerXml+"State.cs") ;
+#><#= Header
+#>	public partial class <#= state.Attributes["name"].InnerXml #>State : StateBase 
+	{ 
+		public <#= state.Attributes["name"].InnerXml #>State(StateMachine machine) : base(machine, "<#= state.Attributes["name"].InnerXml #>") { }
+
+        /// <summary>
+        /// Returns a list of callable triggers
+        /// </summary>
+        public override List<TriggerBase> GetTriggers()
+        {
+			List<TriggerBase> l = new List<TriggerBase>();
+<# 
+			XmlNodeList possibleTransitions = state.SelectNodes("./x:flowTo/x:flow", nsmgr) ;
+			foreach(XmlElement transition in possibleTransitions)
+            {
+				var gName = GetAttValue(transition, "guard") ;
+				if ( !string.IsNullOrEmpty(gName) ) {
+#>
+			l.Add(new <#= gName #>Trigger(StateMachine) ) ;
+<#
+                }
+            }
+#>
+			return l ;
+        }
+<#		
+		if ( null != inAction ) {
+#>
+
+		#region Entry
+//		public virtual void <#= inAction #>(TriggerBase causedByTrigger) {
+//			throw new EffectException(-1, "Entry Action <#= inAction #> not implemented!") ;
+//		}
+
+		/// <summary>
+		/// Is executed when the state machine enters the <#= state.Attributes["name"].InnerXml #> state.
+		/// </summary>
+		public override void OnEntry(TriggerBase causedByTrigger)
+		{
+			// call all entry actions
+			<#= inAction #>(causedByTrigger);
+		}
+		#endregion
+<#
+        }
+#>
+<#
+		if ( null != outAction ) {
+#>
+
+		#region Exit
+//		public virtual void <#= outAction #>(TriggerBase causedByTrigger) {
+//			throw new EffectException(-1, "Exit Action <#= inAction #> not implemented!") ;
+//		}
+
+		/// <summary>
+		/// Is executed when the state machine exits the <#= state.Attributes["name"].InnerXml #> state.
+		/// </summary>
+		public override void OnExit(TriggerBase causedByTrigger)
+		{
+			// call all exit actions
+			<#= outAction #>(causedByTrigger);
+		}
+		#endregion
+<#
+        }
+#>
+
+	}
+<#= Footer
+#><# manager.EndBlock();
+#><#
+
+	var statePath = System.IO.Path.GetDirectoryName(this.Host.TemplateFile);
+	statePath = System.IO.Path.Combine(statePath, state.Attributes["name"].InnerXml+"State.impl.cs");
+
+	if ( inAction != null || outAction != null ) {
+		manager.StartNewFile(state.Attributes["name"].InnerXml+"State.impl.cs") ;
+	
+		// now only create the file, if it does not exist yet
+		if (overWriteImpl || !System.IO.File.Exists(statePath)) 
+		{
+#>
+<#= Header #>
+	public partial class <#= state.Attributes["name"].InnerXml #>State {
+<#	if ( inAction != null ) {
+#>
+		public void <#= inAction #>(TriggerBase causedByTrigger) {
+			// Please fill this method
+        }
+<#
+	}
+	if ( outAction != null ) {
+#>
+		public void <#= outAction #>(TriggerBase causedByTrigger) {
+			// Please fill this method
+        }
+<#
+    }
+#>
+	}
+<#= Footer #>
+<#	
+        }
+		else {
+			//file exists so read it from disk
+			 IEnumerable<string> readText = File.ReadLines(statePath);
+			 foreach(string line in readText){
+				#><#=line + "\r\n"#><#
+			 }
+        }
+    } // No file at all
+
+  }
+#>
+
+	#region State Machine
+<#
+	// Create StateMachine
+	#region State Machine
+	var machineName = !string.IsNullOrEmpty(sg.Name) ? sg.Name : "GeneratedStateMachine";
+	var allTriggers = GetTriggerNames(sg);
+	var allEvents = GetEffectNames(sg);
+
+#>	/// <summary>
+    /// This class is the actual state machine designed in the State-Diagarm.
+	/// </summary>
+	public partial class <#= machineName #> : StateMachine
+	{
+		/// <summary>
+		/// Creates a new instance of this state machine.
+		/// Pay attention to initialize (start or bind) the state machine
+		/// </summary>
+		public <#= machineName #>(ISynchronizeInvoke si) : base(si) { }
+
+        public override void Start() {
+            // initially we go into the StartState.
+            this.TransitionToNewState(new StartState(this), null, null, null);
+        }
+
+		/// <summary>
+		/// Makes the state machine react to a trigger.
+		/// </summary>
+		protected override void ProcessTriggerInternal(TriggerBase trigger)
+		{
+			if (this.CurrentState == null) return;
+			if (trigger == null) throw new ArgumentException("tigger must not be null");
+
+			// determine what action to take based on the current state
+			// and the given trigger.
+<#			// iterate all states in the diagram
+			foreach(XmlElement state in stateList)
+            {
+				// check what transitions may be made from this state
+				XmlNodeList possibleTransitions = state.SelectNodes("./x:flowTo/x:flow", nsmgr) ;
+#>			if (this.CurrentState is <#= GetAttValue(state, "name") #>State)
+			{
+<#				foreach(XmlElement transition in possibleTransitions)
+                {
+					if ( string.IsNullOrEmpty(GetAttValue(transition, "guard")) ) continue ;
+				var guardName = GetAttValue(transition, "guard", 1) ;
+#>				if (trigger is <#= GetAttValue(transition, "guard") #>Trigger)
+				{
+<#
+				if ( !string.IsNullOrEmpty(guardName) ) {
+#>					<#= guardName #>Guard guard = new <#= guardName #>Guard(this) ;
+<#
+                }
+				else {
+#>					DefaultGuardBase guard = null ;
+<#
+                }
+#><#				if (!string.IsNullOrEmpty(GetAttValue(transition, "effect")))
+                    {
+					
+#>					this.TransitionToNewState(new <#= GetStateMoniker(transition, ref nsmgr)[2] #>State(this), trigger, guard, (p, n, t) =>
+                    {
+                        On<#= GetAttValue(transition, "effect") #>(p, n, t);
+                        return true ;
+                    }
+                    );
+
+<#					}
+					else {
+#>
+					this.TransitionToNewState(new <#= GetStateMoniker(transition, ref nsmgr)[2] #>State(this), trigger, guard, null);
+<#					}
+#>
+					return;
+				}
+<#
+                }
+#>			}
+<#          }
+#>
+			// the start state
+			if (this.CurrentState is StartState)
+			{
+<#			// the StartPoint is not a State shape. So we need to deal with it manually.
+			// find the start point
+			XmlElement startPoint = (XmlElement)root.SelectSingleNode("//x:flowElements/x:startPoint[1]", nsmgr) ;
+			if (startPoint == null) throw new NullReferenceException("There is no start point in the diagram.");
+			// get all transitions from the start point
+			XmlNodeList possibleStartTransitions = startPoint.SelectNodes("./x:flowTo/x:flow", nsmgr) ;
+			foreach(XmlElement transition in possibleStartTransitions)
+            {
+				if ( string.IsNullOrEmpty(GetAttValue(transition, "guard")) ) continue ;
+				var guardName = GetAttValue(transition, "guard", 1) ;
+#>				if (trigger is <#= GetAttValue(transition, "guard") #>Trigger)
+				{
+<#
+				if ( !string.IsNullOrEmpty(guardName) ) {
+#>					<#= guardName #>Guard guard = new <#= guardName #>Guard(this) ;
+<#
+                }
+				else {
+#>					DefaultGuardBase guard = null ;
+<#
+                }
+#><#					if (!string.IsNullOrEmpty(GetAttValue(transition, "effect")))
+                    {
+#>					this.TransitionToNewState(new <#= GetStateMoniker(transition, ref nsmgr)[2] #>State(this), trigger, guard, (p, n, t) =>
+                    {
+                        On<#= GetAttValue(transition, "effect") #>(p, n, t);
+                        return true ;
+                    }
+                    );
+
+<#					}
+					else {
+#>
+					this.TransitionToNewState(new <#= GetStateMoniker(transition, ref nsmgr)[2] #>State(this), trigger, guard, null);
+<#					}
+#>
+					return;
+				}
+<#          }
+#>			}
+		}
+
+		#region Events
+<#		// create events for all Effects that are raised
+		// by a transition
+		foreach(var eventName in allEvents)
+        {
+#>		protected void On<#= eventName #>(StateBase prev, StateBase next, TriggerBase why)
+		{
+			if (this.<#= eventName #> != null)
+				this.<#= eventName #>(this, new TransitionEventArgs(prev, next, why));
+		}
+		public event TransitionEventHandler <#= eventName #>;
+
+<#      }
+#>		#endregion
+	}
+<#	#endregion
+#>	#endregion
+
+<#= Footer
+#>
+<# manager.Process(true); #>
+
+<#+ /* from here: auxiliary methods */
+
+	static string GetAttValue(XmlElement e, string attName, int part = 0) {
+		// Bring out the guard name and add the trigger if new
+		if ( e.Attributes[attName] != null ) {
+			string[] s = e.Attributes[attName].InnerXml.Split(new char[]{'[', '/', ']'} ) ;
+			if ( s.Length > part ) return s[part].Trim() ;
+        }
+		return null ;
+	}
+
+	List<string> GetStateMoniker(XmlElement e, ref XmlNamespaceManager nsmgr) {
+		// Bring out the guard name and add the trigger if new
+		XmlNode theNode = e.SelectSingleNode("./x:stateMoniker", nsmgr) ;
+		if ( theNode == null ) {
+			theNode = e.SelectSingleNode("./x:endPointMoniker", nsmgr) ;
+        }
+		return new List<string>(theNode.Attributes["name"].InnerXml.Split('/')) ;
+	}
+
+	/// <summary>
+	/// Gets a list of all triggers in the diagram.
+	/// </summary>
+	List<string> GetTriggerNames(StateGraph sg) {
+		var ret = new List<string>();
+
+		XmlNamespaceManager nsmgr = new XmlNamespaceManager(sg.doc.NameTable);
+		XmlElement root = sg.doc.DocumentElement;
+		nsmgr.AddNamespace("x", root.NamespaceURI);
+		XmlNodeList stateList = root.SelectNodes("//x:flowElements/*[name()='state' or name()='endPoint']", nsmgr) ;
+		// iterate all states
+		foreach(XmlNode s in stateList)
+        {
+			// get all flows where s is the start point
+			// XmlNodeList flowToList = s.SelectNodes("./x:flowTo/x:flow", nsmgr) ;
+			string condition = "//x:flowElements/*/x:flowTo/x:flow[x:stateMoniker/@name='/" ;
+			condition += sg.Name ;
+			condition += "/" ;
+			condition += s.Attributes["name"].InnerXml ;
+			condition += "' or x:endPointMoniker/@name='/" ;
+			condition += sg.Name ;
+			condition += "/" ;
+			condition += s.Attributes["name"].InnerXml ;
+			condition += "']" ;
+			XmlNodeList flowToList = root.SelectNodes(condition, nsmgr) ;
+			foreach(XmlElement f in flowToList)
+            {
+				// Retrieve the value from that attribute.
+				string triggerValue = GetAttValue(f, "guard");
+
+				if (!ret.Contains(triggerValue) 
+				 && !string.IsNullOrEmpty(triggerValue))
+					ret.Add(triggerValue);
+            }
+        }
+
+		return ret;
+	}
+
+	/// <summary>
+	/// Gets a list of all guards in the diagram.
+	/// </summary>
+	List<string> GetGuardNames(StateGraph sg) {
+		var ret = new List<string>();
+
+		XmlNamespaceManager nsmgr = new XmlNamespaceManager(sg.doc.NameTable);
+		XmlElement root = sg.doc.DocumentElement;
+		nsmgr.AddNamespace("x", root.NamespaceURI);
+		XmlNodeList stateList = root.SelectNodes("//x:flowElements/*[name()='state' or name()='endPoint']", nsmgr) ;
+		// iterate all states
+		foreach(XmlNode s in stateList)
+        {
+			// get all flows where s is the start point
+			// XmlNodeList flowToList = s.SelectNodes("./x:flowTo/x:flow", nsmgr) ;
+			string condition = "//x:flowElements/*/x:flowTo/x:flow[x:stateMoniker/@name='/" ;
+			condition += sg.Name ;
+			condition += "/" ;
+			condition += s.Attributes["name"].InnerXml ;
+			condition += "' or x:endPointMoniker/@name='/" ;
+			condition += sg.Name ;
+			condition += "/" ;
+			condition += s.Attributes["name"].InnerXml ;
+			condition += "']" ;
+			XmlNodeList flowToList = root.SelectNodes(condition, nsmgr) ;
+			foreach(XmlElement f in flowToList)
+            {
+				// Retrieve the value from that attribute, second part.
+				string guardValue = GetAttValue(f, "guard", 1);
+
+				if (!ret.Contains(guardValue) 
+				 && !string.IsNullOrEmpty(guardValue))
+					ret.Add(guardValue);
+            }
+        }
+
+		return ret;
+	}
+
+	/// <summary>
+	/// Gets a list of all triggers conditions in the diagram.
+	/// </summary>
+	Dictionary<string,condition> GetTriggerConditionNames(StateGraph sg, string TriggerName) {
+		var ret = new Dictionary<string,condition>();
+
+		XmlNamespaceManager nsmgr = new XmlNamespaceManager(sg.doc.NameTable);
+		XmlElement root = sg.doc.DocumentElement;
+		nsmgr.AddNamespace("x", root.NamespaceURI);
+
+		// get all flows where s is the start point
+		// XmlNodeList flowToList = s.SelectNodes("./x:flowTo/x:flow", nsmgr) ;
+		XmlNodeList flowToList = root.SelectNodes("//x:flowElements/*/x:flowTo/x:flow", nsmgr) ;
+		foreach(XmlElement f in flowToList)
+        {
+			// Retrieve the value from that attribute.
+			string tName = GetAttValue(f, "guard", 0) ;
+			if ( tName == TriggerName ) {
+				string conditionValue = GetAttValue(f, "guard", 1);
+				XmlElement ancestor = (XmlElement)f.SelectSingleNode("../..") ;
+				string stateName = GetAttValue(ancestor, "name") ;
+
+				string completeName = conditionValue + "-" + stateName ;
+
+				if (!ret.ContainsKey(completeName) 
+					&& !string.IsNullOrEmpty(conditionValue)) {
+					// Get state name, will be used as CurrentState
+					ret.Add(completeName, new condition(conditionValue, stateName)) ;
+				}
+            }
+        }
+
+		return ret;
+	}
+
+	/// <summary>
+	/// Gets a list of all Effects in a given diagramm.
+	/// </summary> 
+	List<string> GetEffectNames(StateGraph sg)
+	{
+		var ret = new List<string>();
+
+		XmlNamespaceManager nsmgr = new XmlNamespaceManager(sg.doc.NameTable);
+		XmlElement root = sg.doc.DocumentElement;
+		nsmgr.AddNamespace("x", root.NamespaceURI);
+		XmlNodeList stateList = root.SelectNodes("//x:flowElements/*[name()='state' or name()='endPoint']", nsmgr) ;
+		// iterate all states
+		foreach(XmlNode s in stateList)
+        {
+			// get all flows where s is the start point
+			// XmlNodeList flowToList = s.SelectNodes("./x:flowTo/x:flow", nsmgr) ;
+			string condition = "//x:flowElements/*/x:flowTo/x:flow[x:stateMoniker/@name='/" ;
+			condition += sg.Name ;
+			condition += "/" ;
+			condition += s.Attributes["name"].InnerXml ;
+			condition += "' or x:endPointMoniker/@name='/" ;
+			condition += sg.Name ;
+			condition += "/" ;
+			condition += s.Attributes["name"].InnerXml ;
+			condition += "']" ;
+			XmlNodeList flowToList = root.SelectNodes(condition, nsmgr) ;
+			foreach(XmlElement f in flowToList)
+            {
+				// Retrieve the value from that attribute.
+				string guardValue = GetAttValue(f, "effect");
+
+				if (!ret.Contains(guardValue) 
+				 && !string.IsNullOrEmpty(guardValue))
+					ret.Add(guardValue);
+            }
+        }
+
+		return ret;
+	}
+#>
+
+<#+ 
+
+public class StateGraph {
+	public XmlDocument doc ;
+	public string Name ;
+	public StateGraph(string fileName) {
+		doc = new XmlDocument() ;
+		doc.Load(fileName) ;
+
+		Name = doc.DocumentElement.Attributes["name"].InnerXml ;
+	}
+}
+
+public class condition {
+	public condition(string ConditionName, string StateName) {
+		_cn = ConditionName ;
+		_sn = StateName ;
+    }
+
+	public string _cn { get ; private set ; }
+	public string _sn { get ; private set ; }
+}
+ #>
