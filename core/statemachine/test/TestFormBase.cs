@@ -14,6 +14,13 @@ namespace xwcs.core.statemachine.test
     public partial class TestFormBase : Form
     {
 
+		protected void Log(string msg) {
+			richTextBox1.AppendText(msg + Environment.NewLine);
+			richTextBox1.SelectionStart = richTextBox1.Text.Length;
+			// scroll it automatically
+			richTextBox1.ScrollToCaret();
+		}
+
 		private StateMachine _machine;
 		
 		protected virtual StateMachine CreateMachine()
@@ -24,23 +31,29 @@ namespace xwcs.core.statemachine.test
 		public TestFormBase()
         {
             InitializeComponent();
-			//DocState = new DocumentState(this);
-			_machine = CreateMachine();
+			
+			if(!DesignMode) {
+				_machine = CreateMachine();
+				
+				if (_machine == null) return;
 
-			Text = "State machine : " + _machine.Name;
+				_machine.StartTransition += (object s, TransitionEventArgs e) => { Log("Before transition :" + e + "  called."); };
+				_machine.BeforeExitingPreviousState += (object s, TransitionEventArgs e) => { Log("BeforeExit : " + e + "  called."); };
+				_machine.EndTransition += (object s, TransitionEventArgs e) => { Log("End transition :" + e + "  called."); };
 
-			this.FormClosing += (s, e) =>
-            {
-				_machine.Dispose();
-            };
+				Text = "State machine : " + _machine.Name;
 
-			//_propertyChangedNH = new xwcs.core.statemachine.NotificationHelper(this, DocState, DocState_PropertyChanged);
-			_machine.PropertyChanged += DocState_PropertyChanged;
+				this.FormClosing += (s, e) =>
+				{
+					_machine.Dispose();
+				};
+
+				_machine.PropertyChanged += DocState_PropertyChanged;
+			}			
         }
 
         private List<Button> _myButtons = new List<Button>() ;
-        // private xwcs.core.statemachine.NotificationHelper _propertyChangedNH;
-
+        
         private void AddButtons()
         {
             foreach (Button b in _myButtons)
@@ -76,18 +89,6 @@ namespace xwcs.core.statemachine.test
             }
             // else don't care
         }
-
-        /*
-        private void DocState_EventChanged(object sender, TransitionEventArgs e)
-        {
-            if (e.Prev is CorrezioneState && e.Next is ConsolidatoState)
-            {
-                var confirmResult = MessageBox.Show("Pay attention, Event from CorrezioneState to ConsolidatoState occurred",
-                        "Event Handler", MessageBoxButtons.OK);
-            }
-            // else don't care
-        }
-        */
 
         private void button1_Click(object sender, EventArgs e)
         {

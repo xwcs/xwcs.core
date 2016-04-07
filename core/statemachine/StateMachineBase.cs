@@ -55,42 +55,18 @@ namespace xwcs.core.statemachine
             Why = why;
         }
 
-        public StateBase Prev { get; set; }
+		public override string ToString()
+		{
+			return string.Format("Transition event: [{0}] --({1})--> [{2}]", Prev?.Name ?? "", Why?.Name ?? "", Next?.Name ?? "");
+		}
+
+		public StateBase Prev { get; set; }
         public StateBase Next { get; set; }
         public TriggerBase Why { get; set; }
     }
 
     public delegate void TransitionEventHandler(object sender, TransitionEventArgs e) ;
-
-    public class NotificationHelper : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler PropertyChanged;
-        private readonly ISynchronizeInvoke _invokeDelegate;
-        private readonly StateMachine _sm;
-
-        public NotificationHelper(ISynchronizeInvoke invokeDelegate, StateMachine sm, PropertyChangedEventHandler p)
-        {
-            this._invokeDelegate = invokeDelegate;
-            this._sm = sm;
-            this.PropertyChanged = p;
-
-            _sm.PropertyChanged += OnPropertyChanged;
-        }
-
-        private void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (PropertyChanged != null)
-            {
-                if (_invokeDelegate.InvokeRequired)
-                {
-                    _invokeDelegate.Invoke(new PropertyChangedEventHandler(OnPropertyChanged),
-                                          new[] { sender, e });
-                    return;
-                }
-                PropertyChanged(this, e);
-            }
-        }
-    }
+	
     #endregion
 
     #region BaseClasses
@@ -124,10 +100,13 @@ namespace xwcs.core.statemachine
     /// Base class for all Triggers that start a transition between states.
     /// </summary>
     public abstract class TriggerBase {
-        public TriggerBase(StateMachine machine)
+        public TriggerBase(StateMachine machine, string name)
         {
             this.StateMachine = machine ;
+			Name = name;
         }
+
+		public string Name { get; private set; } = "Trigger";
 
         /// <summary>
         /// The state machine this state belongs to.
@@ -294,34 +273,35 @@ namespace xwcs.core.statemachine
         /// <summary>
         /// Makes the state machine go into another state.
         /// </summary>
-        public void TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, Func<StateBase, StateBase, TriggerBase, bool> lambda)
+        public void TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, TransitionEventHandler EffectHandler)
 		{
             if (disposedValue)
             { // Silent
                 throw new InvalidOperationException("State Machine Disposed");
             }
-            // Pull the trigger to find if condition is Ok.
-            OnStartTransition(this.CurrentState, newState, causedByTrigger);
+			// Pull the trigger to find if condition is Ok.
+			OnTransitionEvent(StartTransition, this.CurrentState, newState, causedByTrigger);
             if ( guard != null )
             {
                 guard.Execute();
             }
 
-            OnBeforeExitingPreviousState(this.CurrentState, newState, causedByTrigger);
+			OnTransitionEvent(BeforeExitingPreviousState, this.CurrentState, newState, causedByTrigger);
             // exit the current state
             if (this.CurrentState != null)
 				this.CurrentState.OnExit(causedByTrigger);
 
             StateBase previousState = this.CurrentState ;
 			this.CurrentState = newState;
-            // OnEvent(previousState, this.CurrentState, causedByTrigger);
-            if (lambda != null)
-                lambda(previousState, this.CurrentState, causedByTrigger);
+			
+			//call effect
+			if(EffectHandler != null)
+				OnTransitionEvent(EffectHandler, previousState, this.CurrentState, causedByTrigger);
 
             // enter the new state
             if (this.CurrentState != null)
 				this.CurrentState.OnEntry(causedByTrigger);
-            OnEndTransition(previousState, this.CurrentState, causedByTrigger);
+			OnTransitionEvent(EndTransition, previousState, this.CurrentState, causedByTrigger);
         }
 
         private ISynchronizeInvoke _invokeDelegate;
@@ -342,7 +322,8 @@ namespace xwcs.core.statemachine
             }
 			private set
 			{
-				_CurrentState = value; OnPropertyChanged(this, new PropertyChangedEventArgs("CurrentState"));
+				_CurrentState = value; 
+				OnPropertyChanged(this, new PropertyChangedEventArgs("CurrentState"));
 			}
 		}
 
@@ -398,26 +379,26 @@ namespace xwcs.core.statemachine
             // Console.WriteLine("Consumer Thread: consumed {0} items", count);
         }
 
-        protected void OnStartTransition(StateBase prev, StateBase next, TriggerBase why)
-        {
-            if (this.StartTransition != null)
-                this.StartTransition(this, new TransitionEventArgs(prev, next, why));
-        }
+
+		//base events
         public event TransitionEventHandler StartTransition;
+		public event TransitionEventHandler BeforeExitingPreviousState;
+		public event TransitionEventHandler EndTransition;
 
-        protected void OnBeforeExitingPreviousState(StateBase prev, StateBase next, TriggerBase why)
-        {
-            if (this.BeforeExitingPreviousState != null)
-                this.BeforeExitingPreviousState(this, new TransitionEventArgs(prev, next, why));
-        }
-        public event TransitionEventHandler BeforeExitingPreviousState;
+		private void OnTransitionEvent(TransitionEventHandler handler, StateBase prev, StateBase next, TriggerBase why) {
+			if (handler != null)
+			{
+				if (_invokeDelegate.InvokeRequired)
+				{
+					_invokeDelegate.Invoke(new TransitionEventHandler(handler), 
+									new[] { this, (object) new TransitionEventArgs(prev, next, why) }
+					);
+					return;
+				}
+				handler(this, new TransitionEventArgs(prev, next, why));
+			}
+		}
 
-        protected void OnEndTransition(StateBase prev, StateBase next, TriggerBase why)
-        {
-            if (this.EndTransition != null)
-                this.EndTransition(this, new TransitionEventArgs(prev, next, why));
-        }
-        public event TransitionEventHandler EndTransition;
 
         protected void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -428,8 +409,7 @@ namespace xwcs.core.statemachine
             {
                 if (_invokeDelegate.InvokeRequired)
                 {
-                    _invokeDelegate.Invoke(new PropertyChangedEventHandler(PropertyChanged),
-                                          new[] { sender, e });
+                    _invokeDelegate.Invoke(new PropertyChangedEventHandler(PropertyChanged), new[] { sender, e });
                     return;
                 }
                 PropertyChanged(this, e);
@@ -440,5 +420,5 @@ namespace xwcs.core.statemachine
     }
 	#endregion
 }
-// End of Tempate
+// End of Template
 
