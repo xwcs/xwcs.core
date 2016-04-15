@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 using LinqKit;
 using xwcs.core.db.model;
+using System.Runtime.CompilerServices;
 
 namespace xwcs.core.linq.filter
 {
@@ -316,6 +317,12 @@ namespace xwcs.core.linq.filter
 #endif
 				FilterBinaryOperator op = FilterBinaryOperator.Eq;
 				string propertyName = pi.Name;
+
+				/* check null values */
+				//TODO : add others types
+				if(pi.PropertyType.Name == "Int32") {
+					if ((Int32)propertyValue == Int32.MinValue) return;
+				}
 				
 				bool skip = false;
 
