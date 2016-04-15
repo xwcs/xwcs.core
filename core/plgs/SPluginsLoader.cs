@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace xwcs.core.plgs
 {
@@ -122,8 +123,18 @@ namespace xwcs.core.plgs
             return string.Empty;
         }
 
-        
-        public IPlugin getPluginByGuid(Guid guid)
+		public IPlugin getPluginByName(string n)
+		{
+			IEnumerable<IPlugin> p = _plugins.Values.Where(o => o.Info.Name == n);
+			if(p.Count() > 0) {
+				return p.First();
+			}
+			return null;
+		}
+
+
+
+		public IPlugin getPluginByGuid(Guid guid)
         {
             if (_plugins.ContainsKey(guid))
             {

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 using LinqKit;
+using System.Runtime.CompilerServices;
 
 namespace xwcs.core.linq.filter
 {
@@ -35,6 +36,18 @@ namespace xwcs.core.linq.filter
 			predicate = predicate.And(Expression.Lambda<Func<lib.mainDataModel.msg_box, bool>>(e2, new ParameterExpression[] { pe }));
 
 	*/
+
+	public class FilterObjectBase {
+		
+		protected bool SetProperty<VT>(ref VT storage, VT value, [CallerMemberName] string propertyName = null)
+		{
+			if (Equals(storage, value)) return false;
+			storage = value;
+
+			
+			return true;
+		}
+	}
 
 	public interface IFilterExpression {
 		Expression getExpression();
@@ -200,6 +213,12 @@ namespace xwcs.core.linq.filter
 				FilterBinaryOperator op = FilterBinaryOperator.Eq;
 				string propertyName = pi.Name;
 				object propertyValue = pi.GetValue(fo);
+
+				/* check null values */
+				//TODO : add others types
+				if(pi.PropertyType.Name == "Int32") {
+					if ((Int32)propertyValue == Int32.MinValue) return;
+				}
 
 				if (propertyValue == null) return; // we skip empty
 				
