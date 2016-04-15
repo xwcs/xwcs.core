@@ -318,12 +318,6 @@ namespace xwcs.core.linq.filter
 				FilterBinaryOperator op = FilterBinaryOperator.Eq;
 				string propertyName = pi.Name;
 
-				/* check null values */
-				//TODO : add others types
-				if(pi.PropertyType.Name == "Int32") {
-					if ((Int32)propertyValue == Int32.MinValue) return;
-				}
-				
 				bool skip = false;
 
 				try {

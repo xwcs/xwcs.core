@@ -1,6 +1,7 @@
 ﻿namespace xwcs.core.controls
 {
 	public enum VisualControlStartingKind {
+		ActivateOpened,
 		StartingNew,
 		StartingPersisted
 	}
@@ -9,7 +10,10 @@
     {
         VisualControlInfo VisualControlInfo { get; }
 		string ControlName { get;  }
-		void Start(VisualControlStartingKind startingKind = VisualControlStartingKind.StartingNew);
+		void Start(
+			VisualControlStartingKind startingKind = VisualControlStartingKind.StartingNew,
+			object data = null
+		);
     }
 }
 
