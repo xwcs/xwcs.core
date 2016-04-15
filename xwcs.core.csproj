@@ -31,7 +31,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>Sign.snk</AssemblyOriginatorKeyFile>
@@ -91,7 +91,7 @@
     <Compile Include="core\db\model\ReflectionHelper.cs" />
     <Compile Include="core\db\EntityBase.cs" />
     <Compile Include="core\db\model\serialize\XmlWriterExt.cs" />
-    <Compile Include="core\evt\DocumentActivatedEvent.cs" />
+    <Compile Include="core\evt\VisualControlActionEvent.cs" />
     <Compile Include="core\evt\DocumentChangedEvent.cs" />
     <Compile Include="core\evt\AddToolBarRequestEvent.cs" />
     <Compile Include="core\evt\Event.cs" />
@@ -102,16 +102,17 @@
     <Compile Include="core\evt\IEvent.cs" />
     <Compile Include="core\evt\OpenPanelRequestEvent.cs" />
     <Compile Include="core\linq\filter\FilterPredicate.cs" />
-    <Compile Include="core\manager\ManagerWithStateBase.cs" />
     <Compile Include="core\manager\SLogManager.cs" />
     <Compile Include="core\manager\SPersistenceManager.cs" />
     <Compile Include="core\manager\SWidgetManager.cs" />
+    <Compile Include="core\plgs\persistent\IPersistentState.cs" />
     <Compile Include="core\plgs\INonVisualPlugin.cs" />
     <Compile Include="core\plgs\IAssemblyInfo.cs" />
     <Compile Include="core\plgs\ISavable.cs" />
     <Compile Include="core\plgs\IPlugin.cs" />
     <Compile Include="core\plgs\IPluginHost.cs" />
     <Compile Include="core\plgs\IVisualPlugin.cs" />
+    <Compile Include="core\plgs\persistent\PersistentStateBase.cs" />
     <Compile Include="core\plgs\PluginBase.cs" />
     <Compile Include="core\plgs\PluginInfo.cs" />
     <Compile Include="core\plgs\SPluginsLoader.cs" />

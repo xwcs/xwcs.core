@@ -10,24 +10,24 @@ namespace xwcs.core.evt
 
         public Event(object s, object t, object d)
         {
-            sender = s;
-            type = t;
-            data = d;
+            _sender = s;
+            _type = t;
+            _data = d;
         }
 
-        public object sender
+        public object Sender
         {
             get { return _sender; }
             set { _sender = value; }
         }
 
-        public object type
+        public object Type
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public object data
+        public object Data
         {
             set { _data = value; }
             get { return _data; }
