@@ -3,7 +3,9 @@ using System.Runtime.CompilerServices;
 
 namespace xwcs.core.evt
 {
-    public class SEventProxy
+	public delegate void EventHandler<in T>(T e) where T : Event;
+
+	public class SEventProxy
     {
 
         private static SEventProxy instance;
@@ -28,26 +30,30 @@ namespace xwcs.core.evt
         */
 
 
-        protected EventHandlerList listEventDelegates = new EventHandlerList();
-        public delegate void EventHandler(Event e);
+        protected EventHandlerList listEventDelegates = new EventHandlerList();        
 
-        public void addEventHandler(object type, EventHandler value)
-        {
+        public void addEventHandler<T>(object type, EventHandler<T> value) where T : Event
+		{
             listEventDelegates.AddHandler(type, value);
         }
+		public void addEventHandler(object type, EventHandler<Event> value)
+		{
+			listEventDelegates.AddHandler(type, value);
+		}
 
-        public void removeEventHandler(object type, EventHandler value)
-        {
+		public void removeEventHandler<T>(object type, EventHandler<T> value) where T : Event
+		{
             listEventDelegates.RemoveHandler(type, value);
         }
+		
+		public void removeEventHandler(object type, EventHandler<Event> value)
+		{
+			listEventDelegates.RemoveHandler(type, value);
+		}
 
-        public void fireEvent(Event e)
+		public void fireEvent<T>(T e) where T : Event
         {
-            EventHandler handler = (EventHandler)listEventDelegates[e.type];
-            if (handler != null)
-            {
-                handler(e);
-            }
-        }
+			((EventHandler<T>)listEventDelegates[e.Type])?.Invoke(e);
+		}
     }
 }

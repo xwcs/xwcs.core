@@ -2,8 +2,8 @@
 {
     interface IEvent
     {
-        object sender { get; }
-        object type { get; }
-        object data { get; }
+        object Sender { get; }
+        object Type { get; }
+        object Data { get; }
     }
 }
