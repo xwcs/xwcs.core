@@ -86,6 +86,13 @@
     <Compile Include="core\db\binding\attributes\StyleAttribute.cs" />
     <Compile Include="core\db\binding\attributes\TokenEditAttribute.cs" />
     <Compile Include="core\db\binding\DataLayoutBindingSource.cs" />
+    <Compile Include="core\db\fo\attributes\ExtendedConditionAttribute.cs" />
+    <Compile Include="core\db\fo\FilterObjectBase.cs" />
+    <Compile Include="core\db\fo\FilterDataLayoutBindingSource.cs" />
+    <Compile Include="core\db\fo\FilterField.cs" />
+    <Compile Include="core\db\fo\Helper.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="core\db\model\attributes\MutableAttribute.cs" />
     <Compile Include="core\db\StructureWatcher.cs" />
     <Compile Include="core\db\model\attributes\SerializedAttribute.cs" />

@@ -31,20 +31,14 @@ namespace xwcs.core.db
 			if (Equals(storage, value)) return false;
 			storage = value;
 
-			if (PropertyChanged != null)
-			{
-				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-			}
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 			return true;
 		}
 
 		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
 		{
-			if (PropertyChanged != null)
-			{
-				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-			}
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 		}
 	}
 
@@ -52,13 +46,6 @@ namespace xwcs.core.db
 	{
 		
 		public event PropertyDeserializedEventHandler PropertyDeserialized;
-
-		public SerializedEntityBase()
-		{
-
-		}
-
-		
 
 		public abstract void GetMutablePropertiesType(Dictionary<string, Type> dest);
 
@@ -87,10 +74,7 @@ namespace xwcs.core.db
 				storage = null;
 			}
 
-			if (PropertyDeserialized != null)
-			{
-				PropertyDeserialized(this, new PropertyDeserialized(storage, propertyName));
-			}
+			PropertyDeserialized?.Invoke(this, new PropertyDeserialized(storage, propertyName));
 
 			return storage;
 		}

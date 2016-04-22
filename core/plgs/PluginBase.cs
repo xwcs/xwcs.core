@@ -46,7 +46,7 @@ namespace xwcs.core.plgs
 
         private string getAssestsDirectory(bool global = false)
         {
-            return AppDomain.CurrentDomain.BaseDirectory + "Plugins\\assets" + (!global ? "\\" + _pluginInfo.Name : "\\");
+            return AppDomain.CurrentDomain.BaseDirectory + "Plugins\\assets" + (!global ? "\\" + _pluginInfo.Namespace : "\\");
         }
 
         private Bitmap getBitmapFromFile(string fileName, bool global = false)

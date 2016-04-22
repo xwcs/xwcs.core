@@ -58,6 +58,11 @@ namespace xwcs.core.plgs
             _type = type;
         }
         
+		public string Namespace {
+			get {
+				return _name.Substring(0, _name.LastIndexOf('.'));	
+			}
+		}
         
         
 

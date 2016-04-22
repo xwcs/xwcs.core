@@ -16,6 +16,7 @@ namespace xwcs.core.controls
         private ControlDockStyle _dockStyle;
         private Guid _GUID;
         private Type _classType;
+		private bool _allowMulti;
 
 		/// <summary>
 		/// This is Visual control unique instance GUID it will be used for 
@@ -61,7 +62,7 @@ namespace xwcs.core.controls
 			_dockStyle = src._dockStyle;
 			_GUID = src._GUID;
 			_classType = src._classType;
-
+			_allowMulti = src._allowMulti;
 			// make new instance guid if we do coy from template
 			_instance_GUID = Guid.NewGuid();
 		}
@@ -71,6 +72,8 @@ namespace xwcs.core.controls
 			Name = name;
 			
 			_GUID = Guid.Parse((string)t.GetField("GUID", BindingFlags.Static | BindingFlags.Public).GetValue(null));
+			FieldInfo fi = t.GetField("ALLOW_MULTI", BindingFlags.Static | BindingFlags.Public);
+			_allowMulti = fi != null ? (bool)fi.GetValue(false) : false;
 			_version = (string)t.GetField("VERSION", BindingFlags.Static | BindingFlags.Public).GetValue(null);
 			_dockStyle = (ControlDockStyle)t.GetField("DOCK_STYLE", BindingFlags.Static | BindingFlags.Public).GetValue(null);
 			_classType = t;
@@ -122,22 +125,21 @@ namespace xwcs.core.controls
 
         public Guid GUID
         {
-            get { return _GUID; }
-            set { _GUID = value; }
-        }
+			get { return _GUID; }
+			set { _GUID = value; }
+		}
+
+		public bool AllowMulti 
+		{
+			get { return _allowMulti; }
+			set { _allowMulti = value; }
+		}
 
         [XmlIgnore]
         public Type ClassType
         {
-            get
-            {
-                return _classType;
-            }
-
-            protected set
-            {
-                _classType = value;
-            }
+            get{ return _classType; }
+			protected set { _classType = value; }
         }		
     }
 }

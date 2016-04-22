@@ -34,6 +34,7 @@ namespace xwcs.core.db.binding
 	{
 		void onGetQueryable(GetFieldQueryableEventData qd);
         void onGetOptionsList(GetFieldOptionsListEventData qd);
+		object Current { get; }
     }
 
 
@@ -353,19 +354,13 @@ namespace xwcs.core.db.binding
 
 		public void onGetQueryable(GetFieldQueryableEventData qd)
 		{
-			if (GetFieldQueryable != null)
-			{
-				GetFieldQueryable(this, qd);
-			}
+			GetFieldQueryable?.Invoke(this, qd);
 		}
 
         public void onGetOptionsList(GetFieldOptionsListEventData qd)
         {
-            if (GetFieldOptionsList != null)
-            {
-                GetFieldOptionsList(this, qd);
-            }
-        }
+			GetFieldOptionsList?.Invoke(this, qd);
+		}
 
         protected virtual void onFieldRetrieving(FieldRetrievingEventArgs e) { }
 		protected virtual void onFieldRetrieved(FieldRetrievedEventArgs e) { }

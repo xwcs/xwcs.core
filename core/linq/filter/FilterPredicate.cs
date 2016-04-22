@@ -144,6 +144,10 @@ namespace xwcs.core.linq.filter
 		protected Type _valueType;
 		protected string _path;
 
+		public string Name { get { return _propertyName; } }
+		public string Path { get { return _path; } }
+		public PropertyInfo PropertyInfo { get { return _propInfo; } }
+
 		public FilterPredicate(string propertyNameOverride, scan_context ctx, PropertyInfo pi, FilterBinaryOperator op = FilterBinaryOperator.Eq) {
 			_contextExpression = ctx.Expression;
 			_propertyName = propertyNameOverride;
@@ -188,17 +192,16 @@ namespace xwcs.core.linq.filter
 	*/
 	public class Filter<ContextType, FoType> : IFilterExpression<FoType>
 	{
-		
-
-
 		// this list contain flattered list of all fields
-		protected List<IFilterExpression<FoType>> _predicates;
+		protected Dictionary<string, IFilterExpression<FoType>> _predicates;
 		protected object _filterObject;
 		protected FilterBinaryOperator _op;
 		protected ParameterExpression _mainExpression;
 		protected scan_context _scan_ctx = new scan_context();
 
 		public FoType Fo { get; private set; }
+
+		public Dictionary<string, IFilterExpression<FoType>> Predicates { get { return _predicates; } }
 
 		public static implicit operator FoType(Filter<ContextType, FoType> from) {
 			return from.Fo;
@@ -213,9 +216,9 @@ namespace xwcs.core.linq.filter
 			_op = op;
 			//expression in destination object domain
 			_mainExpression = Expression.Parameter(typeof(ContextType), "o");
-			_predicates = new List<IFilterExpression<FoType>>();
+			_predicates = new Dictionary<string, IFilterExpression<FoType>>();
             scanCustomAttributes(fo.GetType(), "", typeof(ContextType), _mainExpression);
-			GetSnapshot(fo);	
+			//GetSnapshot(fo);	
 		}
 
 		public bool HasValue(FoType source)
@@ -228,7 +231,7 @@ namespace xwcs.core.linq.filter
 		}
 
 		public void GetSnapshot() {
-			foreach (IFilterExpression<FoType> fe in _predicates)
+			foreach (IFilterExpression<FoType> fe in _predicates.Values)
 			{
 				fe.GetSnapshot(Fo);
 			}
@@ -236,7 +239,7 @@ namespace xwcs.core.linq.filter
 
 		public void GetSnapshot(FoType source)
 		{
-			foreach(IFilterExpression<FoType> fe in _predicates) {
+			foreach(IFilterExpression<FoType> fe in _predicates.Values) {
 				fe.GetSnapshot(source);
 			}
 		}
@@ -244,7 +247,7 @@ namespace xwcs.core.linq.filter
 		public Expression GetExpression(FoType source) {
 			if(_op == FilterBinaryOperator.And) {
 				var exp = PredicateBuilder.True<ContextType>();
-				foreach(IFilterExpression<FoType> fe in _predicates) {
+				foreach(IFilterExpression<FoType> fe in _predicates.Values) {
 					if (fe.HasValue(source)) {
 						exp = exp.And(Expression.Lambda<Func<ContextType, bool>>(fe.GetExpression(source), new ParameterExpression[] { _mainExpression }));
 					}					
@@ -253,7 +256,7 @@ namespace xwcs.core.linq.filter
 			}
 			else {
 				var exp = PredicateBuilder.False<ContextType>();
-				foreach (IFilterExpression<FoType> fe in _predicates)
+				foreach (IFilterExpression<FoType> fe in _predicates.Values)
 				{
 					if (fe.HasValue(source))
 					{
@@ -275,6 +278,8 @@ namespace xwcs.core.linq.filter
 		{
 			if (!_scan_ctx.PushContext(t, ctxt, expr, name)) return;
 
+
+			Dictionary<string, PropertyInfo> metaCache = new Dictionary<string, PropertyInfo>();
 			//handle eventual MetadataType annotation which will add annotations from surrogate object
 			try
 			{
@@ -286,7 +291,7 @@ namespace xwcs.core.linq.filter
 					PropertyInfo[] mpis = metaType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 					foreach (PropertyInfo pi in mpis)
 					{
-						handleOneProperty(pi);
+						metaCache[pi.Name] = pi;
 					}
 				}
 			}
@@ -299,24 +304,31 @@ namespace xwcs.core.linq.filter
 			PropertyInfo[] pis = t.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 			foreach (PropertyInfo pi in pis)
 			{
-				handleOneProperty(pi);
+				if(metaCache.ContainsKey(pi.Name)) {
+					handleOneProperty(pi, metaCache[pi.Name]);
+				}
+				else {
+					handleOneProperty(pi);
+				}				
 			}
 
 			_scan_ctx.PopContext();
 		}
 
 
-		private void handleOneProperty(PropertyInfo pi)
+		private void handleOneProperty(PropertyInfo pi, PropertyInfo metaPi = null)
 		{
 			//we can have complex types			
 			if (pi != null)
 			{
-
-#if DEBUG
-	manager.SLogManager.getInstance().getClassLogger(this.GetType()).Debug("Make filter predicate for : " + pi.Name);
-#endif
 				FilterBinaryOperator op = FilterBinaryOperator.Eq;
 				string propertyName = pi.Name;
+				string propertyPath = _scan_ctx.Path + pi.Name;
+
+#if DEBUG
+				manager.SLogManager.getInstance().getClassLogger(this.GetType()).Debug("Make filter predicate for : " + propertyPath);
+#endif
+				
 
 				bool skip = false;
 
@@ -328,28 +340,47 @@ namespace xwcs.core.linq.filter
 						// handle eventual overrides
 						op = fpa.Operator;
 						skip = fpa.SkipProperty;
-					}		
-						
-				}catch(Exception) {}
+					}
+
+					//check also meta info if present
+					if(metaPi != null) {
+						attr = metaPi.GetCustomAttributes(typeof(FilterPredicateAttribute), true);
+
+						if (attr.Count() > 0)
+						{
+							FilterPredicateAttribute fpa = (attr[0] as FilterPredicateAttribute);
+							// handle eventual overrides
+							op = fpa.Operator;
+							skip = fpa.SkipProperty;
+						}
+					}
+				}
+				catch(Exception) {}
 
 				if (skip) return; //skipped property
 
-				if (pi.PropertyType.FullName == "System.String" || pi.PropertyType.IsPrimitive || pi.PropertyType.FullName == "System.DateTime" || pi.PropertyType.IsValueType)
+				if (pi.PropertyType.FullName == "System.String" || pi.PropertyType.IsPrimitive || pi.PropertyType.FullName == "System.DateTime" || pi.PropertyType.IsValueType) // || pi.PropertyType.IsGenericType)
 				{
 					// direct field
-					_predicates.Add(new FilterPredicate<FoType>(propertyName, _scan_ctx, pi, op));
+					if(!_predicates.ContainsKey(propertyPath)) {
+						_predicates[propertyPath] = new FilterPredicate<FoType>(propertyName, _scan_ctx, pi, op);
+					}
+					
 				}
 				else if (pi.PropertyType.IsClass) //do recursion only for classes
 				{
 					// nested object so we have to change contexts
-					scanCustomAttributes(
-						// Fo domain
-						pi.PropertyType,
-						propertyName,
-						// Filtered domain
-						_scan_ctx.CtxType.GetProperty(propertyName).PropertyType,
-						Expression.Property(_scan_ctx.Expression, _scan_ctx.CtxType.GetProperty(propertyName))
-					);
+					Type t = _scan_ctx.CtxType?.GetProperty(propertyName)?.PropertyType;
+					if(t != null) {
+						scanCustomAttributes(
+							// Fo domain
+							pi.PropertyType,
+							propertyName,
+							// Filtered domain
+							t,
+							Expression.Property(_scan_ctx.Expression, _scan_ctx.CtxType.GetProperty(propertyName))
+						);
+					}
 				}			
 			}			
 		}
