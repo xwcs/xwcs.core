@@ -124,10 +124,10 @@ namespace xwcs.core.statemachine
             this.StateMachine = machine;
         }
 
-        public virtual void Execute()
+        public virtual bool Execute()
         {
-            // Will throw a GuardException when condition goes wrong
-            return;
+            // Will never throw an exception
+            return true;
         }
 
         /// <summary>
@@ -186,6 +186,30 @@ namespace xwcs.core.statemachine
         /// </summary>
         public virtual void OnExit(TriggerBase trigger) { }
 	}
+
+    /// <summary>
+    /// Base class for all Conditional States of the State Machine.
+    /// </summary>
+    public abstract class ConditionStateBase : StateBase
+    {
+        /// <summary>
+        /// Creates a new instance of this state with a reference to the state machine.
+        /// </summary>
+        public ConditionStateBase(StateMachine machine, string Name) : base(machine, Name) { }
+
+        /// <summary>
+        /// Is executed when the state machine enters this state.
+        /// </summary>
+        public override void OnEntry(TriggerBase trigger) {
+            // Ask for available triggers.
+            List<TriggerBase> tList = GetTriggers();
+
+            foreach (TriggerBase t in tList)
+            {
+                this.StateMachine.ProcessTrigger(t);
+            }
+        }
+    }
 
     /// <summary>
     /// This state represents the start of the StateMachine.
@@ -283,7 +307,7 @@ namespace xwcs.core.statemachine
 			OnTransitionEvent(StartTransition, this.CurrentState, newState, causedByTrigger);
             if ( guard != null )
             {
-                guard.Execute();
+                if (!guard.Execute()) return; // Guard said this trigger can't go on
             }
 
 			OnTransitionEvent(BeforeExitingPreviousState, this.CurrentState, newState, causedByTrigger);
@@ -323,8 +347,11 @@ namespace xwcs.core.statemachine
 			private set
 			{
 				_CurrentState = value; 
-				OnPropertyChanged(this, new PropertyChangedEventArgs("CurrentState"));
-			}
+                if ( !(_CurrentState is ConditionStateBase) )
+                {
+                    OnPropertyChanged(this, new PropertyChangedEventArgs("CurrentState"));
+                }
+            }
 		}
 
         /// <summary>
@@ -372,8 +399,11 @@ namespace xwcs.core.statemachine
             {
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    TriggerBase t = _queue.Dequeue();
-                    ProcessTriggerInternal(t) ;
+                    while(_queue.Count > 0)
+                    {
+                        TriggerBase t = _queue.Dequeue();
+                        ProcessTriggerInternal(t);
+                    }
                 }
             }
             // Console.WriteLine("Consumer Thread: consumed {0} items", count);
