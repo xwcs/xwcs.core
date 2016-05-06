@@ -44,17 +44,17 @@ namespace xwcs.core.plgs
 
 
 
-        private string getAssestsDirectory()
+        private string getAssestsDirectory(bool global = false)
         {
-            return AppDomain.CurrentDomain.BaseDirectory + "/plugins/" + _pluginInfo.Name;
+            return AppDomain.CurrentDomain.BaseDirectory + "Plugins\\assets" + (!global ? "\\" + _pluginInfo.Name : "\\");
         }
 
-        private Bitmap getBitmapFromFile(string fileName)
+        private Bitmap getBitmapFromFile(string fileName, bool global = false)
         {
             Bitmap bitmap = null;
             try
             {
-                bitmap = (Bitmap)Image.FromFile(getAssestsDirectory() + "/" + fileName, true);
+                bitmap = (Bitmap)Image.FromFile(getAssestsDirectory() + "\\" + fileName, true);
             }
             catch(Exception e)
             {
@@ -64,9 +64,9 @@ namespace xwcs.core.plgs
             return bitmap;
         }
 
-        public void setImageToButtonItem(DevExpress.XtraBars.BarButtonItem buttonItem, string fileName)
+        public void setImageToButtonItem(DevExpress.XtraBars.BarButtonItem buttonItem, string fileName, bool global = false)
         {
-            Bitmap bmp = getBitmapFromFile("images/" + fileName);
+            Bitmap bmp = getBitmapFromFile("img\\" + fileName);
             if (bmp != null) buttonItem.Glyph = bmp;
         }
     }

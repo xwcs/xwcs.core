@@ -10,6 +10,7 @@ namespace xwcs.core.evt
     {
         //Private
         xwcs.core.controls.VisualControlInfo _vci;
+		object _dataObject;
 
         public VisualControlInfo Vci
         {
@@ -23,7 +24,20 @@ namespace xwcs.core.evt
                 _vci = value;
             }
         }
-    }
+
+		public object DataObject
+		{
+			get
+			{
+				return _dataObject;
+			}
+
+			set
+			{
+				_dataObject = value;
+			}
+		}
+	}
 
     public class OpenPanelRequestEvent : Event
     {

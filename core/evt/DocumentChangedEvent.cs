@@ -1,26 +1,16 @@
 ﻿namespace xwcs.core.evt
 {
-    public class DocumentChangedRequest
+	public class DocumentChangedEventData : VisualControlActionEventData {
+		public DocumentChangedEventData(controls.IVisualControl vc) : base(vc, VisualControlActionKind.Changed)
+		{ 
+		}
+	}
+
+	public class DocumentChangedEvent : VisualControlActionEvent
     {
-
-        public xwcs.core.controls.IVisualControl visualControl { get; set; }
-
-        public DocumentChangedRequest(xwcs.core.controls.IVisualControl vc)
+        public DocumentChangedEvent(object sender, DocumentChangedEventData requestData) : base(sender, requestData)
         {
-            this.visualControl = vc;
-        }
-    }
-
-    public class DocumentChangedEvent : Event
-    {
-        public DocumentChangedEvent(object sender, DocumentChangedRequest requestData) : base(sender, EventType.DocumentChangedEvent, requestData)
-        {
-        }
-
-        public DocumentChangedRequest requestData
-        {
-            set { _data = value; }
-            get { return (DocumentChangedRequest)_data; }
-        }
+			Type = EventType.DocumentChangedEvent; //force type
+		}
     }
 }

@@ -7,10 +7,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 using LinqKit;
+using xwcs.core.db.model;
+using System.Runtime.CompilerServices;
 
 namespace xwcs.core.linq.filter
 {
-
 	/*
 
 			var predicate = PredicateBuilder.True<lib.mainDataModel.msg_box>();
@@ -36,9 +37,20 @@ namespace xwcs.core.linq.filter
 
 	*/
 
-	public interface IFilterExpression {
-		Expression getExpression();
-    }
+	/*
+	 * NOTE:	We do FilterObject from some Type and we will produce 
+	 *			complex expression which will be applied to the ContextType collection 
+	 *			of objects, There must be structural coherency, it does mean:
+	 *			Filter object must have structure which is subset of  ContextType
+	 *			structure, if there is property with different name, it should be
+	 *			override using FilterPredicateAttribute.PropertyName 
+	 */
+
+	public interface IFilterExpression<FoT> {
+		Expression GetExpression(FoT source);
+		void GetSnapshot(FoT source);
+		bool HasValue(FoT source);
+	}
 
 	public enum FilterBinaryOperator {
 		Eq,
@@ -58,43 +70,104 @@ namespace xwcs.core.linq.filter
 	{
 		// can override default = operator
 		public FilterBinaryOperator Operator { get; set; } = FilterBinaryOperator.Eq;
-		// can override property name
-		public string PropertyName { get; set; } = "";
 		// property can be skipped
 		public bool SkipProperty { get; set; } = false;
+	}
+
+
+	public class scan_context
+	{
+		
+
+		private class ctx_elem
+		{
+			public Type FoType;
+			public Type FoProxiedType;
+			public Type CtxType;
+			public Expression Expression;
+			public string Path;
+		}
+
+		private Stack<ctx_elem> _curentTypesChain;
+
+		public scan_context()
+		{
+			_curentTypesChain = new Stack<ctx_elem>();
+		}
+
+		public scan_context(scan_context orig)
+		{
+			_curentTypesChain = new Stack<ctx_elem>(orig._curentTypesChain.Reverse());
+		}
+
+		public string Path { get { string n = _curentTypesChain.Peek().Path; return n != "" ? n + "." : n; } }
+		public Type CtxType { get { return _curentTypesChain.Peek().CtxType; } }
+		public Type FoType { get { return _curentTypesChain.Peek().FoType; } }
+		public Expression Expression { get { return _curentTypesChain.Peek().Expression; } }
+
+		public bool PushContext(Type t, Type ctxt, Expression exp, string name)
+		{
+			if (_curentTypesChain.Count > 0)
+			{
+				// cycle check 
+				if ((from e in _curentTypesChain where (e.FoType == t || e.FoProxiedType == t) select e).Count() > 0) return false;
+			}
+			// new in chain
+			if (t.BaseType != null && t.Namespace == "System.Data.Entity.DynamicProxies")
+			{
+				_curentTypesChain.Push(new ctx_elem { CtxType = ctxt, FoType = t, FoProxiedType = t.BaseType, Path = name, Expression = exp });
+			}
+			else
+			{
+				_curentTypesChain.Push(new ctx_elem { CtxType = ctxt, FoType = t, FoProxiedType = t, Path = name, Expression = exp });
+			}
+
+			return true;
+		}
+
+		public void PopContext()
+		{
+			_curentTypesChain.Pop();
+		}
 	}
 
 	/*
 		One single condition predicate
 	*/
-	public class FilterPredicateContext
-	{
-		public Type type;
-		public Expression expression;
-	}
-
-
-	public class FilterPredicate : IFilterExpression
+	public class FilterPredicate<FoT> : IFilterExpression<FoT>
 	{
 		protected string _propertyName;
 		protected Expression _contextExpression;
-		protected object _propertyValue;
+		protected object _propertyValueSnapshot; //filter will emit predicate only if value is different from snapshot
 		protected FilterBinaryOperator _operator;
-
 		protected PropertyInfo _propInfo;
 		protected Type _valueType;
+		protected string _path;
 
-		public FilterPredicate(FilterPredicateContext ctx, string propName, object propValue, FilterBinaryOperator op = FilterBinaryOperator.Eq) {
-			_contextExpression = ctx.expression;
-			_propertyName = propName;
-			_propInfo = ctx.type.GetProperty(propName);
-			_operator = op;
-			_propertyValue = propValue;
+		public FilterPredicate(string propertyNameOverride, scan_context ctx, PropertyInfo pi, FilterBinaryOperator op = FilterBinaryOperator.Eq) {
+			_contextExpression = ctx.Expression;
+			_propertyName = propertyNameOverride;
+			_path = ctx.Path + _propertyName;
+			_propInfo = ctx.CtxType.GetProperty(_propertyName); // ReflectionHelper.GetPropertyFromPath(ctx.CtxType, _path);
+			_operator = op;			
+			_propertyValueSnapshot = null;
 		}
 
-		public Expression getExpression() {
+		public void GetSnapshot(FoT source) {
+			_propertyValueSnapshot = source.GetPropValueByPathUsingReflection(_path);
+		}
+
+		public bool HasValue(FoT source) {
+			object _propertyValue = source.GetPropValueByPathUsingReflection(_path);
+			bool ret = (_propertyValue != null && !_propertyValue.Equals(_propertyValueSnapshot));
+			return ret;
+		}
+
+		public Expression GetExpression(FoT source) {
+			object _propertyValue = source.GetPropValueByPathUsingReflection(_path);
+
 			Expression lhe = Expression.Property(_contextExpression, _propInfo);
-			Expression rhe = Expression.Constant(_propertyValue, _propertyValue.GetType());
+			Expression rhe = Expression.Constant(_propertyValue, _propInfo.PropertyType); // _propertyValue.GetType());
 
 			switch(_operator) {
 				case FilterBinaryOperator.Eq:
@@ -113,107 +186,149 @@ namespace xwcs.core.linq.filter
 		it will combine all internal predicates with condition "or" or "and"
 		it will scan Filter object and produce from its fields list of predicates
 	*/
-	public class Filter<ContextType> : IFilterExpression
+	public class Filter<ContextType, FoType> : IFilterExpression<FoType>
 	{
-		protected List<IFilterExpression> _predicates;
+		
+
+
+		// this list contain flattered list of all fields
+		protected List<IFilterExpression<FoType>> _predicates;
 		protected object _filterObject;
 		protected FilterBinaryOperator _op;
 		protected ParameterExpression _mainExpression;
+		protected scan_context _scan_ctx = new scan_context();
 
-		
+		public FoType Fo { get; private set; }
 
-		public Filter(object fo, FilterBinaryOperator op = FilterBinaryOperator.And) {
+		public static implicit operator FoType(Filter<ContextType, FoType> from) {
+			return from.Fo;
+		}
+
+		public static implicit operator Filter<ContextType, FoType>(FoType from) {
+			return new Filter<ContextType, FoType>(from);
+		}
+
+		public Filter(FoType fo, FilterBinaryOperator op = FilterBinaryOperator.And) {
+			Fo = fo;
 			_op = op;
+			//expression in destination object domain
 			_mainExpression = Expression.Parameter(typeof(ContextType), "o");
-			_predicates = new List<IFilterExpression>();
-            scanCustomAttributes(fo, new FilterPredicateContext {
-				expression = _mainExpression,
-				type = typeof(ContextType)
-			});	
+			_predicates = new List<IFilterExpression<FoType>>();
+            scanCustomAttributes(fo.GetType(), "", typeof(ContextType), _mainExpression);
+			GetSnapshot(fo);	
 		}
 
-		public Expression<Func<ContextType, bool>> getFilterLambda() {
-			return (Expression<Func<ContextType, bool>>)getExpression(); 
+		public bool HasValue(FoType source)
+		{
+			return true;
 		}
 
-		public Expression getExpression() {
+		public Expression<Func<ContextType, bool>> GetFilterLambda() {
+			return (Expression<Func<ContextType, bool>>)GetExpression(Fo); 
+		}
+
+		public void GetSnapshot() {
+			foreach (IFilterExpression<FoType> fe in _predicates)
+			{
+				fe.GetSnapshot(Fo);
+			}
+		}
+
+		public void GetSnapshot(FoType source)
+		{
+			foreach(IFilterExpression<FoType> fe in _predicates) {
+				fe.GetSnapshot(source);
+			}
+		}
+
+		public Expression GetExpression(FoType source) {
 			if(_op == FilterBinaryOperator.And) {
 				var exp = PredicateBuilder.True<ContextType>();
-				foreach(IFilterExpression fe in _predicates) {
-					exp = exp.And(Expression.Lambda<Func<ContextType, bool>>(fe.getExpression(), new ParameterExpression[] { _mainExpression }));
+				foreach(IFilterExpression<FoType> fe in _predicates) {
+					if (fe.HasValue(source)) {
+						exp = exp.And(Expression.Lambda<Func<ContextType, bool>>(fe.GetExpression(source), new ParameterExpression[] { _mainExpression }));
+					}					
 				}
 				return exp;
 			}
 			else {
 				var exp = PredicateBuilder.False<ContextType>();
-				foreach (IFilterExpression fe in _predicates)
+				foreach (IFilterExpression<FoType> fe in _predicates)
 				{
-					exp = exp.Or(Expression.Lambda<Func<ContextType, bool>>(fe.getExpression(), new ParameterExpression[] { _mainExpression }));
+					if (fe.HasValue(source))
+					{
+						exp = exp.Or(Expression.Lambda<Func<ContextType, bool>>(fe.GetExpression(source), new ParameterExpression[] { _mainExpression }));
+					}
 				}
 				return exp;
 			}
 		}
 
-
-		private void scanCustomAttributes(object fo, FilterPredicateContext ctx)
+		/// <summary>
+		///		scan filter object for attributes and create filter predicates list
+		/// </summary>
+		/// <param name="t">Filteor object type</param>
+		/// <param name="name">Filter object property name</param>
+		/// <param name="ctxt">Filtered objects type</param>
+		/// <param name="expr">Filtered objects expression</param>
+		private void scanCustomAttributes(Type t, string name, Type ctxt, Expression expr)
 		{
-			Type t = fo.GetType();
+			if (!_scan_ctx.PushContext(t, ctxt, expr, name)) return;
+
 			//handle eventual MetadataType annotation which will add annotations from surrogate object
 			try
 			{
-				MetadataTypeAttribute mt = t.GetCustomAttributes(typeof(MetadataTypeAttribute), true)
-											.Cast<MetadataTypeAttribute>()
-											.Single();
-				if (mt != null)
+				var mt = t.GetCustomAttributes(typeof(MetadataTypeAttribute), true);
+				if(mt.Count() > 0)
 				{
 					//we have MetadataType forwarding so handle it first
-					Type metaType = mt.MetadataClassType;
+					Type metaType = (mt[0] as MetadataTypeAttribute).MetadataClassType;
 					PropertyInfo[] mpis = metaType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 					foreach (PropertyInfo pi in mpis)
 					{
-						handleOneProperty(fo, pi, ctx);
+						handleOneProperty(pi);
 					}
 				}
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex.Message);
+				manager.SLogManager.getInstance().getClassLogger(this.GetType()).Error(ex.Message);
 			}
 
 			//now own properties => these are later then those from surrogated so locals will do override
 			PropertyInfo[] pis = t.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 			foreach (PropertyInfo pi in pis)
 			{
-				handleOneProperty(fo, pi, ctx);
+				handleOneProperty(pi);
 			}
+
+			_scan_ctx.PopContext();
 		}
 
 
-		private void handleOneProperty(object fo, PropertyInfo pi, FilterPredicateContext ctx)
+		private void handleOneProperty(PropertyInfo pi)
 		{
-			//we can have complex types
-			
+			//we can have complex types			
 			if (pi != null)
 			{
-				Console.WriteLine("Make filter predicate for : " + pi.Name);
 
+#if DEBUG
+	manager.SLogManager.getInstance().getClassLogger(this.GetType()).Debug("Make filter predicate for : " + pi.Name);
+#endif
 				FilterBinaryOperator op = FilterBinaryOperator.Eq;
 				string propertyName = pi.Name;
-				object propertyValue = pi.GetValue(fo);
 
-				if (propertyValue == null) return; // we skip empty
-				
 				bool skip = false;
 
 				try {
-					FilterPredicateAttribute attr = pi.GetCustomAttributes(typeof(FilterPredicateAttribute), true)
-																		.Cast<FilterPredicateAttribute>()
-																		.Single();
+					var attr = pi.GetCustomAttributes(typeof(FilterPredicateAttribute), true);
 
-					// handle eventual overrides
-					propertyName = attr.PropertyName != "" ? attr.PropertyName : propertyName;
-					op = attr.Operator;
-					skip = attr.SkipProperty;
+					if(attr.Count() > 0) {
+						FilterPredicateAttribute fpa = (attr[0] as FilterPredicateAttribute);
+						// handle eventual overrides
+						op = fpa.Operator;
+						skip = fpa.SkipProperty;
+					}		
 						
 				}catch(Exception) {}
 
@@ -222,16 +337,19 @@ namespace xwcs.core.linq.filter
 				if (pi.PropertyType.FullName == "System.String" || pi.PropertyType.IsPrimitive || pi.PropertyType.FullName == "System.DateTime" || pi.PropertyType.IsValueType)
 				{
 					// direct field
-					_predicates.Add(new FilterPredicate(ctx, propertyName, propertyValue, op));
+					_predicates.Add(new FilterPredicate<FoType>(propertyName, _scan_ctx, pi, op));
 				}
 				else if (pi.PropertyType.IsClass) //do recursion only for classes
 				{
 					// nested object so we have to change contexts
-				 	scanCustomAttributes(propertyValue, new FilterPredicateContext
-					{
-						expression = Expression.Property(ctx.expression, ctx.type.GetProperty(propertyName)),
-						type = ctx.type.GetProperty(propertyName).PropertyType
-					});
+					scanCustomAttributes(
+						// Fo domain
+						pi.PropertyType,
+						propertyName,
+						// Filtered domain
+						_scan_ctx.CtxType.GetProperty(propertyName).PropertyType,
+						Expression.Property(_scan_ctx.Expression, _scan_ctx.CtxType.GetProperty(propertyName))
+					);
 				}			
 			}			
 		}

@@ -39,7 +39,7 @@ namespace xwcs.core.db.binding
 
 	public class DataLayoutBindingSource : BindingSource, IDataLayoutExtender, IDisposable
 	{
-		private manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
+		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
 		private DataLayoutControl _cnt;
 		
@@ -78,9 +78,10 @@ namespace xwcs.core.db.binding
 			// there is one active
 			if (_cnt != null && DataSource != null && _fieldsAreRetrieved)
 			{
-				if (_logger != null && CurrencyManager.Position >= 0)
+#if DEBUG
+				if (CurrencyManager.Position >= 0)
 					_logger.Debug("Reset layout");
-				
+#endif				
 				_cnt.DataSource = null;
 				_cnt.DataBindings.Clear();
 				_cnt.Clear();
@@ -105,9 +106,11 @@ namespace xwcs.core.db.binding
 
         protected override void OnListChanged(ListChangedEventArgs e)
 		{
-			if (_logger != null && CurrencyManager.Position >= 0)
-				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
 
+#if DEBUG
+			if (CurrencyManager.Position >= 0)
+				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+#endif
 			/* eventual possible use
 					
 			switch (e.ListChangedType)
@@ -133,27 +136,31 @@ namespace xwcs.core.db.binding
 			{
 				// we can have problems to bind at form cause it can not match new data
 				// so stop exception here, cause we are moving to new record
-				if (_logger != null && CurrencyManager.Position >= 0)
+				if (CurrencyManager.Position >= 0)
 				{
-					_logger.Debug("LC-EXCEPT-Current: (" + ex.Message + ") " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+					_logger.Error("LC-EXCEPT-Current: (" + ex.Message + ") " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
 				}
 			}
-			if (_logger != null && CurrencyManager.Position >= 0)
+#if DEBUG
+			if (CurrencyManager.Position >= 0)
 				_logger.Debug("LC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-
+#endif
 
 		}
 
 		private void handleCurrentChanged(object sender, object args)
-		{	
+		{
+#if DEBUG
 			_logger.Debug("CC-Current ["+sender+"] : " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-
+#endif
 
 			if (_oldCurrent != base.Current) {
 				
 				if(_structureWatcher != null) {
 					//de-serialize if necessary
+#if DEBUG
 					_logger.Debug("CC-Current Deserialize");
+#endif
 					(base.Current as SerializedEntityBase).DeserializeFields();
 					_resetLayoutRequest = _structureWatcher.CheckStructure(base.Current as SerializedEntityBase);
 				}				
@@ -166,8 +173,9 @@ namespace xwcs.core.db.binding
 					resetDataLayout();
 				}
 			}
-
+#if DEBUG
 			_logger.Debug("CC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+#endif
 		}
 
 		public new object DataSource {
@@ -268,13 +276,10 @@ namespace xwcs.core.db.binding
 			}
 			set
 			{
-				if (_logger != null)
-					_logger.Debug("Set-DS : New");
-				else
-				{
-					_logger = xwcs.core.manager.SLogManager.getInstance().getClassLogger(GetType());
-					_logger.Debug("Set-DS : New");
-				}
+
+#if DEBUG
+				_logger.Debug("Set-DS : New");
+#endif
 
 				if (_cnt == value) return;
 				//first disconnect eventual old one
@@ -300,7 +305,9 @@ namespace xwcs.core.db.binding
 
 		private void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
 		{
+#if DEBUG
 			_logger.Debug("Retrieving for field:" + e.FieldName);
+#endif
 			if (_attributesCache.ContainsKey(e.FieldName))
 			{
 				foreach (CustomAttribute a in _attributesCache[e.FieldName])
@@ -317,8 +324,10 @@ namespace xwcs.core.db.binding
 
 		private void FieldRetrievingHandler(object sender, FieldRetrievingEventArgs e)
 		{
+#if DEBUG
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
+#endif
 			if (base.Current != null) {
 				IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(base.Current.GetType(), e.FieldName);
 				IList<CustomAttribute> ac = new List<CustomAttribute>();
@@ -331,9 +340,10 @@ namespace xwcs.core.db.binding
 					_attributesCache[e.FieldName] = ac;
 			}
 
+#if DEBUG
 			sw.Stop();
 			_logger.Debug(String.Format("Elapsed={0}", sw.Elapsed));
-
+#endif
 			
 			onFieldRetrieving(e);
 			// fixed things
@@ -369,18 +379,23 @@ namespace xwcs.core.db.binding
 			{
 				if (disposing)
 				{
-					//only if disposing is caled from Dispose patern	
+					//only if disposing is called from Dispose pattern
+
+					//disconnect events in any case
+					if (_cnt != null)
+					{
+						_cnt.FieldRetrieved -= FieldRetrievedHandler;
+						_cnt.FieldRetrieving -= FieldRetrievingHandler;
+						_cnt = null;
+					}
+
+					if(DataSource != null) {
+						DataSource = null;
+					}
 				}
 
 				// TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
 				// TODO: set large fields to null.
-
-				//disconnect events in any case
-				if (_cnt != null)
-				{
-					_cnt.FieldRetrieved -= FieldRetrievedHandler;
-					_cnt.FieldRetrieving -= FieldRetrievingHandler;
-				}
 
 				disposedValue = true;
 				//call inherited
