@@ -10,8 +10,11 @@ using DevExpress.XtraDataLayout;
 namespace xwcs.core.db.binding
 {
 	using attributes;
+	using DevExpress.XtraEditors.Container;
+	using DevExpress.XtraGrid;
 	using System.Collections;
 	using System.Data;
+	using System.Reflection;
 	public class GetFieldQueryableEventData
 	{
 		public object DataSource { get; set; }
@@ -37,13 +40,15 @@ namespace xwcs.core.db.binding
 		object Current { get; }
     }
 
+	
 
 	public class DataLayoutBindingSource : BindingSource, IDataLayoutExtender, IDisposable
 	{
 		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
-		private DataLayoutControl _cnt;
-		
+		private DataLayoutControl _cnt = null;
+		private Type  _dataType;
+
 		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
 		private object _oldCurrent = null;
 		private bool _fieldsAreRetrieved = true;
@@ -52,8 +57,8 @@ namespace xwcs.core.db.binding
 		//if we work with serialized entities
 		private StructureWatcher _structureWatcher = null;
 		
-		public EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
-        public EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
+		public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
+        public event EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
 
         
 		public DataLayoutBindingSource() : base()
@@ -96,13 +101,13 @@ namespace xwcs.core.db.binding
         public void addNewRecord(object rec)
         {
             AddNew();
-            base.Current.CopyFrom(rec);           
+            Current.CopyFrom(rec);           
         }
 
 
         public void setCurrentRecord(object rec)
         {
-            base.Current.CopyFrom(rec);
+            Current.CopyFrom(rec);
         }
 
         protected override void OnListChanged(ListChangedEventArgs e)
@@ -112,22 +117,7 @@ namespace xwcs.core.db.binding
 			if (CurrencyManager.Position >= 0)
 				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
 #endif
-			/* eventual possible use
-					
-			switch (e.ListChangedType)
-			{
-				case ListChangedType.PropertyDescriptorChanged:
-					{
-						//we have to refresh attributes cache
-						if (DataSource != null && e.PropertyDescriptor == null)
-						{
-						}
-
-						break;
-					}
-			}
-			*/
-
+			
 			//orig call
 			try
 			{
@@ -185,6 +175,8 @@ namespace xwcs.core.db.binding
 			}
 
 			set {
+				if (value == null) return;
+
 				Type t = null;
 
 				object tmpDs = null;
@@ -239,12 +231,7 @@ namespace xwcs.core.db.binding
 					t = tmpT;
 				}
 				if(t.IsInstanceOfType(typeof(SerializedEntityBase))) {
-					/*
-					Type generic = typeof(StructureWatcher<>);
-					Type[] typeArgs = { t };
-					Type tg = generic.MakeGenericType(typeArgs);
-					_structureWatcher = (IStructureWatcher)Activator.CreateInstance(tg);
-					*/
+					
 					if(_structureWatcher != null) {
 						if(!_structureWatcher.IsCompatible(t)) {
 							_structureWatcher = new StructureWatcher(t);
@@ -259,15 +246,18 @@ namespace xwcs.core.db.binding
 				}
 				// make generic Structure watch basing on type of DataSource element
 				base.DataSource = value;
+				_dataType = t;
 
 				// load fields eventually, layout should be assigned before
 				// so we need do eventually also this
 				if(!_fieldsAreRetrieved) {
 					_cnt.RetrieveFields();
-				}				
+				}
+			
 			}
 		}
 
+		
 		
 		public DataLayoutControl DataLayout
 		{
@@ -277,9 +267,8 @@ namespace xwcs.core.db.binding
 			}
 			set
 			{
-
 #if DEBUG
-				_logger.Debug("Set-DS : New");
+				_logger.Debug("Set-DL : New");
 #endif
 
 				if (_cnt == value) return;
@@ -367,7 +356,7 @@ namespace xwcs.core.db.binding
 
 
 		#region IDisposable Support
-		private bool disposedValue = false; // To detect redundant calls
+		protected bool disposedValue = false; // To detect redundant calls
 		protected override void Dispose(bool disposing)
 		{
 			if (!disposedValue)

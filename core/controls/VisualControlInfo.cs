@@ -2,13 +2,14 @@
 using System.Reflection;
 using System.Collections.Generic;
 using System.Xml.Serialization;
-
+using System.Runtime.Serialization;
 
 namespace xwcs.core.controls
 {
     public enum ControlDockStyle { PLGT_undef = 0, PLGT_document, PLGT_status, PLGT_property, PLGT_widget };
 
-    public class VisualControlInfo
+	[DataContract]
+	public class VisualControlInfo
     {
         //Private
         private string _name;
@@ -93,49 +94,54 @@ namespace xwcs.core.controls
             return null;
         }
 
+		[DataMember]
         public string TypeFullName
         {
             get { return _classType.FullName;  }
             set { _classType = GetType(value); }
         }
 
-        //Public getters, setters
-        public string Name
+		[DataMember]
+		public string Name
         {
             get { return _name; }
             set { _name = value; }
         }
 
-        public string Version
+		[DataMember]
+		public string Version
         {
             get { return _version; }
             set { _version = value; }
         }
 
-        public ControlDockStyle DockStyle
+		[DataMember]
+		public ControlDockStyle DockStyle
         {
             get { return _dockStyle; }
             set { _dockStyle = value; }
         }
 
+		[DataMember]
 		public Guid InstanceGUID {
 			get { return _instance_GUID;  }
 			set { _instance_GUID = value; }
 		}
 
-        public Guid GUID
+		[DataMember]
+		public Guid GUID
         {
 			get { return _GUID; }
 			set { _GUID = value; }
 		}
 
+		[DataMember]
 		public bool AllowMulti 
 		{
 			get { return _allowMulti; }
 			set { _allowMulti = value; }
 		}
 
-        [XmlIgnore]
         public Type ClassType
         {
             get{ return _classType; }

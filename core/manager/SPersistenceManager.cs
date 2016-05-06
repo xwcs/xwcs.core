@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Serialization;
+using System.Runtime.Serialization;
 
 namespace xwcs.core.manager
 {
@@ -94,9 +95,11 @@ namespace xwcs.core.manager
 			Stream writer = null;
 			try
 			{
-				XmlSerializer serial = new XmlSerializer(typeof(T));
+
+				//XmlSerializer serial = new XmlSerializer(typeof(T));
+				NetDataContractSerializer serial = new NetDataContractSerializer();
 				writer = GetWriter(key);
-				serial.Serialize(writer, what);
+				serial.WriteObject(writer, what);
 			}
 			catch (Exception e)
 			{
@@ -117,8 +120,9 @@ namespace xwcs.core.manager
 
 				if (reader != null)
 				{
-					XmlSerializer serial = new XmlSerializer(typeof(T));
-					dest = (T)serial.Deserialize(reader);
+					NetDataContractSerializer serial = new NetDataContractSerializer();
+					//XmlSerializer serial = new XmlSerializer(typeof(T));
+					dest = (T)serial.ReadObject(reader);
 					return true;
 				}
 			}

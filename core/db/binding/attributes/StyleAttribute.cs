@@ -6,7 +6,7 @@ namespace xwcs.core.db.binding.attributes
 	[AttributeUsage(AttributeTargets.Property,	AllowMultiple = true)]
 	public class StyleAttribute : CustomAttribute
 	{
-		UInt32 _backGrndColor;
+		uint _backGrndColor;
 		bool _backGrndColorUsed;
 
 		public override bool Equals(object obj)
@@ -34,14 +34,18 @@ namespace xwcs.core.db.binding.attributes
 			_backGrndColorUsed = false; //default
 		}
 
-		public UInt32 BackgrounColor
+		public uint BackgrounColor
 		{
 			get { return _backGrndColor; }
 			set { _backGrndColorUsed = true;  _backGrndColor = value; }
 		}
 
 		public override void applyRetrievedAttribute(IDataLayoutExtender host, FieldRetrievedEventArgs e) {
-			if (_backGrndColorUsed) e.Control.BackColor = System.Drawing.Color.FromArgb((int)_backGrndColor);	 
+			if (_backGrndColorUsed)
+			{
+				e.Control.Padding = new System.Windows.Forms.Padding(0);
+				e.Control.BackColor = System.Drawing.Color.FromArgb((int)_backGrndColor);
+			}
 		}
 	}	
 }

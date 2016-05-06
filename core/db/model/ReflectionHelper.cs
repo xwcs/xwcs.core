@@ -9,7 +9,7 @@ using xwcs.core.db.binding.attributes;
 
 namespace xwcs.core.db.model{
 
-	static class ExtensionMethods
+	public static class ExtensionMethods
 	{
 		public static bool TryGetInterfaceGenericParameters(this Type type, Type @interface, out Type[] typeParameters)
 		{
@@ -102,7 +102,7 @@ namespace xwcs.core.db.model{
 				//we are at the end so set value
 				info.SetValue(lastObject, value, null);
 			}
-			catch (Exception)
+			catch (Exception e)
 			{
 				throw new InvalidEnumArgumentException();
 			}
@@ -178,18 +178,19 @@ namespace xwcs.core.db.model{
         }
 
 		public static IEnumerable<CustomAttribute> GetCustomAttributesFromPath(Type rootType, string propertyPath) {
-			PropertyDescriptor pd = ReflectionHelper.GetPropertyDescriptorFromPath(rootType, propertyPath);
+			PropertyDescriptor pd = GetPropertyDescriptorFromPath(rootType, propertyPath);
 			Type t1 = pd.ComponentType;
 			IEnumerable<CustomAttribute> attrs1 = t1.GetProperty(pd.Name).GetCustomAttributes(typeof(CustomAttribute), true).Cast<CustomAttribute>();
 			List<MetadataTypeAttribute> l = TypeDescriptor.GetAttributes(t1).OfType<MetadataTypeAttribute>().ToList();
 			if(l.Count > 0) {
 				Type t2 = l.Single().MetadataClassType;
-				IEnumerable<CustomAttribute> attrs2 = t2.GetProperty(pd.Name).GetCustomAttributes(typeof(CustomAttribute), true).Cast<CustomAttribute>();
-				return attrs1.Union(attrs2);
+				PropertyInfo pi = t2.GetProperty(pd.Name);
+				if(pi != null) {
+					IEnumerable<CustomAttribute> attrs2 = pi.GetCustomAttributes(typeof(CustomAttribute), true).Cast<CustomAttribute>();
+					return attrs1.Union(attrs2);
+				}
 			}
-			else {
-				return attrs1;
-			}			
+			return attrs1;
 		}
 
 		public static void CopyObject(object from, object to) {

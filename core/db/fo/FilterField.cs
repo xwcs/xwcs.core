@@ -4,35 +4,75 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
+using System.Xml;
+using System.Xml.Schema;
+using System.Xml.Linq;
+using System.Runtime.Serialization;
 
 namespace xwcs.core.db.fo
 {
-	public class FilterField<T> 
+	public interface ICriteriaTreeNode {
+		CriteriaOperator GetCondition();
+		string GetFieldName();
+		string GetFullFieldName();
+		bool HasCriteria();
+	}
+	
+	[DataContract(IsReference=true)]
+	public class FilterField<T> : ICriteriaTreeNode
 	{
+		#region serialize
+		[DataMember(Order = 0)]
 		private object _field;
 		private CriteriaOperator _condition;
+		[DataMember(Order = 1)]
+		private string _conditionStr {
+			get {
+				return _condition != null ? _condition.LegacyToString() : "";	
+			}
+			set {
+				_condition = value == "" ? null : CriteriaOperator.Parse(value);
+			}
+		}
+		[DataMember(Order = 2)]
+		private bool _hasCriteria = false;
+		[DataMember(Order = 3)]
+		private string _fieldName;
+		[DataMember(Order = 4)]
+		private string _fieldFullName;
+		#endregion
 
+		#region ICriteriaTreeNode
+		public CriteriaOperator GetCondition() { return Condition; }
+		public string GetFullFieldName() {
+			return _fieldFullName; 
+		}
+		public string GetFieldName()
+		{
+			return _fieldName;
+		}
+		#endregion
 
-		public FilterField() {
+		//private need for de-serialize
+		private FilterField() : this("", "") { }		
+		public FilterField(string pn, string fn) {
+
 			if (typeof(T).IsValueType)
 				_field = Activator.CreateInstance(typeof(T));
 			else
 				_field = null;
-		}
 
-		public FilterField(T f) {
-			_field = f;
-		}
+			_fieldName = fn;
+			_fieldFullName = pn != "" ? pn + "." + fn :  fn;
+		}	
 
 		public static implicit operator T(FilterField<T> from)
 		{
 			return (T)from._field;
 		}
 
-		public static implicit operator FilterField<T>(T from)
-		{
-			return new FilterField<T>(from);
-		}
+		#region Properties
 
 		public T Value {
 			get {
@@ -41,23 +81,38 @@ namespace xwcs.core.db.fo
 
 			set {
 				_field = value;
+				_hasCriteria = false;
 			}
 		}
 
 		public CriteriaOperator Condition {
 			get {
-				return _condition;
+				if(_hasCriteria) {
+					return _condition;
+				}else {
+					//make one from value
+					return _field != null ? new BinaryOperator(GetFullFieldName(), _field, BinaryOperatorType.Equal) : null;
+				}
+				
 			}
 
 			set {
 				_condition = value;
+				_hasCriteria = true;
 			}
 		}
+
+		#endregion
 
 		public bool Cmp(object rhs) {
 			return Equals(_field, rhs);
 		}
 
+		public bool HasCriteria() {
+			return _hasCriteria;
+		}
+		
+		/*
 		public bool Cmp(CriteriaOperator rhs) {
 			return _condition.Equals(rhs);
 		}
@@ -65,5 +120,6 @@ namespace xwcs.core.db.fo
 		public bool Cmp(FilterField<T> rhs) {
 			return Equals((T)_field, rhs.Value) && _condition.Equals(rhs.Condition);
 		}
+		*/
 	}
 }
