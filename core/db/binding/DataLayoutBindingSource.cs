@@ -110,34 +110,7 @@ namespace xwcs.core.db.binding
             Current.CopyFrom(rec);
         }
 
-        protected override void OnListChanged(ListChangedEventArgs e)
-		{
-
-#if DEBUG
-			if (CurrencyManager.Position >= 0)
-				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-#endif
-			
-			//orig call
-			try
-			{
-				base.OnListChanged(e);
-			}
-			catch (Exception ex)
-			{
-				// we can have problems to bind at form cause it can not match new data
-				// so stop exception here, cause we are moving to new record
-				if (CurrencyManager.Position >= 0)
-				{
-					_logger.Error("LC-EXCEPT-Current: (" + ex.Message + ") " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-				}
-			}
-#if DEBUG
-			if (CurrencyManager.Position >= 0)
-				_logger.Debug("LC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-#endif
-
-		}
+		
 
 		private void handleCurrentChanged(object sender, object args)
 		{
@@ -230,7 +203,10 @@ namespace xwcs.core.db.binding
 				else {
 					t = tmpT;
 				}
-				if(t.IsInstanceOfType(typeof(SerializedEntityBase))) {
+
+				bool isSerialized = typeof(SerializedEntityBase).IsAssignableFrom(t);
+
+				if (isSerialized) {
 					
 					if(_structureWatcher != null) {
 						if(!_structureWatcher.IsCompatible(t)) {
@@ -405,5 +381,38 @@ namespace xwcs.core.db.binding
 		}
 		*/
 		#endregion
+
+
+		/*
+        protected override void OnListChanged(ListChangedEventArgs e)
+		{
+
+#if DEBUG
+			if (CurrencyManager.Position >= 0)
+				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+#endif
+			
+			//orig call
+			try
+			{
+				base.OnListChanged(e);
+			}
+			catch (Exception ex)
+			{
+				// we can have problems to bind at form cause it can not match new data
+				// so stop exception here, cause we are moving to new record
+				if (CurrencyManager.Position >= 0)
+				{
+					_logger.Error("LC-EXCEPT-Current: (" + ex.Message + ") " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+				}
+			}
+#if DEBUG
+			if (CurrencyManager.Position >= 0)
+				_logger.Debug("LC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+#endif
+
+		}
+		*/
+
 	}
 }

@@ -35,7 +35,7 @@ namespace xwcs.core.db
 		private Type _targetType;
 
 		public StructureWatcher(Type t) {
-			if(!t.IsInstanceOfType(typeof(SerializedEntityBase))) {
+			if(!(typeof(SerializedEntityBase).IsAssignableFrom(t))) {
 				throw new InvalidEnumArgumentException("StructureWatcher need SerializableEntityBase!");
 			}
 			//read structure of type

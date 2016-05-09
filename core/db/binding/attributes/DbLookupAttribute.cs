@@ -3,6 +3,7 @@ using DevExpress.XtraDataLayout;
 using DevExpress.XtraEditors.Repository;
 using DevExpress.XtraGrid.Views.Grid;
 using DevExpress.XtraGrid.Columns;
+using System.Linq;
 
 namespace xwcs.core.db.binding.attributes
 {
@@ -40,13 +41,11 @@ namespace xwcs.core.db.binding.attributes
 		}
 
 		public override void applyGridColumnPopulation(IDataGridSource host, string ColumnName) {
-			//setup correct editor in grid
-			rle.Name = ColumnName;
-			rle.DisplayMember = DisplayMember;
-			rle.ValueMember = ValueMember;
-			rle.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.Standard;
-			
-			host.Grid.RepositoryItems.Add(rle);
+			//check if grid have already RepositoryItemLookUpEdit
+			if(host.Grid.RepositoryItems.OfType<RepositoryItemLookUpEdit>().Count() == 0) {
+				host.Grid.RepositoryItems.Add(new RepositoryItemLookUpEdit());
+			} 
+			/*
 			GridView gv = host.Grid.MainView as GridView;
 			if(gv != null)
 			{
@@ -62,15 +61,21 @@ namespace xwcs.core.db.binding.attributes
 						e.RepositoryItem = rle;
 					}
 				};
-				/*
-				foreach(GridColumn gcc in gv.Columns) {
-					Console.WriteLine(gcc.Name);
-				}
-				GridColumn gc = gv.Columns.ColumnByName("col" + ColumnName);
-				if(gc != null)
-					gc.ColumnEdit = rle;
-				*/
-			}			
+			}
+			*/			
+		}
+
+		public override void applyCustomRowCellEdit(IDataLayoutExtender host, CustomRowCellEditEventArgs e) {
+			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
+			rle.DisplayMember = DisplayMember;
+			rle.ValueMember = ValueMember;
+			rle.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.Standard;
+			GetFieldQueryableEventData qd = new GetFieldQueryableEventData { DataSource = null, FieldName = e.Column.FieldName };
+			host.onGetQueryable(qd);
+			if (qd.DataSource != null)
+			{
+				rle.DataSource = qd.DataSource;
+			}
 		}
 
 		public override void applyRetrievingAttribute(IDataLayoutExtender host, FieldRetrievingEventArgs e)
