@@ -40,38 +40,22 @@ namespace xwcs.core.db.binding.attributes
 			return hashCode;
 		}
 
-		public override void applyGridColumnPopulation(IDataGridSource host, string ColumnName) {
-			//check if grid have already RepositoryItemLookUpEdit
-			if(host.Grid.RepositoryItems.OfType<RepositoryItemLookUpEdit>().Count() == 0) {
-				host.Grid.RepositoryItems.Add(new RepositoryItemLookUpEdit());
-			} 
-			/*
-			GridView gv = host.Grid.MainView as GridView;
-			if(gv != null)
-			{
-				gv.CustomRowCellEditForEditing += (object s, CustomRowCellEditEventArgs e) => { 
-					if(e.Column.FieldName == ColumnName) {
-						GetFieldQueryableEventData qd = new GetFieldQueryableEventData { DataSource = null, FieldName = ColumnName };
-						host.onGetQueryable(qd);
-						if (qd.DataSource != null)
-						{
-							rle.DataSource = qd.DataSource;
-						}
-
-						e.RepositoryItem = rle;
-					}
-				};
-			}
-			*/			
+		public override RepositoryItem applyGridColumnPopulation(IDataGridSource host, string ColumnName) {
+			return new RepositoryItemLookUpEdit();
 		}
 
-		public override void applyCustomRowCellEdit(IDataLayoutExtender host, CustomRowCellEditEventArgs e) {
+		public override void applyCustomRowCellEdit(IDataGridSource host, CustomRowCellEditEventArgs e) {
 			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
 			rle.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.Standard;
 			GetFieldQueryableEventData qd = new GetFieldQueryableEventData { DataSource = null, FieldName = e.Column.FieldName };
-			host.onGetQueryable(qd);
+			IEditorsHost eh = rle.OwnerEdit.FindForm() as IEditorsHost;
+			if (eh != null)
+			{
+				eh.onGetQueryable(this, qd);
+			}
+			//host.onGetQueryable(this, qd);
 			if (qd.DataSource != null)
 			{
 				rle.DataSource = qd.DataSource;
@@ -89,7 +73,11 @@ namespace xwcs.core.db.binding.attributes
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
 			GetFieldQueryableEventData qd = new GetFieldQueryableEventData { DataSource = null, FieldName = e.FieldName };
-			host.onGetQueryable(qd);
+			IEditorsHost eh = e.Control.FindForm() as IEditorsHost;
+			if(eh != null) {
+				eh.onGetQueryable(this, qd);
+			}
+			//host.onGetQueryable(this, qd);
 			if (qd.DataSource != null)
 			{
 				rle.DataSource = qd.DataSource;

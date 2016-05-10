@@ -14,7 +14,7 @@ namespace xwcs.core.db.fo
 	using System.Xml.Schema;
 	using System.Runtime.Serialization;
 	using System.Reflection;
-
+	using evt;
 	[CollectionDataContract(IsReference = true)]
 	public class FilterObjectList<T> : List<T> where T : ICriteriaTreeNode {}
 
@@ -78,7 +78,21 @@ namespace xwcs.core.db.fo
 	[DataContract(IsReference = true)]
 	public abstract class FilterObjectbase : INotifyPropertyChanged, ICriteriaTreeNode//, IXmlSerializable
 	{
-		public event PropertyChangedEventHandler PropertyChanged;
+		//public event PropertyChangedEventHandler PropertyChanged;
+		private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+		public event PropertyChangedEventHandler PropertyChanged
+		{
+			add
+			{
+				if (_wes_PropertyChanged == null)
+				{
+					_wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+				}
+				_wes_PropertyChanged.Subscribe(new EventHandler<PropertyChangedEventArgs>(value));
+			}
+			remove { _wes_PropertyChanged.Unsubscribe(new EventHandler<PropertyChangedEventArgs>(value)); }
+		}
+
 		#region serialize
 		[DataMember(Order = 0)]
 		private string _fieldName;
@@ -113,29 +127,32 @@ namespace xwcs.core.db.fo
 
 		public FilterObjectbase(string pn, string fn)
 		{
+			if(_wes_PropertyChanged == null) _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
 			_fieldName = fn;
 			_fieldFullName = pn != "" ? pn + "." + fn : fn;
 		}
 
-		protected bool SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
+		protected void SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
 		{
-			if (storage.Cmp(value)) return false;
+			storage.Value = (T)value;
+			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
+		}
 
-			//handle different settings
-			if (value is CriteriaOperator) {
-				storage.Condition = (CriteriaOperator)value;
-				//this will not invoke change property, due to who will set criteria have to set null in value just after
-			}
-			else{
-				storage.Value = (T)value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-			}
-			return true;
+		protected void SetFieldCriteria<T>(ref FilterField<T> storage, CriteriaOperator value, [CallerMemberName] string propertyName = null)
+		{
+			var oldValue = storage.Value;	
+			storage.Condition = value;
+			//condition set value to null, so if old was something else notify property change
+			if(oldValue != null)
+				//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+				_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName)); //value set to null
 		}
 
 		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
 		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
 		}
 
 		public ICriteriaTreeNode GetFilterFieldByPath(string path) {

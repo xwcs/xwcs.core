@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace xwcs.core.db
 {
+	using evt;
 	using model;
 	using model.attributes;
 	using System.Collections.Generic;
@@ -18,34 +19,48 @@ namespace xwcs.core.db
 		public string SourcePropertyName { get; private set; }
 	}
 
-	public delegate void PropertyDeserializedEventHandler(EntityBase sender, PropertyDeserialized e);
+	//public delegate void PropertyDeserializedEventHandler(EntityBase sender, PropertyDeserialized e);
 
 
 	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
 	public abstract class EntityBase : INotifyPropertyChanged
 	{
-		public event PropertyChangedEventHandler PropertyChanged;	
-		
+		//public event PropertyChangedEventHandler PropertyChanged;
+		private readonly WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+		public event PropertyChangedEventHandler PropertyChanged
+		{
+			add { _wes_PropertyChanged.Subscribe(new EventHandler<PropertyChangedEventArgs>(value)); }
+			remove { _wes_PropertyChanged.Unsubscribe(new EventHandler<PropertyChangedEventArgs>(value)); }
+		}
+
+
 		protected bool SetProperty<VT>(ref VT storage, VT value, [CallerMemberName] string propertyName = null)
 		{
 			if (Equals(storage, value)) return false;
 			storage = value;
 
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
 
 			return true;
 		}
 
 		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
 		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
 		}
 	}
 
 	public abstract class SerializedEntityBase : EntityBase
 	{
 		
-		public event PropertyDeserializedEventHandler PropertyDeserialized;
+		//public event PropertyDeserializedEventHandler OnPropertyDeserialized;
+		private readonly WeakEventSource<PropertyDeserialized> _wes_OnPropertyDeserialized = new WeakEventSource<PropertyDeserialized>();
+		public event EventHandler<PropertyDeserialized> OnPropertyDeserialized
+		{
+			add { _wes_OnPropertyDeserialized.Subscribe(value); }
+			remove { _wes_OnPropertyDeserialized.Unsubscribe(value); }
+		}
+
 
 		public abstract void GetMutablePropertiesType(Dictionary<string, Type> dest);
 
@@ -74,7 +89,7 @@ namespace xwcs.core.db
 				storage = null;
 			}
 
-			PropertyDeserialized?.Invoke(this, new PropertyDeserialized(storage, propertyName));
+			_wes_OnPropertyDeserialized.Raise(this, new PropertyDeserialized(storage, propertyName));
 
 			return storage;
 		}

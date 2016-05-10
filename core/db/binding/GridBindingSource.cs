@@ -11,14 +11,17 @@ namespace xwcs.core.db.binding
 {
 	using attributes;
 	using DevExpress.XtraEditors.Container;
+	using DevExpress.XtraEditors.Repository;
 	using DevExpress.XtraGrid;
+	using DevExpress.XtraGrid.Views.Grid;
+	using evt;
 	using System.Collections;
 	using System.Data;
 	using System.Reflection;
-	
+
 	public interface IDataGridSource
 	{
-		void onGetQueryable(GetFieldQueryableEventData qd);
+		void onGetQueryable(object sender, GetFieldQueryableEventData qd);
 		GridControl Grid { get; }
 	}
 
@@ -31,9 +34,17 @@ namespace xwcs.core.db.binding
 		private Type  _dataType = null;
 
 		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
+		private Dictionary<string, RepositoryItem> _repositories = new Dictionary<string, RepositoryItem>();
 		private bool _gridIsConnected = false;
 
-		public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
+		//public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
+		private readonly WeakEventSource<GetFieldQueryableEventData> _wes_GetFieldQueryable = new WeakEventSource<GetFieldQueryableEventData>();
+		public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable
+		{
+			add { _wes_GetFieldQueryable.Subscribe(value); }
+			remove { _wes_GetFieldQueryable.Unsubscribe(value); }
+		}
+
 
 		public GridBindingSource() : base()
         {
@@ -153,6 +164,11 @@ namespace xwcs.core.db.binding
 				if (_grid != null)
 				{
 					_grid.DataSourceChanged -= GridDataSourceChanged;
+					GridView gv = _grid.MainView as GridView;
+					if (gv != null)
+					{
+						gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
+					}
 				}
 				_grid = value;
 				_grid.DataSourceChanged += GridDataSourceChanged;
@@ -168,10 +184,24 @@ namespace xwcs.core.db.binding
 				PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 				foreach (PropertyInfo pi in pis) {
 					IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
+					IList<CustomAttribute> ac = new List<CustomAttribute>();
 					foreach (CustomAttribute a in attrs)
 					{
-						a.applyGridColumnPopulation(this, pi.Name);
+						RepositoryItem ri = a.applyGridColumnPopulation(this, pi.Name);
+						ac.Add(a as CustomAttribute);
+						if(ri != null) {
+							_grid.RepositoryItems.Add(ri);
+							_repositories[pi.Name] = ri;
+						}
 					}
+					if (ac.Count > 0)
+						_attributesCache[pi.Name] = ac;
+
+				}
+				//attach CustomRowCellEditForEditing event too
+				GridView gv = _grid.MainView as GridView;
+				if(gv!=null) {
+					gv.CustomRowCellEditForEditing += CustomRowCellEditForEditingHandler;
 				}
 
 				_gridIsConnected = true;
@@ -183,10 +213,24 @@ namespace xwcs.core.db.binding
 			ConnectGrid();
 		}
 
-		
-		public void onGetQueryable(GetFieldQueryableEventData qd)
+		private void CustomRowCellEditForEditingHandler(object sender, CustomRowCellEditEventArgs e) {
+			if (_repositories.ContainsKey(e.Column.FieldName)) {
+				e.RepositoryItem = _repositories[e.Column.FieldName];
+			}
+			if (_attributesCache.ContainsKey(e.Column.FieldName))
+			{
+				foreach (CustomAttribute a in _attributesCache[e.Column.FieldName])
+				{
+					a.applyCustomRowCellEdit(this, e);
+				}
+			}
+		}
+
+		public void onGetQueryable(object sender, GetFieldQueryableEventData qd)
 		{
-			GetFieldQueryable?.Invoke(this, qd);
+			//set current edited object into event
+			qd.Current = Current;
+			_wes_GetFieldQueryable.Raise(this, qd);
 		}
 
         
@@ -200,17 +244,28 @@ namespace xwcs.core.db.binding
 			{
 				if (disposing)
 				{
-					//only if disposing is called from Dispose pattern
-
 					//disconnect events in any case
 					if(_grid != null) {
 						_grid.DataSourceChanged -= GridDataSourceChanged;
+						GridView gv = _grid.MainView as GridView;
+						if (gv != null)
+						{
+							gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
+						}
+						//remove eventual grid cells editor repositories from grid
+						foreach (RepositoryItem ri in _repositories.Values)
+						{
+							_grid.RepositoryItems.Remove(ri);
+						}
 						_grid = null;
 					}
-
 					if(DataSource != null) {
 						DataSource = null;
 					}
+					//clear cached attributes
+					_attributesCache.Clear();
+					//clear repositories cache					
+					_repositories.Clear();
 				}
 
 				// TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

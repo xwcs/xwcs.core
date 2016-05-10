@@ -1,16 +1,34 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace xwcs.core.evt
-{
-	public delegate void EventHandler<in T>(T e) where T : Event;
+{	
 
 	public class SEventProxy
     {
+		internal class EventSource<TEvent> where TEvent : IEvent {
+			public static readonly ConstructorInfo constructor = typeof(EventSource<TEvent>).GetConstructor(new Type[] { });
 
-        private static SEventProxy instance;
+			public EventSource() { }
 
-        //singleton need private ctor
+			private readonly WeakEventSource<TEvent> _eventSource = new WeakEventSource<TEvent>();
+			public event EventHandler<TEvent> Event
+			{
+				add { _eventSource.Subscribe(value); }
+				remove { _eventSource.Unsubscribe(value); }
+			}
+			public void Fire(TEvent evt) {
+				_eventSource.Raise(evt.Sender, evt);
+			}
+		}
+
+
+		private static SEventProxy instance;
+
+		//singleton need private ctor
         private SEventProxy(){}
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -23,37 +41,38 @@ namespace xwcs.core.evt
             return instance;
         }
 
+		private readonly Dictionary<object, object> _eventSources = new Dictionary<object, object>();
+
 
         /****
-
             MAIN methods
         */
 
 
-        protected EventHandlerList listEventDelegates = new EventHandlerList();        
-
-        public void addEventHandler<T>(object type, EventHandler<T> value) where T : Event
+        public void addEventHandler<T>(object type, EventHandler<T> value) where T : IEvent
 		{
-            listEventDelegates.AddHandler(type, value);
+			if (!_eventSources.ContainsKey(type)){
+				_eventSources[type] = EventSource<T>.constructor.Invoke(new object[] { });
+			}
+			(_eventSources[type] as EventSource<T>).Event += value;	
         }
-		public void addEventHandler(object type, EventHandler<Event> value)
-		{
-			listEventDelegates.AddHandler(type, value);
-		}
 
-		public void removeEventHandler<T>(object type, EventHandler<T> value) where T : Event
-		{
-            listEventDelegates.RemoveHandler(type, value);
-        }
 		
-		public void removeEventHandler(object type, EventHandler<Event> value)
+		public void removeEventHandler<T>(object type, EventHandler<T> value) where T : IEvent
 		{
-			listEventDelegates.RemoveHandler(type, value);
+			if (_eventSources.ContainsKey(type))
+			{
+				(_eventSources[type] as EventSource<T>).Event -= value;
+			}
 		}
+		
 
-		public void fireEvent<T>(T e) where T : Event
-        {
-			((EventHandler<T>)listEventDelegates[e.Type])?.Invoke(e);
+		public void fireEvent<T>(T e) where T : IEvent
+		{
+			if (_eventSources.ContainsKey(e.Type))
+			{
+				(_eventSources[e.Type] as EventSource<T>).Fire(e);
+			}
 		}
     }
 }

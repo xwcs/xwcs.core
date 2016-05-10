@@ -1,6 +1,6 @@
 ﻿namespace xwcs.core.evt
 {
-    interface IEvent
+    public interface IEvent
     {
         object Sender { get; }
         object Type { get; }

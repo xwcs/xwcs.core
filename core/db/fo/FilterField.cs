@@ -29,7 +29,7 @@ namespace xwcs.core.db.fo
 		[DataMember(Order = 1)]
 		private string _conditionStr {
 			get {
-				return _condition != null ? _condition.LegacyToString() : "";	
+				return !ReferenceEquals(null, _condition) ? _condition.LegacyToString() : "";	
 			}
 			set {
 				_condition = value == "" ? null : CriteriaOperator.Parse(value);
@@ -81,6 +81,7 @@ namespace xwcs.core.db.fo
 
 			set {
 				_field = value;
+				_condition = null;
 				_hasCriteria = false;
 			}
 		}
@@ -98,15 +99,12 @@ namespace xwcs.core.db.fo
 
 			set {
 				_condition = value;
+				_field = null;
 				_hasCriteria = true;
 			}
 		}
 
 		#endregion
-
-		public bool Cmp(object rhs) {
-			return Equals(_field, rhs);
-		}
 
 		public bool HasCriteria() {
 			return _hasCriteria;

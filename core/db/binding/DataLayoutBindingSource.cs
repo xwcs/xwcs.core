@@ -12,11 +12,13 @@ namespace xwcs.core.db.binding
 	using attributes;
 	using DevExpress.XtraEditors.Container;
 	using DevExpress.XtraGrid;
+	using evt;
 	using System.Collections;
 	using System.Data;
 	using System.Reflection;
 	public class GetFieldQueryableEventData
 	{
+		public object Current { get; set; }
 		public object DataSource { get; set; }
 		public string FieldName { get; set; }
 	}
@@ -29,18 +31,22 @@ namespace xwcs.core.db.binding
 
     public class GetFieldOptionsListEventData
     {
-        public List<KeyValuePair> List { get; set; }
+		public object Current { get; set; }
+		public List<KeyValuePair> List { get; set; }
         public string FieldName { get; set; }
     }
 
     public interface IDataLayoutExtender
 	{
-		void onGetQueryable(GetFieldQueryableEventData qd);
-        void onGetOptionsList(GetFieldOptionsListEventData qd);
+		void onGetQueryable(object sender, GetFieldQueryableEventData qd);
+        void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
 		object Current { get; }
     }
 
-	
+	public interface IEditorsHost
+	{
+		void onGetQueryable(object sender, GetFieldQueryableEventData qd);
+	}
 
 	public class DataLayoutBindingSource : BindingSource, IDataLayoutExtender, IDisposable
 	{
@@ -49,6 +55,7 @@ namespace xwcs.core.db.binding
 		private DataLayoutControl _cnt = null;
 		private Type  _dataType;
 
+
 		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
 		private object _oldCurrent = null;
 		private bool _fieldsAreRetrieved = true;
@@ -56,11 +63,24 @@ namespace xwcs.core.db.binding
 		
 		//if we work with serialized entities
 		private StructureWatcher _structureWatcher = null;
-		
-		public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
-        public event EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
 
-        
+		//public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
+		private readonly WeakEventSource<GetFieldQueryableEventData> _wes_GetFieldQueryable = new WeakEventSource<GetFieldQueryableEventData>();
+		public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable
+		{
+			add { _wes_GetFieldQueryable.Subscribe(value); }
+			remove { _wes_GetFieldQueryable.Unsubscribe(value); }
+		}
+		//public event EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
+		private readonly WeakEventSource<GetFieldOptionsListEventData> _wes_GetFieldOptionsList = new WeakEventSource<GetFieldOptionsListEventData>();
+		public event EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList
+		{
+			add { _wes_GetFieldOptionsList.Subscribe(value); }
+			remove { _wes_GetFieldOptionsList.Unsubscribe(value); }
+		}
+
+
+
 		public DataLayoutBindingSource() : base()
         {
 			start();
@@ -317,14 +337,18 @@ namespace xwcs.core.db.binding
 			e.Handled = true;
 		}
 
-		public void onGetQueryable(GetFieldQueryableEventData qd)
+		public void onGetQueryable(object sender, GetFieldQueryableEventData qd)
 		{
-			GetFieldQueryable?.Invoke(this, qd);
+			//set current edited object into event
+			qd.Current = Current;
+			_wes_GetFieldQueryable.Raise(sender, qd);
 		}
 
-        public void onGetOptionsList(GetFieldOptionsListEventData qd)
+        public void onGetOptionsList(object sender, GetFieldOptionsListEventData qd)
         {
-			GetFieldOptionsList?.Invoke(this, qd);
+			//set current edited object into event
+			qd.Current = Current;
+			_wes_GetFieldOptionsList.Raise(sender, qd);
 		}
 
         protected virtual void onFieldRetrieving(FieldRetrievingEventArgs e) { }

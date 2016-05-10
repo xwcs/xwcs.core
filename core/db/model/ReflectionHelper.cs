@@ -102,7 +102,7 @@ namespace xwcs.core.db.model{
 				//we are at the end so set value
 				info.SetValue(lastObject, value, null);
 			}
-			catch (Exception e)
+			catch (Exception)
 			{
 				throw new InvalidEnumArgumentException();
 			}

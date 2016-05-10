@@ -93,9 +93,9 @@
     <Compile Include="core\db\binding\DataLayoutBindingSource.cs" />
     <Compile Include="core\db\fo\FilterObjectBase.cs" />
     <Compile Include="core\db\fo\FilterField.cs" />
-    <Compile Include="core\db\fo\Helper.cs">
+    <None Include="core\db\fo\Helper.cs.off">
       <SubType>Component</SubType>
-    </Compile>
+    </None>
     <Compile Include="core\db\model\attributes\MutableAttribute.cs" />
     <Compile Include="core\db\StructureWatcher.cs" />
     <Compile Include="core\db\model\attributes\SerializedAttribute.cs" />
@@ -115,6 +115,7 @@
     <Compile Include="core\evt\EventType.cs" />
     <Compile Include="core\evt\IEvent.cs" />
     <Compile Include="core\evt\OpenPanelRequestEvent.cs" />
+    <Compile Include="core\evt\WeakEventSource.cs" />
     <Compile Include="core\linq\filter\FilterPredicate.cs" />
     <Compile Include="core\manager\SLogManager.cs" />
     <Compile Include="core\manager\SPersistenceManager.cs" />
@@ -169,7 +170,9 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="snippets\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

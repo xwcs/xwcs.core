@@ -17,7 +17,7 @@ namespace xwcs.core.db.binding.attributes
 		{
 			RepositoryItemTokenEdit rle = e.RepositoryItem as RepositoryItemTokenEdit;
 			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { List = null, FieldName = e.FieldName };
-			host.onGetOptionsList(qd);
+			host.onGetOptionsList(this, qd);
 			if (qd.List != null)
 			{
                 foreach (KeyValuePair pair in qd.List)
