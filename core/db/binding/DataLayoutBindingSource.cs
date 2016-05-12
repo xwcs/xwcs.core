@@ -16,42 +16,13 @@ namespace xwcs.core.db.binding
 	using System.Collections;
 	using System.Data;
 	using System.Reflection;
-	public class GetFieldQueryableEventData
-	{
-		public object Current { get; set; }
-		public object DataSource { get; set; }
-		public string FieldName { get; set; }
-	}
+	
 
-    public class KeyValuePair
-    {
-        public object Key;
-        public string Value;
-    }
-
-    public class GetFieldOptionsListEventData
-    {
-		public object Current { get; set; }
-		public List<KeyValuePair> List { get; set; }
-        public string FieldName { get; set; }
-    }
-
-    public interface IDataLayoutExtender
-	{
-		void onGetQueryable(object sender, GetFieldQueryableEventData qd);
-        void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
-		object Current { get; }
-    }
-
-	public interface IEditorsHost
-	{
-		void onGetQueryable(object sender, GetFieldQueryableEventData qd);
-	}
-
-	public class DataLayoutBindingSource : BindingSource, IDataLayoutExtender, IDisposable
+	public class DataLayoutBindingSource : BindingSource, IDataBindingSource, IDisposable
 	{
 		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
+		private IEditorsHost _editorsHost = null;
 		private DataLayoutControl _cnt = null;
 		private Type  _dataType;
 
@@ -64,110 +35,75 @@ namespace xwcs.core.db.binding
 		//if we work with serialized entities
 		private StructureWatcher _structureWatcher = null;
 
-		//public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
-		private readonly WeakEventSource<GetFieldQueryableEventData> _wes_GetFieldQueryable = new WeakEventSource<GetFieldQueryableEventData>();
-		public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable
+		public DataLayoutBindingSource() : this((IEditorsHost)null) {}
+		public DataLayoutBindingSource(IContainer c) : this(null, c) { }
+		public DataLayoutBindingSource(object o, string s) : this(null, o, s) { }
+		public DataLayoutBindingSource(IEditorsHost eh) : base() { start(eh); }
+		public DataLayoutBindingSource(IEditorsHost eh, IContainer c) : base(c){ start(eh); }
+		public DataLayoutBindingSource(IEditorsHost eh, object o, string s) : base(o, s){ start(eh); }
+		
+		private void start(IEditorsHost eh)
 		{
-			add { _wes_GetFieldQueryable.Subscribe(value); }
-			remove { _wes_GetFieldQueryable.Unsubscribe(value); }
-		}
-		//public event EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList;
-		private readonly WeakEventSource<GetFieldOptionsListEventData> _wes_GetFieldOptionsList = new WeakEventSource<GetFieldOptionsListEventData>();
-		public event EventHandler<GetFieldOptionsListEventData> GetFieldOptionsList
-		{
-			add { _wes_GetFieldOptionsList.Subscribe(value); }
-			remove { _wes_GetFieldOptionsList.Unsubscribe(value); }
-		}
-
-
-
-		public DataLayoutBindingSource() : base()
-        {
-			start();
-        }
-		public DataLayoutBindingSource(IContainer c) : base(c)
-		{
-			start();
-		}
-		public DataLayoutBindingSource(object o, string s) : base(o, s)
-		{
-			start();
-		}
-
-		private void start()
-		{
+			_editorsHost = eh;
 			CurrentChanged += handleCurrentChanged;
 		}
 
-		private void resetDataLayout() {
-			// reset layout if
-			// there is one active
-			if (_cnt != null && DataSource != null && _fieldsAreRetrieved)
-			{
-#if DEBUG
-				if (CurrencyManager.Position >= 0)
-					_logger.Debug("Reset layout");
-#endif				
-				_cnt.DataSource = null;
-				_cnt.DataBindings.Clear();
-				_cnt.Clear();
-				_resetLayoutRequest = false;
-				_fieldsAreRetrieved = false;
-				// now set new source
-				_cnt.DataSource = this;
-            }			
-		}
-
-        public void addNewRecord(object rec)
-        {
-            AddNew();
-            Current.CopyFrom(rec);           
-        }
-
-
-        public void setCurrentRecord(object rec)
-        {
-            Current.CopyFrom(rec);
-        }
-
-		
-
-		private void handleCurrentChanged(object sender, object args)
+		#region IDisposable Support
+		protected bool disposedValue = false; // To detect redundant calls
+		protected override void Dispose(bool disposing)
 		{
-#if DEBUG
-			_logger.Debug("CC-Current ["+sender+"] : " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-#endif
-
-			if (_oldCurrent != base.Current) {
-				
-				if(_structureWatcher != null) {
-					//de-serialize if necessary
-#if DEBUG
-					_logger.Debug("CC-Current Deserialize");
-#endif
-					(base.Current as SerializedEntityBase).DeserializeFields();
-					_resetLayoutRequest = _structureWatcher.CheckStructure(base.Current as SerializedEntityBase);
-				}				
-
-				_oldCurrent = base.Current;
-
-				//if there is no more valid layout reset is
-				if (_resetLayoutRequest)
+			if (!disposedValue)
+			{
+				if (disposing)
 				{
-					resetDataLayout();
+					//only if disposing is called from Dispose pattern
+					CurrentChanged -= handleCurrentChanged;
+
+					//disconnect events in any case
+					if (_cnt != null)
+					{
+						_cnt.FieldRetrieved -= FieldRetrievedHandler;
+						_cnt.FieldRetrieving -= FieldRetrievingHandler;
+						_cnt = null;
+					}
+
+					resetAttributes();
+					
+					if (DataSource != null)
+					{
+						DataSource = null;
+					}
 				}
+
+				// TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+				// TODO: set large fields to null.
+
+				disposedValue = true;
+				//call inherited
+				base.Dispose(disposing);
 			}
-#if DEBUG
-			_logger.Debug("CC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-#endif
+		}
+		#endregion
+
+
+
+		#region properties
+
+		public IEditorsHost EditorsHost {
+			get {
+				return _editorsHost;
+			}
 		}
 
-		public new object DataSource {
-			get {
-				return base.DataSource; 
+		public new object DataSource
+		{
+			get
+			{
+				return base.DataSource;
 			}
 
-			set {
+			set
+			{
 				if (value == null) return;
 
 				Type t = null;
@@ -220,24 +156,30 @@ namespace xwcs.core.db.binding
 						}
 					}
 				}
-				else {
+				else
+				{
 					t = tmpT;
 				}
 
 				bool isSerialized = typeof(SerializedEntityBase).IsAssignableFrom(t);
 
-				if (isSerialized) {
-					
-					if(_structureWatcher != null) {
-						if(!_structureWatcher.IsCompatible(t)) {
+				if (isSerialized)
+				{
+
+					if (_structureWatcher != null)
+					{
+						if (!_structureWatcher.IsCompatible(t))
+						{
 							_structureWatcher = new StructureWatcher(t);
 						}
 					}
-					else {
+					else
+					{
 						_structureWatcher = new StructureWatcher(t);
 					}
 				}
-				else {
+				else
+				{
 					_structureWatcher = null;
 				}
 				// make generic Structure watch basing on type of DataSource element
@@ -246,15 +188,14 @@ namespace xwcs.core.db.binding
 
 				// load fields eventually, layout should be assigned before
 				// so we need do eventually also this
-				if(!_fieldsAreRetrieved) {
+				if (!_fieldsAreRetrieved)
+				{
 					_cnt.RetrieveFields();
 				}
-			
+
 			}
 		}
 
-		
-		
 		public DataLayoutControl DataLayout
 		{
 			get
@@ -285,9 +226,77 @@ namespace xwcs.core.db.binding
 				_resetLayoutRequest = false;
 				_fieldsAreRetrieved = false;
 				//connect
-				_cnt.DataSource = this;				
-            }
+				_cnt.DataSource = this;
+			}
 		}
+
+		#endregion
+
+		private void resetDataLayout() {
+			// reset layout if
+			// there is one active
+			if (_cnt != null && DataSource != null && _fieldsAreRetrieved)
+			{
+#if DEBUG
+				if (CurrencyManager.Position >= 0)
+					_logger.Debug("Reset layout");
+#endif				
+				_cnt.DataSource = null;
+				_cnt.DataBindings.Clear();
+				_cnt.Clear();
+				_resetLayoutRequest = false;
+				_fieldsAreRetrieved = false;
+				resetAttributes();
+				// now set new source
+				_cnt.DataSource = this;
+            }			
+		}
+
+        public void addNewRecord(object rec)
+        {
+            AddNew();
+            Current.CopyFrom(rec);           
+        }
+
+
+        public void setCurrentRecord(object rec)
+        {
+            Current.CopyFrom(rec);
+        }
+
+		
+
+		private void handleCurrentChanged(object sender, object args)
+		{
+#if DEBUG
+			_logger.Debug("CC-Current ["+sender+"] : " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+#endif
+
+			if (_oldCurrent != base.Current) {
+				
+				if(_structureWatcher != null) {
+					//de-serialize if necessary
+#if DEBUG
+					_logger.Debug("CC-Current Deserialize");
+#endif
+					(base.Current as SerializedEntityBase).DeserializeFields();
+					_resetLayoutRequest = _structureWatcher.CheckStructure(base.Current as SerializedEntityBase);
+				}				
+
+				_oldCurrent = base.Current;
+
+				//if there is no more valid layout reset is
+				if (_resetLayoutRequest)
+				{
+					resetDataLayout();
+				}
+			}
+#if DEBUG
+			_logger.Debug("CC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
+#endif
+		}
+
+		
 
 		private void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
 		{
@@ -301,8 +310,6 @@ namespace xwcs.core.db.binding
 					a.applyRetrievedAttribute(this, e);
 				}
 			}
-			onFieldRetrieved(e);
-			
 			// at the end say that layout is valid
 			// TODO: verify what happen if there is a change in the middle, this is called for each field separately
 			_fieldsAreRetrieved = true;
@@ -331,112 +338,16 @@ namespace xwcs.core.db.binding
 			_logger.Debug(String.Format("Elapsed={0}", sw.Elapsed));
 #endif
 			
-			onFieldRetrieving(e);
+		
 			// fixed things
 			e.DataSourceUpdateMode = DataSourceUpdateMode.OnPropertyChanged;
 			e.Handled = true;
 		}
 
-		public void onGetQueryable(object sender, GetFieldQueryableEventData qd)
-		{
-			//set current edited object into event
-			qd.Current = Current;
-			_wes_GetFieldQueryable.Raise(sender, qd);
+		//if there is change or we dispose we need reset attributes
+		private void resetAttributes() {
+			_attributesCache.Values.ToList().ForEach(e => { e.ToList().ForEach(a => a.unbind(this)); e.Clear(); });
+			_attributesCache.Clear();
 		}
-
-        public void onGetOptionsList(object sender, GetFieldOptionsListEventData qd)
-        {
-			//set current edited object into event
-			qd.Current = Current;
-			_wes_GetFieldOptionsList.Raise(sender, qd);
-		}
-
-        protected virtual void onFieldRetrieving(FieldRetrievingEventArgs e) { }
-		protected virtual void onFieldRetrieved(FieldRetrievedEventArgs e) { }
-
-
-		#region IDisposable Support
-		protected bool disposedValue = false; // To detect redundant calls
-		protected override void Dispose(bool disposing)
-		{
-			if (!disposedValue)
-			{
-				if (disposing)
-				{
-					//only if disposing is called from Dispose pattern
-
-					//disconnect events in any case
-					if (_cnt != null)
-					{
-						_cnt.FieldRetrieved -= FieldRetrievedHandler;
-						_cnt.FieldRetrieving -= FieldRetrievingHandler;
-						_cnt = null;
-					}
-
-					if(DataSource != null) {
-						DataSource = null;
-					}
-				}
-
-				// TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-				// TODO: set large fields to null.
-
-				disposedValue = true;
-				//call inherited
-				base.Dispose(disposing);
-			}
-		}
-
-		// TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-		~DataLayoutBindingSource()
-		{
-			// Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-			Dispose(false);
-		}
-
-		// This code added to correctly implement the disposable pattern.
-		/* INHERITED SO NOT USE IT HERE
-		public void Dispose()
-		{
-			// Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-			Dispose(true);
-			// TODO: uncomment the following line if the finalizer is overridden above.
-			// GC.SuppressFinalize(this);
-		}
-		*/
-		#endregion
-
-
-		/*
-        protected override void OnListChanged(ListChangedEventArgs e)
-		{
-
-#if DEBUG
-			if (CurrencyManager.Position >= 0)
-				_logger.Debug("LC-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-#endif
-			
-			//orig call
-			try
-			{
-				base.OnListChanged(e);
-			}
-			catch (Exception ex)
-			{
-				// we can have problems to bind at form cause it can not match new data
-				// so stop exception here, cause we are moving to new record
-				if (CurrencyManager.Position >= 0)
-				{
-					_logger.Error("LC-EXCEPT-Current: (" + ex.Message + ") " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-				}
-			}
-#if DEBUG
-			if (CurrencyManager.Position >= 0)
-				_logger.Debug("LC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
-#endif
-
-		}
-		*/
-
 	}
 }

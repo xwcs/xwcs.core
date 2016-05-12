@@ -8,16 +8,16 @@ namespace xwcs.core.db.binding.attributes
 	public class TokenEditAttribute : CustomAttribute
 	{
 		
-		public override void applyRetrievingAttribute(IDataLayoutExtender host, FieldRetrievingEventArgs e)
+		public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
 		{
 			e.EditorType = typeof(DevExpress.XtraEditors.TokenEdit);
 		}
 
-		public override void applyRetrievedAttribute(IDataLayoutExtender host, FieldRetrievedEventArgs e)
+		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
 		{
 			RepositoryItemTokenEdit rle = e.RepositoryItem as RepositoryItemTokenEdit;
 			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { List = null, FieldName = e.FieldName };
-			host.onGetOptionsList(this, qd);
+			src.EditorsHost.onGetOptionsList(this, qd);
 			if (qd.List != null)
 			{
                 foreach (KeyValuePair pair in qd.List)

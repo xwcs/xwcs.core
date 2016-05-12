@@ -40,7 +40,7 @@ namespace xwcs.core.db.binding.attributes
 			set { _backGrndColorUsed = true;  _backGrndColor = value; }
 		}
 
-		public override void applyRetrievedAttribute(IDataLayoutExtender host, FieldRetrievedEventArgs e) {
+		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) {
 			if (_backGrndColorUsed)
 			{
 				e.Control.Padding = new System.Windows.Forms.Padding(0);

@@ -40,44 +40,32 @@ namespace xwcs.core.db.binding.attributes
 			return hashCode;
 		}
 
-		public override RepositoryItem applyGridColumnPopulation(IDataGridSource host, string ColumnName) {
+		// grid like container
+		public override RepositoryItem applyGridColumnPopulation(IDataBindingSource src, string ColumnName) {
 			return new RepositoryItemLookUpEdit();
 		}
-
-		public override void applyCustomRowCellEdit(IDataGridSource host, CustomRowCellEditEventArgs e) {
+		public override void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e) {
 			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
-			rle.DisplayMember = DisplayMember;
-			rle.ValueMember = ValueMember;
-			rle.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.Standard;
-			GetFieldQueryableEventData qd = new GetFieldQueryableEventData { DataSource = null, FieldName = e.Column.FieldName };
-			IEditorsHost eh = rle.OwnerEdit.FindForm() as IEditorsHost;
-			if (eh != null)
-			{
-				eh.onGetQueryable(this, qd);
-			}
-			//host.onGetQueryable(this, qd);
-			if (qd.DataSource != null)
-			{
-				rle.DataSource = qd.DataSource;
-			}
+			setupRle(src, rle, e.Column.FieldName);
 		}
 
-		public override void applyRetrievingAttribute(IDataLayoutExtender host, FieldRetrievingEventArgs e)
+		// data layout like container
+		public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
 		{
 			e.EditorType = typeof(DevExpress.XtraEditors.LookUpEdit);
 		}
-
-		public override void applyRetrievedAttribute(IDataLayoutExtender host, FieldRetrievedEventArgs e)
+		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
 		{
 			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
+			setupRle(src, rle, e.FieldName);
+		}
+
+		private void setupRle(IDataBindingSource src, RepositoryItemLookUpEdit rle, string fn) {
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
-			GetFieldQueryableEventData qd = new GetFieldQueryableEventData { DataSource = null, FieldName = e.FieldName };
-			IEditorsHost eh = e.Control.FindForm() as IEditorsHost;
-			if(eh != null) {
-				eh.onGetQueryable(this, qd);
-			}
-			//host.onGetQueryable(this, qd);
+			rle.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.Standard;
+			GetFieldQueryableEventData qd = new GetFieldQueryableEventData { DataSource = null, FieldName = fn };
+			src.EditorsHost.onGetQueryable(this, qd);
 			if (qd.DataSource != null)
 			{
 				rle.DataSource = qd.DataSource;

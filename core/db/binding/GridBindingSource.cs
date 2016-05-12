@@ -19,17 +19,14 @@ namespace xwcs.core.db.binding
 	using System.Data;
 	using System.Reflection;
 
-	public interface IDataGridSource
-	{
-		void onGetQueryable(object sender, GetFieldQueryableEventData qd);
-		GridControl Grid { get; }
-	}
+	
 
 
-	public class GridBindingSource : BindingSource, IDisposable, IDataGridSource
+	public class GridBindingSource : BindingSource, IDisposable, IDataBindingSource
 	{
 		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(GridBindingSource));
 
+		private IEditorsHost _editorsHost = null;
 		private GridControl _grid = null; 
 		private Type  _dataType = null;
 
@@ -37,47 +34,26 @@ namespace xwcs.core.db.binding
 		private Dictionary<string, RepositoryItem> _repositories = new Dictionary<string, RepositoryItem>();
 		private bool _gridIsConnected = false;
 
-		//public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable;
-		private readonly WeakEventSource<GetFieldQueryableEventData> _wes_GetFieldQueryable = new WeakEventSource<GetFieldQueryableEventData>();
-		public event EventHandler<GetFieldQueryableEventData> GetFieldQueryable
+		public GridBindingSource() : this((IEditorsHost)null) { }
+		public GridBindingSource(IContainer c) : this(null, c) { }
+		public GridBindingSource(object o, string s) : this(null, o, s) { }
+		public GridBindingSource(IEditorsHost eh) : base() { start(eh); }
+		public GridBindingSource(IEditorsHost eh, IContainer c) : base(c){ start(eh); }
+		public GridBindingSource(IEditorsHost eh, object o, string s) : base(o, s){ start(eh); }
+
+		private void start(IEditorsHost eh)
 		{
-			add { _wes_GetFieldQueryable.Subscribe(value); }
-			remove { _wes_GetFieldQueryable.Unsubscribe(value); }
+			_editorsHost = eh;
 		}
 
-
-		public GridBindingSource() : base()
-        {
-			start();
-        }
-		public GridBindingSource(IContainer c) : base(c)
+		public IEditorsHost EditorsHost
 		{
-			start();
-		}
-		public GridBindingSource(object o, string s) : base(o, s)
-		{
-			start();
+			get
+			{
+				return _editorsHost;
+			}
 		}
 
-		private void start()
-		{
-			
-		}
-
-		
-        public void addNewRecord(object rec)
-        {
-            AddNew();
-            Current.CopyFrom(rec);           
-        }
-
-
-        public void setCurrentRecord(object rec)
-        {
-            Current.CopyFrom(rec);
-        }
-
-       
 		public new object DataSource {
 			get {
 				return base.DataSource; 
@@ -168,6 +144,7 @@ namespace xwcs.core.db.binding
 					if (gv != null)
 					{
 						gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
+						gv.ShownEditor -= EditorShownHandler;
 					}
 				}
 				_grid = value;
@@ -176,8 +153,24 @@ namespace xwcs.core.db.binding
 				_grid.DataSource = this;
 			}
 		}
-		
-		
+
+		public void addNewRecord(object rec)
+		{
+			AddNew();
+			Current.CopyFrom(rec);
+		}
+
+		public void setCurrentRecord(object rec)
+		{
+			Current.CopyFrom(rec);
+		}
+
+		private void GridDataSourceChanged(object sender, EventArgs e)
+		{
+			_grid.MainView.PopulateColumns();
+			ConnectGrid();
+		}
+
 		private void ConnectGrid() {
 			if (_grid != null && !_gridIsConnected && _dataType != null)
 			{
@@ -202,15 +195,19 @@ namespace xwcs.core.db.binding
 				GridView gv = _grid.MainView as GridView;
 				if(gv!=null) {
 					gv.CustomRowCellEditForEditing += CustomRowCellEditForEditingHandler;
+					gv.ShownEditor += EditorShownHandler;
 				}
 
 				_gridIsConnected = true;
 			}
 		}
 
-		private void GridDataSourceChanged(object sender, EventArgs e) {
-			_grid.MainView.PopulateColumns();
-			ConnectGrid();
+		
+
+		
+
+		private void EditorShownHandler(object sender, EventArgs e) {
+
 		}
 
 		private void CustomRowCellEditForEditingHandler(object sender, CustomRowCellEditEventArgs e) {
@@ -226,15 +223,15 @@ namespace xwcs.core.db.binding
 			}
 		}
 
-		public void onGetQueryable(object sender, GetFieldQueryableEventData qd)
+		//if there is change or we dispose we need reset attributes
+		private void resetAttributes()
 		{
-			//set current edited object into event
-			qd.Current = Current;
-			_wes_GetFieldQueryable.Raise(this, qd);
+			_attributesCache.Values.ToList().ForEach(e => { e.ToList().ForEach(a => a.unbind(this)); e.Clear(); });
+			_attributesCache.Clear();
+			//clear repositories cache	
+			_repositories.Values.ToList().ForEach(r => r.Dispose());				
+			_repositories.Clear();
 		}
-
-        
-
 
 		#region IDisposable Support
 		protected bool disposedValue = false; // To detect redundant calls
@@ -262,10 +259,8 @@ namespace xwcs.core.db.binding
 					if(DataSource != null) {
 						DataSource = null;
 					}
-					//clear cached attributes
-					_attributesCache.Clear();
-					//clear repositories cache					
-					_repositories.Clear();
+					//clear cached attributes and repositories
+					resetAttributes();					
 				}
 
 				// TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
@@ -276,24 +271,6 @@ namespace xwcs.core.db.binding
 				base.Dispose(disposing);
 			}
 		}
-
-		// TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-		~GridBindingSource()
-		{
-			// Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-			Dispose(false);
-		}
-
-		// This code added to correctly implement the disposable pattern.
-		/* INHERITED SO NOT USE IT HERE
-		public void Dispose()
-		{
-			// Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-			Dispose(true);
-			// TODO: uncomment the following line if the finalizer is overridden above.
-			// GC.SuppressFinalize(this);
-		}
-		*/
 		#endregion
 	}
 }

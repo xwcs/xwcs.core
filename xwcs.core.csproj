@@ -90,7 +90,10 @@
     <Compile Include="core\db\binding\GridBindingSource.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="core\db\binding\DataLayoutBindingSource.cs" />
+    <Compile Include="core\db\binding\DataLayoutBindingSource.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="core\db\binding\IDataBindingSource.cs" />
     <Compile Include="core\db\fo\FilterObjectBase.cs" />
     <Compile Include="core\db\fo\FilterField.cs" />
     <None Include="core\db\fo\Helper.cs.off">
