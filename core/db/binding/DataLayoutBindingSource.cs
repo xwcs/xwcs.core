@@ -22,7 +22,12 @@ namespace xwcs.core.db.binding
 	{
 		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
+		// this variable will be propagated to all datasource chain down to the 
+		// model, normaly this should be some form or other root container whih 
+		// will resolve all combo box datasets
 		private IEditorsHost _editorsHost = null;
+
+
 		private DataLayoutControl _cnt = null;
 		private Type  _dataType;
 
@@ -88,6 +93,8 @@ namespace xwcs.core.db.binding
 
 
 		#region properties
+
+		public Dictionary<string, IList<CustomAttribute>> AttributesCache { get { return _attributesCache; } }
 
 		public IEditorsHost EditorsHost {
 			get {

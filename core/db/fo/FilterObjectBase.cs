@@ -15,8 +15,15 @@ namespace xwcs.core.db.fo
 	using System.Runtime.Serialization;
 	using System.Reflection;
 	using evt;
+	using System.Diagnostics;
+
+
+	/*
+	 * NOTE:
+	 *	Filter object list must be BindingList => so Binding Source can handle change of values
+	 */
 	[CollectionDataContract(IsReference = true)]
-	public class FilterObjectList<T> : List<T> where T : ICriteriaTreeNode {}
+	public class FilterObjectList<T> : BindingList<T> where T : ICriteriaTreeNode {}
 
 	[DataContract(IsReference = true)]
 	public class FilterObjectsCollection <T> : ICriteriaTreeNode where T : ICriteriaTreeNode
@@ -34,7 +41,7 @@ namespace xwcs.core.db.fo
 		#region ICriteriaTreeNode
 		public CriteriaOperator GetCondition()
 		{
-			return new ContainsOperator(GetFullFieldName(), CriteriaOperator.Or(this._data.Select(o => o.GetCondition()).AsEnumerable()));
+			return new ContainsOperator(GetFullFieldName(), CriteriaOperator.Or(_data.Select(o => o.GetCondition()).AsEnumerable()));
 		}
 		public string GetFullFieldName()
 		{
@@ -43,6 +50,14 @@ namespace xwcs.core.db.fo
 		public string GetFieldName()
 		{
 			return _fieldName;
+		}
+		public bool HasCriteria()
+		{
+			return true;
+		}
+		public void Reset()
+		{
+			Data = null;
 		}
 		#endregion
 
@@ -63,14 +78,9 @@ namespace xwcs.core.db.fo
 			set {
 				_data.Clear();
 				if(value != null)
-					_data.AddRange(value);
+					value.ToList().ForEach(e => _data.Add(e));
 			}
-		}
-
-		public bool HasCriteria()
-		{
-			return true;
-		}
+		}		
 	} 
 
 
@@ -121,6 +131,15 @@ namespace xwcs.core.db.fo
 		{
 			return _fieldName;
 		}
+		public void Reset()
+		{
+			GetType()
+			.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+			.Select(field => field.GetValue(this))
+			.Cast<ICriteriaTreeNode>()
+			.ToList()
+			.ForEach(c => { c.Reset(); OnPropertyChanged(c.GetFieldName()); } );
+		}
 		#endregion
 
 		public FilterObjectbase() : this("", "") { }
@@ -134,6 +153,8 @@ namespace xwcs.core.db.fo
 
 		protected void SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
 		{
+			MethodBase info = new StackFrame(3).GetMethod();
+			Console.WriteLine(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
 			storage.Value = (T)value;
 			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
@@ -193,6 +214,6 @@ namespace xwcs.core.db.fo
 		public bool HasCriteria()
 		{
 			return true;
-		}
+		}		
 	}
 }

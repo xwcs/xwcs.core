@@ -84,7 +84,9 @@
     <Compile Include="core\controls\IVisualControl.cs" />
     <Compile Include="core\controls\WidgetDescriptor.cs" />
     <Compile Include="core\db\binding\attributes\CustomAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\DbComboAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbLookupAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\ResetSlavesAttribute.cs" />
     <Compile Include="core\db\binding\attributes\StyleAttribute.cs" />
     <Compile Include="core\db\binding\attributes\TokenEditAttribute.cs" />
     <Compile Include="core\db\binding\GridBindingSource.cs">
@@ -156,6 +158,7 @@
     <Compile Include="LinqKit\Linq.cs" />
     <Compile Include="LinqKit\PredicateBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="uml\ClassDiagram1.cd" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="core\statemachine\test\TestFormBase.resx">

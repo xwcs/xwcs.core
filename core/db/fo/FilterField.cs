@@ -17,8 +17,11 @@ namespace xwcs.core.db.fo
 		string GetFieldName();
 		string GetFullFieldName();
 		bool HasCriteria();
+		void Reset();
 	}
+
 	
+
 	[DataContract(IsReference=true)]
 	public class FilterField<T> : ICriteriaTreeNode
 	{
@@ -52,6 +55,16 @@ namespace xwcs.core.db.fo
 		{
 			return _fieldName;
 		}
+		public void Reset()
+		{
+			_field = null;
+			_hasCriteria = false;
+			_condition = null;
+		}
+		public bool HasCriteria()
+		{
+			return _hasCriteria;
+		}
 		#endregion
 
 		//private need for de-serialize
@@ -81,8 +94,12 @@ namespace xwcs.core.db.fo
 
 			set {
 				_field = value;
-				_condition = null;
-				_hasCriteria = false;
+				// see note up: value is weaker then criteria!!
+				// but real value reset criteria, just null no
+				if(value != null) {
+					_condition = null;
+					_hasCriteria = false;
+				}
 			}
 		}
 
@@ -98,26 +115,24 @@ namespace xwcs.core.db.fo
 			}
 
 			set {
-				_condition = value;
-				_field = null;
-				_hasCriteria = true;
+				if(ReferenceEquals(null, value)) {
+					// reset of condition!!!
+					// so value become main
+					_hasCriteria = false;
+					_condition = null;
+				}else {
+					_condition = value;
+					_field = null;
+					_hasCriteria = true;
+				}				
 			}
 		}
 
 		#endregion
 
-		public bool HasCriteria() {
-			return _hasCriteria;
-		}
 		
-		/*
-		public bool Cmp(CriteriaOperator rhs) {
-			return _condition.Equals(rhs);
-		}
 
-		public bool Cmp(FilterField<T> rhs) {
-			return Equals((T)_field, rhs.Value) && _condition.Equals(rhs.Condition);
-		}
-		*/
+		
+
 	}
 }

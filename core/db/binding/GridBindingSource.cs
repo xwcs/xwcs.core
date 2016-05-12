@@ -10,16 +10,18 @@ using DevExpress.XtraDataLayout;
 namespace xwcs.core.db.binding
 {
 	using attributes;
+	using DevExpress.XtraEditors;
 	using DevExpress.XtraEditors.Container;
 	using DevExpress.XtraEditors.Repository;
 	using DevExpress.XtraGrid;
+	using DevExpress.XtraGrid.Views.Base;
 	using DevExpress.XtraGrid.Views.Grid;
 	using evt;
 	using System.Collections;
 	using System.Data;
 	using System.Reflection;
 
-	
+
 
 
 	public class GridBindingSource : BindingSource, IDisposable, IDataBindingSource
@@ -29,10 +31,19 @@ namespace xwcs.core.db.binding
 		private IEditorsHost _editorsHost = null;
 		private GridControl _grid = null; 
 		private Type  _dataType = null;
+		
 
 		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
 		private Dictionary<string, RepositoryItem> _repositories = new Dictionary<string, RepositoryItem>();
 		private bool _gridIsConnected = false;
+
+
+
+		public Dictionary<string, IList<CustomAttribute>> AttributesCache { get { return _attributesCache; } }
+
+		//if true it will handle eventual column text override
+		public bool HandleCustomColumnDisplayText { get; set; } = false;
+
 
 		public GridBindingSource() : this((IEditorsHost)null) { }
 		public GridBindingSource(IContainer c) : this(null, c) { }
@@ -44,8 +55,56 @@ namespace xwcs.core.db.binding
 		private void start(IEditorsHost eh)
 		{
 			_editorsHost = eh;
+			ListChanged += handleListItemChanged;
 		}
 
+		#region IDisposable Support
+		protected bool disposedValue = false; // To detect redundant calls
+		protected override void Dispose(bool disposing)
+		{
+			if (!disposedValue)
+			{
+				if (disposing)
+				{
+					//disconnect events in any case
+					if (_grid != null)
+					{
+						_grid.DataSourceChanged -= GridDataSourceChanged;
+						GridView gv = _grid.MainView as GridView;
+						if (gv != null)
+						{
+							gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
+							gv.ShownEditor -= EditorShownHandler;
+							gv.CustomColumnDisplayText -= CustomColumnDisplayText; //try remove anyway
+						}
+						//remove eventual grid cells editor repositories from grid
+						foreach (RepositoryItem ri in _repositories.Values)
+						{
+							_grid.RepositoryItems.Remove(ri);
+						}
+						_grid = null;
+					}
+					if (DataSource != null)
+					{
+						DataSource = null;
+					}
+					//clear cached attributes and repositories
+					resetAttributes();
+
+					ListChanged -= handleListItemChanged;
+				}
+
+				// TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+				// TODO: set large fields to null.
+
+				disposedValue = true;
+				//call inherited
+				base.Dispose(disposing);
+			}
+		}
+		#endregion
+
+		
 		public IEditorsHost EditorsHost
 		{
 			get
@@ -145,6 +204,7 @@ namespace xwcs.core.db.binding
 					{
 						gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
 						gv.ShownEditor -= EditorShownHandler;
+						gv.CustomColumnDisplayText -= CustomColumnDisplayText;
 					}
 				}
 				_grid = value;
@@ -180,7 +240,9 @@ namespace xwcs.core.db.binding
 					IList<CustomAttribute> ac = new List<CustomAttribute>();
 					foreach (CustomAttribute a in attrs)
 					{
-						RepositoryItem ri = a.applyGridColumnPopulation(this, pi.Name);
+						GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null };
+						a.applyGridColumnPopulation(this, gcp);
+						RepositoryItem ri = gcp.RepositoryItem;
 						ac.Add(a as CustomAttribute);
 						if(ri != null) {
 							_grid.RepositoryItems.Add(ri);
@@ -196,22 +258,45 @@ namespace xwcs.core.db.binding
 				if(gv!=null) {
 					gv.CustomRowCellEditForEditing += CustomRowCellEditForEditingHandler;
 					gv.ShownEditor += EditorShownHandler;
+					if (HandleCustomColumnDisplayText)
+						gv.CustomColumnDisplayText += CustomColumnDisplayText;
 				}
 
 				_gridIsConnected = true;
 			}
 		}
 
-		
+		protected virtual void GetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs e) {
+			//just to be overloaded if necessary	
+		}
 
-		
+		private void CustomColumnDisplayText(object sender, CustomColumnDisplayTextEventArgs e){
+			GetFieldDisplayText(sender, e);
+		}
 
 		private void EditorShownHandler(object sender, EventArgs e) {
-
+			ColumnView view = (ColumnView)sender;
+			Control editor = view.ActiveEditor;
+			RepositoryItem be = ((BaseEdit)editor).Properties;
+			ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs { 
+				Control = editor, 
+				View = view, 
+				FieldName = view.FocusedColumn.FieldName, 
+				RepositoryItem = be
+			};
+			
+			if (_attributesCache.ContainsKey(vsea.FieldName))
+			{
+				foreach (CustomAttribute a in _attributesCache[vsea.FieldName])
+				{
+					a.applyCustomEditShown(this, vsea);
+				}
+			}
 		}
 
 		private void CustomRowCellEditForEditingHandler(object sender, CustomRowCellEditEventArgs e) {
-			if (_repositories.ContainsKey(e.Column.FieldName)) {
+			if (_repositories.ContainsKey(e.Column.FieldName))
+			{
 				e.RepositoryItem = _repositories[e.Column.FieldName];
 			}
 			if (_attributesCache.ContainsKey(e.Column.FieldName))
@@ -233,44 +318,29 @@ namespace xwcs.core.db.binding
 			_repositories.Clear();
 		}
 
-		#region IDisposable Support
-		protected bool disposedValue = false; // To detect redundant calls
-		protected override void Dispose(bool disposing)
+
+		protected virtual void resetSlavesOfModifiedProperty(ResetSlavesAttribute att) {
+			//should be overriden
+
+		}
+
+		private void handleListItemChanged(object sender, ListChangedEventArgs args)
 		{
-			if (!disposedValue)
+			if(args.ListChangedType == ListChangedType.ItemChanged)
 			{
-				if (disposing)
-				{
-					//disconnect events in any case
-					if(_grid != null) {
-						_grid.DataSourceChanged -= GridDataSourceChanged;
-						GridView gv = _grid.MainView as GridView;
-						if (gv != null)
-						{
-							gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
-						}
-						//remove eventual grid cells editor repositories from grid
-						foreach (RepositoryItem ri in _repositories.Values)
-						{
-							_grid.RepositoryItems.Remove(ri);
-						}
-						_grid = null;
+				if(args.PropertyDescriptor != null) {
+					IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, args.PropertyDescriptor.Name);
+					var ra = attrs.OfType<ResetSlavesAttribute>();
+					if(ra.Count() == 1) {
+						//we need reset slaves chain
+						resetSlavesOfModifiedProperty(ra.First());
 					}
-					if(DataSource != null) {
-						DataSource = null;
-					}
-					//clear cached attributes and repositories
-					resetAttributes();					
+					
+#if DEBUG
+					_logger.Debug("Item changed! " + args.PropertyDescriptor.Name);
+#endif
 				}
-
-				// TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-				// TODO: set large fields to null.
-
-				disposedValue = true;
-				//call inherited
-				base.Dispose(disposing);
 			}
 		}
-		#endregion
 	}
 }
