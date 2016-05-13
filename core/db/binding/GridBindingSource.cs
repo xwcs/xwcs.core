@@ -278,13 +278,14 @@ namespace xwcs.core.db.binding
 			ColumnView view = (ColumnView)sender;
 			Control editor = view.ActiveEditor;
 			RepositoryItem be = ((BaseEdit)editor).Properties;
-			ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs { 
-				Control = editor, 
-				View = view, 
-				FieldName = view.FocusedColumn.FieldName, 
+			ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs
+			{
+				Control = editor,
+				View = view,
+				FieldName = view.FocusedColumn.FieldName,
 				RepositoryItem = be
 			};
-			
+
 			if (_attributesCache.ContainsKey(vsea.FieldName))
 			{
 				foreach (CustomAttribute a in _attributesCache[vsea.FieldName])

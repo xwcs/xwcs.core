@@ -308,18 +308,18 @@ namespace xwcs.core.db.binding
 		private void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
 		{
 #if DEBUG
-			_logger.Debug("Retrieving for field:" + e.FieldName);
+				_logger.Debug("Retrieving for field:" + e.FieldName);
 #endif
-			if (_attributesCache.ContainsKey(e.FieldName))
-			{
-				foreach (CustomAttribute a in _attributesCache[e.FieldName])
+				if (_attributesCache.ContainsKey(e.FieldName))
 				{
-					a.applyRetrievedAttribute(this, e);
+					foreach (CustomAttribute a in _attributesCache[e.FieldName])
+					{
+						a.applyRetrievedAttribute(this, e);
+					}
 				}
-			}
-			// at the end say that layout is valid
-			// TODO: verify what happen if there is a change in the middle, this is called for each field separately
-			_fieldsAreRetrieved = true;
+				// at the end say that layout is valid
+				// TODO: verify what happen if there is a change in the middle, this is called for each field separately
+				_fieldsAreRetrieved = true;
 		}
 
 		private void FieldRetrievingHandler(object sender, FieldRetrievingEventArgs e)
