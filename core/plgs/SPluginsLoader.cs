@@ -58,23 +58,22 @@ namespace xwcs.core.plgs
 
         public void LoadPlugins(IPluginHost host, string path)
         {
-            string[] dllFileNames = null;
+            List<string> dllFileNames = new List<string>();
 
             if (Directory.Exists(path))
             {
-                dllFileNames = Directory.GetFiles(path, "*.dll");
+                dllFileNames.AddRange(Directory.GetFiles(path, "plugin.*.dll"));
+				dllFileNames.AddRange(Directory.GetFiles(path, "*.plugin.*.dll"));
 
-                ICollection<Assembly> assemblies = new List<Assembly>(dllFileNames.Length);
+				List<Assembly> assemblies = new List<Assembly>();
                 foreach (string dllFile in dllFileNames)
                 {
-                    AssemblyName an = AssemblyName.GetAssemblyName(dllFile);
-                    //Assembly assembly = Assembly.Load(an);
-                    Assembly assembly = AppDomain.CurrentDomain.Load(an); //this is need to have Singletons shared!!!!
+                    Assembly assembly = AppDomain.CurrentDomain.Load(AssemblyName.GetAssemblyName(dllFile)); //this is need to have Singletons shared!!!!
                     assemblies.Add(assembly);
                 }
 
                 Type pluginType = typeof(IPlugin);
-                ICollection<Type> pluginTypes = new List<Type>();
+                List<Type> pluginTypes = new List<Type>();
                 foreach (Assembly assembly in assemblies)
                 {
                     if (assembly != null)
@@ -84,8 +83,7 @@ namespace xwcs.core.plgs
                         if (typeInfo != null)
                         {
                             IAssemblyInfo info = (IAssemblyInfo)Activator.CreateInstance(typeInfo);
-                            string[] plugins = info.Plugins;
-                            foreach(string name in plugins)
+                            foreach(string name in info.Plugins)
                             {
                                 Type typePlugin = assembly.GetType(name);
                                 if (typePlugin != null)

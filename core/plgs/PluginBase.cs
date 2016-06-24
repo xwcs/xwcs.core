@@ -6,17 +6,63 @@ using System.Threading.Tasks;
 using xwcs.core.evt;
 using System.Drawing;
 using xwcs.core.manager;
+using System.Resources;
+using System.Reflection;
 
 namespace xwcs.core.plgs
 {
-    public abstract class PluginBase : IPlugin
+	public static class ExtensionMethods {
+		public static string _L<T>(this T input, string key, string def = null) where T : PluginBase
+		{
+			try {
+				return input.RsMan.GetString(key, input.RsManCulture);
+			}catch(Exception e) {
+				Console.WriteLine(e.Message);
+				Console.Write(e.StackTrace);
+				Console.WriteLine("");
+				return def ?? key;
+			}			
+		}
+	}
+
+	public abstract class PluginBase : IPlugin
     {
 
         private PluginInfo _pluginInfo;
         private xwcs.core.evt.SEventProxy _eventProxy;
+		
+		//strings
+		private ResourceManager _resourceManager;
+		private System.Globalization.CultureInfo _resourceCulture;
+
+		public ResourceManager RsMan
+		{
+			get
+			{
+				if (ReferenceEquals(_resourceManager, null))
+				{
+					Type thisT = GetType();
+					ResourceManager temp = new ResourceManager(thisT.Namespace + ".Properties.Resources", thisT.Assembly);
+					_resourceManager = temp;
+				}
+				return _resourceManager;
+			}
+		}
+
+		public System.Globalization.CultureInfo RsManCulture
+		{
+			get
+			{
+				return _resourceCulture;
+			}
+			set
+			{
+				_resourceCulture = value;
+			}
+		}
 
 
-        public void createPluginInfo(string name, string version, pluginType type)
+		public void createPluginInfo(string name, string version, pluginType type)
         {
             _pluginInfo = new PluginInfo(name, version, type);
         }
@@ -34,11 +80,13 @@ namespace xwcs.core.plgs
             }
         }
 
-        protected void setup()
+		
+
+		protected void setup()
         {
             //get proxy, so we are sure it exists
-            _eventProxy = xwcs.core.evt.SEventProxy.getInstance();
-        }
+            _eventProxy = SEventProxy.getInstance();		
+		}
 
         abstract public void init();
 
@@ -46,7 +94,7 @@ namespace xwcs.core.plgs
 
         private string getAssestsDirectory(bool global = false)
         {
-            return AppDomain.CurrentDomain.BaseDirectory + "Plugins\\assets" + (!global ? "\\" + _pluginInfo.Namespace : "\\");
+            return AppDomain.CurrentDomain.BaseDirectory + "assets" + (!global ? "\\" + _pluginInfo.Namespace : "\\");
         }
 
         private Bitmap getBitmapFromFile(string fileName, bool global = false)
