@@ -222,18 +222,23 @@ namespace xwcs.core.db.binding
 					_cnt.FieldRetrieved -= FieldRetrievedHandler;
 					_cnt.FieldRetrieving -= FieldRetrievingHandler;
 				}
-				_cnt = value;
-				_cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
-				_cnt.AutoRetrieveFields = true;
-				_cnt.AllowCustomization = false;
-				//_cnt.AllowCustomizationMenu = false;
-				_cnt.FieldRetrieved += FieldRetrievedHandler;
-				_cnt.FieldRetrieving += FieldRetrievingHandler;
-				//variables first
-				_resetLayoutRequest = false;
-				_fieldsAreRetrieved = false;
-				//connect
-				_cnt.DataSource = this;
+				if (value != null) {
+					_cnt = value;
+					_cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
+					_cnt.AutoRetrieveFields = true;
+					_cnt.AllowCustomization = false;
+					//_cnt.AllowCustomizationMenu = false;
+					_cnt.FieldRetrieved += FieldRetrievedHandler;
+					_cnt.FieldRetrieving += FieldRetrievingHandler;
+					//variables first
+					_resetLayoutRequest = false;
+					_fieldsAreRetrieved = false;
+					//connect
+					_cnt.DataSource = this;
+				}
+				else {
+					_cnt = null;
+				}				
 			}
 		}
 
