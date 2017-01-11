@@ -76,6 +76,10 @@ namespace xwcs.core.db.fo
 				return _data;
 			}
 			set {
+                if(ReferenceEquals(_data, value))
+                {
+                    return;
+                }
 				_data.Clear();
 				if(value != null)
 					value.ToList().ForEach(e => _data.Add(e));

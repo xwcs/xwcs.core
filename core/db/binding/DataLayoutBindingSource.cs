@@ -225,6 +225,7 @@ namespace xwcs.core.db.binding
 				if (value != null) {
 					_cnt = value;
 					_cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
+                    _cnt.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
 					_cnt.AutoRetrieveFields = true;
 					_cnt.AllowCustomization = false;
 					//_cnt.AllowCustomizationMenu = false;

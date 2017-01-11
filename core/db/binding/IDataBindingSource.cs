@@ -46,7 +46,12 @@ namespace xwcs.core.db.binding
 		IEditorsHost EditorsHost { get; set; }
 	}
 
-	public interface IEditorsHost
+    public interface IDataSourceProvider
+    {
+        object DataSource { get; set; }
+    }
+
+    public interface IEditorsHost
 	{
 		void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
 		//void onGetQueryable(object sender, GetFieldQueryableEventData qd);
