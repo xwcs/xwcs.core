@@ -41,8 +41,10 @@ namespace xwcs.core.db.fo
 		#region ICriteriaTreeNode
 		public CriteriaOperator GetCondition()
 		{
-			return new ContainsOperator(GetFullFieldName(), CriteriaOperator.Or(_data.Select(o => o.GetCondition()).AsEnumerable()));
-		}
+            return _data.Count > 0 ? new ContainsOperator(GetFullFieldName(), CriteriaOperator.And(_data.Select(o => o.GetCondition()).AsEnumerable())) : null;
+            return _data.Count > 0 ? CriteriaOperator.And(_data.Select(o => new ContainsOperator(GetFullFieldName(), o.GetCondition())).AsEnumerable()) : null;
+                
+        }
 		public string GetFullFieldName()
 		{
 			return _fieldFullName;
@@ -137,13 +139,18 @@ namespace xwcs.core.db.fo
 		}
 		public void Reset()
 		{
-			GetType()
+            //string lastName = "";
+
+            GetType()
 			.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
 			.Select(field => field.GetValue(this))
 			.Cast<ICriteriaTreeNode>()
 			.ToList()
-			.ForEach(c => { c.Reset(); OnPropertyChanged(c.GetFieldName()); } );
-		}
+			.ForEach(c => { c.Reset();/* lastName = c.GetFieldName(); */} );
+
+            //invoke property changed on last property, it will force update all bindings anyway
+            OnPropertyChanged(String.Empty);
+        }
 		#endregion
 
 		public FilterObjectbase() : this("", "") { }
@@ -218,6 +225,12 @@ namespace xwcs.core.db.fo
 		public bool HasCriteria()
 		{
 			return true;
-		}		
+		}	
+        
+        public void ResetFieldByName(string FieldName)
+        {
+            GetFilterFieldByPath(FieldName)?.Reset();
+            OnPropertyChanged();
+        }
 	}
 }

@@ -20,7 +20,7 @@ namespace xwcs.core.db.binding
 
 	public class DataLayoutBindingSource : BindingSource, IDataBindingSource, IDisposable
 	{
-		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
+		protected static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
 		// this variable will be propagated to all datasource chain down to the 
 		// model, normaly this should be some form or other root container whih 
@@ -32,9 +32,9 @@ namespace xwcs.core.db.binding
 		private Type  _dataType;
 
 
-		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
+        protected Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
 		private object _oldCurrent = null;
-		private bool _fieldsAreRetrieved = true;
+        protected bool _fieldsAreRetrieved = true;
 		private bool _resetLayoutRequest = false;
 		
 		//if we work with serialized entities
@@ -228,7 +228,7 @@ namespace xwcs.core.db.binding
                     _cnt.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
 					_cnt.AutoRetrieveFields = true;
 					_cnt.AllowCustomization = false;
-					//_cnt.AllowCustomizationMenu = false;
+                    _cnt.OptionsItemText.TextAlignMode = DevExpress.XtraLayout.TextAlignMode.AlignInGroups;
 					_cnt.FieldRetrieved += FieldRetrievedHandler;
 					_cnt.FieldRetrieving += FieldRetrievingHandler;
 					//variables first
@@ -311,7 +311,7 @@ namespace xwcs.core.db.binding
 
 		
 
-		private void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
+		virtual protected void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
 		{
 #if DEBUG
 				_logger.Debug("Retrieving for field:" + e.FieldName);
