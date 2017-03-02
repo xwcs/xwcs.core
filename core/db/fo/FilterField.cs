@@ -9,16 +9,28 @@ using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Linq;
 using System.Runtime.Serialization;
+using System.Data;
+using System.Reflection.Emit;
+using System.Reflection;
+using xwcs.core.db.model;
 
 namespace xwcs.core.db.fo
 {
-	public interface ICriteriaTreeNode {
+
+    
+
+
+    public interface ICriteriaTreeNode {
 		CriteriaOperator GetCondition();
 		string GetFieldName();
 		string GetFullFieldName();
 		bool HasCriteria();
 		void Reset();
-	}
+
+        // dynamic types
+        PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null);
+
+    }
 
 	
 
@@ -65,10 +77,21 @@ namespace xwcs.core.db.fo
 		{
 			return _hasCriteria;
 		}
-		#endregion
+        
+        public PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null)
+        {
+            Type t = typeof(T);
+            if (t.IsGenericType)
+            {
+                t = t.GenericTypeArguments[0];
+            }
+            return ReflectionHelper.AddProperty(tb, _fieldName, t);
+            //return tb.DefineProperty(_fieldName, System.Reflection.PropertyAttributes.None, typeof(T), new Type[] { });
+        }
+        #endregion
 
-		//private need for de-serialize
-		private FilterField() : this("", "") { }		
+        //private need for de-serialize
+        private FilterField() : this("", "") { }		
 		public FilterField(string pn, string fn) {
 
 			if (typeof(T).IsValueType)
@@ -86,6 +109,8 @@ namespace xwcs.core.db.fo
 		}
 
 		#region Properties
+
+        
 
 		public T Value {
 			get {

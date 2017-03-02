@@ -5,24 +5,25 @@ using System.Linq;
 
 namespace xwcs.core.db.fo
 {
-	using DevExpress.Data.Filtering;
-	using model;
-	using model.attributes;
-	using System.Collections.Generic;
-	using System.Xml.Serialization;
-	using System.Xml;
-	using System.Xml.Schema;
-	using System.Runtime.Serialization;
-	using System.Reflection;
-	using evt;
-	using System.Diagnostics;
+    using DevExpress.Data.Filtering;
+    using model;
+    using model.attributes;
+    using System.Collections.Generic;
+    using System.Xml.Serialization;
+    using System.Xml;
+    using System.Xml.Schema;
+    using System.Runtime.Serialization;
+    using System.Reflection;
+    using evt;
+    using System.Diagnostics;
+    using System.Reflection.Emit;
 
 
-	/*
+    /*
 	 * NOTE:
 	 *	Filter object list must be BindingList => so Binding Source can handle change of values
 	 */
-	[CollectionDataContract(IsReference = true)]
+    [CollectionDataContract(IsReference = true)]
 	public class FilterObjectList<T> : BindingList<T> where T : ICriteriaTreeNode {}
 
 	[DataContract(IsReference = true)]
@@ -41,7 +42,7 @@ namespace xwcs.core.db.fo
 		#region ICriteriaTreeNode
 		public CriteriaOperator GetCondition()
 		{
-            return _data.Count > 0 ? new ContainsOperator(GetFullFieldName(), CriteriaOperator.And(_data.Select(o => o.GetCondition()).AsEnumerable())) : null;
+            //return _data.Count > 0 ? new ContainsOperator(GetFullFieldName(), CriteriaOperator.And(_data.Select(o => o.GetCondition()).AsEnumerable())) : null;
             return _data.Count > 0 ? CriteriaOperator.And(_data.Select(o => new ContainsOperator(GetFullFieldName(), o.GetCondition())).AsEnumerable()) : null;
                 
         }
@@ -61,11 +62,15 @@ namespace xwcs.core.db.fo
 		{
 			Data = null;
 		}
-		#endregion
+        public PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null)
+        {
+            return tb.DefineProperty(_fieldName, PropertyAttributes.None, typeof(List<T>), new Type[] {  typeof(T) });
+        }
+        #endregion
 
 
-		//private need for de-serialize
-		private FilterObjectsCollection() : this("", "") {}
+        //private need for de-serialize
+        private FilterObjectsCollection() : this("", "") {}
 		public FilterObjectsCollection(string pn, string fn) : base()
 		{
 			_data = new FilterObjectList<T>();
@@ -139,21 +144,58 @@ namespace xwcs.core.db.fo
 		}
 		public void Reset()
 		{
-            //string lastName = "";
-
+            
             GetType()
 			.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
 			.Select(field => field.GetValue(this))
 			.Cast<ICriteriaTreeNode>()
 			.ToList()
-			.ForEach(c => { c.Reset();/* lastName = c.GetFieldName(); */} );
+			.ForEach(c => { c.Reset(); } );
 
             //invoke property changed on last property, it will force update all bindings anyway
             OnPropertyChanged(String.Empty);
         }
-		#endregion
 
-		public FilterObjectbase() : this("", "") { }
+        public PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null)
+        {
+            // make first type from all fields
+            TypeBuilder ntb = mb.DefineType(_fieldName + "_t", TypeAttributes.Public);
+            
+            // add properties 
+            GetType()
+            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Select(field => field.GetValue(this))
+            .Cast<ICriteriaTreeNode>()
+            .ToList()
+            .ForEach(c => { c.CreateFakeProperty(ntb, mb); });
+
+            // now make property
+            return tb.DefineProperty(_fieldName, PropertyAttributes.None, ntb.CreateType(), new Type[] {});
+        }
+        #endregion
+
+        // make filter type
+        public object CreateFakeFilterObject()
+        {
+            AssemblyBuilder dynamicAssembly =
+                    AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("xwcs.dynamic.data.assembly"),
+                        AssemblyBuilderAccess.Run);
+            ModuleBuilder dynamicModule = dynamicAssembly.DefineDynamicModule("xwcs.dynamic.data.assembly.Module");
+            // make first type from all fields
+            TypeBuilder ntb = dynamicModule.DefineType(GetType().Name + "_fake_type", TypeAttributes.Public);
+
+            // add properties 
+            GetType()
+            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Select(field => field.GetValue(this))
+            .Cast<ICriteriaTreeNode>()
+            .ToList()
+            .ForEach(c => { c.CreateFakeProperty(ntb, dynamicModule); });
+
+            return Activator.CreateInstance(ntb.CreateType());
+        }
+
+        public FilterObjectbase() : this("", "") { }
 
 		public FilterObjectbase(string pn, string fn)
 		{
