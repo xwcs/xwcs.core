@@ -26,10 +26,6 @@ namespace xwcs.core.db.fo
 		string GetFullFieldName();
 		bool HasCriteria();
 		void Reset();
-
-        // dynamic types
-        PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null);
-
     }
 
 	
@@ -77,17 +73,6 @@ namespace xwcs.core.db.fo
 		{
 			return _hasCriteria;
 		}
-        
-        public PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null)
-        {
-            Type t = typeof(T);
-            if (t.IsGenericType)
-            {
-                t = t.GenericTypeArguments[0];
-            }
-            return ReflectionHelper.AddProperty(tb, _fieldName, t);
-            //return tb.DefineProperty(_fieldName, System.Reflection.PropertyAttributes.None, typeof(T), new Type[] { });
-        }
         #endregion
 
         //private need for de-serialize

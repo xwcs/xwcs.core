@@ -18,6 +18,11 @@ namespace xwcs.core.db.fo
     using System.Diagnostics;
     using System.Reflection.Emit;
 
+    public class fake_filter_field
+    {
+        public string name;
+        public Type type;
+    }
 
     /*
 	 * NOTE:
@@ -62,10 +67,7 @@ namespace xwcs.core.db.fo
 		{
 			Data = null;
 		}
-        public PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null)
-        {
-            return tb.DefineProperty(_fieldName, PropertyAttributes.None, typeof(List<T>), new Type[] {  typeof(T) });
-        }
+        
         #endregion
 
 
@@ -119,20 +121,19 @@ namespace xwcs.core.db.fo
 		private string _fieldName;
 		[DataMember(Order = 1)]
 		private string _fieldFullName;
-		#endregion
+        [DataMember(Order = 2)]
+        private bool _isAdvanced;
+        [DataMember(Order = 3)]
+        private CriteriaOperator _advancedCriteria;
+        #endregion
+
+        // hold cached fake filter object
+        private object _fakeFilterObject;
 
 		#region ICriteriaTreeNode
 
 		public CriteriaOperator GetCondition() {
-			//build condition
-			return CriteriaOperator.And(
-					this.GetType()
-					.GetFields(System.Reflection.BindingFlags.NonPublic | BindingFlags.Instance)
-					.Select(field => field.GetValue(this))
-					.Cast<ICriteriaTreeNode>()
-					.Select(c => c.GetCondition())
-					.AsEnumerable()
-			);
+            return _isAdvanced ? _advancedCriteria : GetCriteriaOperator();
 		}
 		public string GetFullFieldName()
 		{
@@ -154,57 +155,88 @@ namespace xwcs.core.db.fo
 
             //invoke property changed on last property, it will force update all bindings anyway
             OnPropertyChanged(String.Empty);
+
+            // advanced
+            _isAdvanced = false;
+            _advancedCriteria = null;
         }
 
-        public PropertyBuilder CreateFakeProperty(TypeBuilder tb, ModuleBuilder mb = null)
-        {
-            // make first type from all fields
-            TypeBuilder ntb = mb.DefineType(_fieldName + "_t", TypeAttributes.Public);
-            
-            // add properties 
-            GetType()
-            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
-            .Select(field => field.GetValue(this))
-            .Cast<ICriteriaTreeNode>()
-            .ToList()
-            .ForEach(c => { c.CreateFakeProperty(ntb, mb); });
-
-            // now make property
-            return tb.DefineProperty(_fieldName, PropertyAttributes.None, ntb.CreateType(), new Type[] {});
-        }
         #endregion
-
-        // make filter type
-        public object CreateFakeFilterObject()
-        {
-            AssemblyBuilder dynamicAssembly =
-                    AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("xwcs.dynamic.data.assembly"),
-                        AssemblyBuilderAccess.Run);
-            ModuleBuilder dynamicModule = dynamicAssembly.DefineDynamicModule("xwcs.dynamic.data.assembly.Module");
-            // make first type from all fields
-            TypeBuilder ntb = dynamicModule.DefineType(GetType().Name + "_fake_type", TypeAttributes.Public);
-
-            // add properties 
-            GetType()
-            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
-            .Select(field => field.GetValue(this))
-            .Cast<ICriteriaTreeNode>()
-            .ToList()
-            .ForEach(c => { c.CreateFakeProperty(ntb, dynamicModule); });
-
-            return Activator.CreateInstance(ntb.CreateType());
-        }
 
         public FilterObjectbase() : this("", "") { }
 
-		public FilterObjectbase(string pn, string fn)
-		{
-			if(_wes_PropertyChanged == null) _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
-			_fieldName = fn;
-			_fieldFullName = pn != "" ? pn + "." + fn : fn;
-		}
+        public FilterObjectbase(string pn, string fn)
+        {
+            if (_wes_PropertyChanged == null) _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+            _fieldName = fn;
+            _fieldFullName = pn != "" ? pn + "." + fn : fn;
+            _isAdvanced = false;
+            _advancedCriteria = null;
+            _fakeFilterObject = null;
+        }      
 
-		protected void SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
+        // retur fake filter object
+        public object GetFakeFilterObject()
+        {
+            if (_fakeFilterObject == null)
+            {
+                AssemblyBuilder dynamicAssembly =
+                    AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("xwcs.dynamic.data.assembly"),
+                        AssemblyBuilderAccess.Run);
+                ModuleBuilder dynamicModule = dynamicAssembly.DefineDynamicModule("xwcs.dynamic.data.assembly.Module");
+                _fakeFilterObject = Activator.CreateInstance(CreateFakeFilterObjectType(GetType().Name, GetType(), dynamicModule));
+            }
+
+            return _fakeFilterObject;
+        }
+
+        
+
+        // take current condition from fields and save it in criteria string
+        public void SaveToAdvancedCriteria()
+        {
+            _advancedCriteria = GetCriteriaOperator();
+        }
+
+
+        // cant use getter/setter
+        public CriteriaOperator GetAdvancedCriteria()
+        {
+            return _advancedCriteria;
+        }
+        public void  SetAdvancedCriteria(CriteriaOperator c)
+        {
+            _advancedCriteria = c;
+        }
+        public bool GetIsAdvanced()  
+        {
+            return _isAdvanced;
+
+        }
+        public void SetIsAdvanced(bool a)
+        {
+            _isAdvanced = a;
+        }
+
+        public ICriteriaTreeNode GetFilterFieldByPath(string path)
+        {
+            return GetFilterFieldByPath(this, path);
+        }
+
+        public bool HasCriteria()
+        {
+            return true;
+        }
+
+        public void ResetFieldByName(string FieldName)
+        {
+            GetFilterFieldByPath(FieldName)?.Reset();
+            OnPropertyChanged();
+        }
+
+
+
+        protected void SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
 		{
 			MethodBase info = new StackFrame(3).GetMethod();
 			Console.WriteLine(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
@@ -229,9 +261,7 @@ namespace xwcs.core.db.fo
 			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
 		}
 
-		public ICriteriaTreeNode GetFilterFieldByPath(string path) {
-			return GetFilterFieldByPath(this, path);
-		}
+		
 
 		private ICriteriaTreeNode GetFilterFieldByPath(ICriteriaTreeNode obj, string path) {
 			if (obj == null) { return null; }
@@ -264,15 +294,77 @@ namespace xwcs.core.db.fo
 			return obj;
 		}
 
-		public bool HasCriteria()
-		{
-			return true;
-		}	
-        
-        public void ResetFieldByName(string FieldName)
+        private CriteriaOperator GetCriteriaOperator()
         {
-            GetFilterFieldByPath(FieldName)?.Reset();
-            OnPropertyChanged();
+            //build condition
+            return CriteriaOperator.And(
+                    this.GetType()
+                    .GetFields(System.Reflection.BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Select(field => field.GetValue(this))
+                    .Cast<ICriteriaTreeNode>()
+                    .Select(c => c.GetCondition())
+                    .AsEnumerable()
+            );
         }
-	}
+
+
+        // make filter fake object
+        private Type CreateFakeFilterObjectType(string name, Type t, ModuleBuilder mb = null)
+        {
+            // make first type from all fields
+            TypeBuilder ntb = mb.DefineType(name + "_t", TypeAttributes.Public);
+
+            // fields   
+            IEnumerable<FieldInfo> fields = t.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+
+            fields.Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterField<>)))
+            .Select(f => new fake_filter_field()
+            {
+                name = f.Name.Substring(f.Name.IndexOf('_') + 1),
+                // filter field is template so take its first generic argument and check it if it is generic again
+                type = f.FieldType.GenericTypeArguments[0].IsGenericType ?
+                            // nullable<>
+                            f.FieldType.GenericTypeArguments[0].GenericTypeArguments[0] :
+                            // direct type
+                            f.FieldType.GenericTypeArguments[0]
+            }).ToList()
+            .ForEach(c => { ReflectionHelper.AddProperty(ntb, c.name, c.type); });
+
+            // nested collections
+            fields.Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectsCollection<>)))
+            .Select(f => new fake_filter_field()
+            {
+                name = f.Name.Substring(f.Name.IndexOf('_') + 1),
+                type = f.FieldType.GenericTypeArguments[0]
+            }).ToList()
+            .ForEach(c =>
+            {
+                ReflectionHelper.AddProperty(
+                    ntb,
+                    c.name,
+                    typeof(List<>).MakeGenericType(new Type[] { CreateFakeFilterObjectType(c.name, c.type, mb) })
+                );
+            });
+
+            // nested objects
+            fields.Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectbase)))
+            .Select(f => new fake_filter_field()
+            {
+                name = f.Name.Substring(f.Name.IndexOf('_') + 1),
+                type = f.FieldType
+            }).ToList()
+            .ForEach(c =>
+            {
+                ReflectionHelper.AddProperty(
+                    ntb,
+                    c.name,
+                    CreateFakeFilterObjectType(c.name, c.type, mb)
+                );
+            });
+
+            // now make property
+            return ntb.CreateType();
+        }
+
+    }
 }

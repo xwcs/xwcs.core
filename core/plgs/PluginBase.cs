@@ -97,14 +97,29 @@ namespace xwcs.core.plgs
             return AppDomain.CurrentDomain.BaseDirectory + "assets" + (!global ? "\\" + _pluginInfo.Namespace : "\\");
         }
 
-        private Bitmap getBitmapFromFile(string fileName, bool global = false)
+        public Bitmap getBitmapFromFile(string fileName, bool global = false)
         {
             Bitmap bitmap = null;
             try
             {
-                bitmap = (Bitmap)Image.FromFile(getAssestsDirectory() + "\\" + fileName, true);
+                bitmap = (Bitmap)Image.FromFile(getAssestsDirectory() + "\\img\\" + fileName, true);
             }
             catch(Exception e)
+            {
+                SLogManager.getInstance().Error(e.Message);
+                return null;
+            }
+            return bitmap;
+        }
+
+        public Icon getIconFromFile(string fileName, bool global = false)
+        {
+            Icon bitmap = null;
+            try
+            {
+                bitmap = Icon.ExtractAssociatedIcon(getAssestsDirectory() + "\\img\\" + fileName);
+            }
+            catch (Exception e)
             {
                 SLogManager.getInstance().Error(e.Message);
                 return null;
