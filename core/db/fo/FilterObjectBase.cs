@@ -116,16 +116,31 @@ namespace xwcs.core.db.fo
 			remove { _wes_PropertyChanged.Unsubscribe(new EventHandler<PropertyChangedEventArgs>(value)); }
 		}
 
-		#region serialize
-		[DataMember(Order = 0)]
+        
+
+        #region serialize
+        [DataMember(Order = 0)]
 		private string _fieldName;
 		[DataMember(Order = 1)]
 		private string _fieldFullName;
         [DataMember(Order = 2)]
         private bool _isAdvanced;
         [DataMember(Order = 3)]
-        private CriteriaOperator _advancedCriteria;
+        private string _advancedCriteriaString
+        {
+            get
+            {
+                return !ReferenceEquals(null, _advancedCriteria) ? _advancedCriteria.LegacyToString() : "";
+            }
+            set
+            {
+                _advancedCriteria = value == "" ? null : CriteriaOperator.Parse(value);
+            }
+        }
         #endregion
+
+        // advanced criteria
+        private CriteriaOperator _advancedCriteria;
 
         // hold cached fake filter object
         private object _fakeFilterObject;

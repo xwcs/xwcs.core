@@ -8,12 +8,13 @@ using System.Drawing;
 using xwcs.core.manager;
 using System.Resources;
 using System.Reflection;
+using System.Threading;
 
 namespace xwcs.core.plgs
 {
 	public static class ExtensionMethods {
 		public static string _L<T>(this T input, string key, string def = null) where T : PluginBase
-		{
+        {
 			try {
 				return input.RsMan.GetString(key, input.RsManCulture);
 			}catch(Exception e) {
@@ -44,7 +45,9 @@ namespace xwcs.core.plgs
 					Type thisT = GetType();
 					ResourceManager temp = new ResourceManager(thisT.Namespace + ".Properties.Resources", thisT.Assembly);
 					_resourceManager = temp;
-				}
+                    _resourceCulture = Thread.CurrentThread.CurrentUICulture;
+
+                }
 				return _resourceManager;
 			}
 		}
