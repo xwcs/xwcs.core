@@ -55,8 +55,8 @@ namespace xwcs.core.db.binding
 		private void start(IEditorsHost eh)
 		{
 			_editorsHost = eh;
-			ListChanged += handleListItemChanged;
-		}
+            ListChanged += handleListItemChanged;
+        }
 
 		#region IDisposable Support
 		protected bool disposedValue = false; // To detect redundant calls
@@ -321,7 +321,7 @@ namespace xwcs.core.db.binding
 
 
 		protected virtual void resetSlavesOfModifiedProperty(ResetSlavesAttribute att) {
-			//should be overriden
+			//should be overridden
 
 		}
 

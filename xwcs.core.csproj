@@ -90,7 +90,9 @@
     <Compile Include="core\db\binding\attributes\DbLookupAttribute.cs" />
     <Compile Include="core\db\binding\attributes\ResetSlavesAttribute.cs" />
     <Compile Include="core\db\binding\attributes\StyleAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\DynamicAspectAttribute.cs" />
     <Compile Include="core\db\binding\attributes\TokenEditAttribute.cs" />
+    <Compile Include="core\db\binding\IFormSupport.cs" />
     <Compile Include="core\db\binding\GridBindingSource.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -113,6 +115,7 @@
     <Compile Include="core\db\model\ReflectionHelper.cs" />
     <Compile Include="core\db\EntityBase.cs" />
     <Compile Include="core\db\model\serialize\XmlWriterExt.cs" />
+    <Compile Include="core\EnumExtender.cs" />
     <Compile Include="core\evt\VisualControlActionEvent.cs" />
     <Compile Include="core\evt\DocumentChangedEvent.cs" />
     <Compile Include="core\evt\AddToolBarRequestEvent.cs" />

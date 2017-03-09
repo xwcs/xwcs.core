@@ -96,6 +96,10 @@ namespace xwcs.core.db.fo
 		#region Properties
 
         
+        public bool ValueEquals(object what)
+        {
+            return _field != null ? _field.Equals(what) : (what == null);
+        }
 
 		public T Value {
 			get {

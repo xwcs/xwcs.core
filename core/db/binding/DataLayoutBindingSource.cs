@@ -51,10 +51,25 @@ namespace xwcs.core.db.binding
 		{
 			_editorsHost = eh;
 			CurrentChanged += handleCurrentChanged;
-		}
+            
+        }
 
-		#region IDisposable Support
-		protected bool disposedValue = false; // To detect redundant calls
+        // we will hook model properties changed event
+        private void CurrentItemPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+#if DEBUG
+            _logger.Debug(string.Format("CC-Current Item Property: {0} changed", e));
+#endif
+            HandleCurrentItemPropertyChanged(sender, e);
+        }
+        protected virtual void HandleCurrentItemPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            // should be overridden
+        }
+
+
+        #region IDisposable Support
+        protected bool disposedValue = false; // To detect redundant calls
 		protected override void Dispose(bool disposing)
 		{
 			if (!disposedValue)
@@ -73,8 +88,8 @@ namespace xwcs.core.db.binding
 					}
 
 					resetAttributes();
-					
-					if (DataSource != null)
+
+                    if (DataSource != null)
 					{
 						DataSource = null;
 					}
@@ -294,8 +309,18 @@ namespace xwcs.core.db.binding
 #endif
 					(base.Current as SerializedEntityBase).DeserializeFields();
 					_resetLayoutRequest = _structureWatcher.CheckStructure(base.Current as SerializedEntityBase);
-				}				
+				}
 
+                // handle hook to property changed event	
+                if (!ReferenceEquals(null, _oldCurrent) && _oldCurrent is INotifyModelPropertyChanged)
+                {
+                    (_oldCurrent as INotifyModelPropertyChanged).ModelPropertyChanged -= CurrentItemPropertyChanged;
+                }
+                if (base.Current is INotifyModelPropertyChanged)
+                {
+                    (base.Current as INotifyModelPropertyChanged).ModelPropertyChanged += CurrentItemPropertyChanged;
+                }
+                
 				_oldCurrent = base.Current;
 
 				//if there is no more valid layout reset is
@@ -309,9 +334,8 @@ namespace xwcs.core.db.binding
 #endif
 		}
 
-		
-
-		virtual protected void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
+       
+        virtual protected void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
 		{
 #if DEBUG
 				_logger.Debug("Retrieving for field:" + e.FieldName);

@@ -18,11 +18,8 @@ namespace xwcs.core.db.fo
     using System.Diagnostics;
     using System.Reflection.Emit;
 
-    public class fake_filter_field
-    {
-        public string name;
-        public Type type;
-    }
+
+    
 
     /*
 	 * NOTE:
@@ -32,20 +29,65 @@ namespace xwcs.core.db.fo
 	public class FilterObjectList<T> : BindingList<T> where T : ICriteriaTreeNode {}
 
 	[DataContract(IsReference = true)]
-	public class FilterObjectsCollection <T> : ICriteriaTreeNode where T : ICriteriaTreeNode
+	public class FilterObjectsCollection <T> : INotifyPropertyChanged, INotifyModelPropertyChanged, ICriteriaTreeNode where T : ICriteriaTreeNode
 	{
-		#region serialize
-		[DataMember(Order = 0)]
+        private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
+        public event PropertyChangedEventHandler PropertyChanged
+        {
+            add
+            {
+                if (_wes_PropertyChanged == null)
+                {
+                    _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+                }
+                _wes_PropertyChanged.SubscribePropertyChanged(value);
+            }
+            remove
+            {
+                _wes_PropertyChanged?.UnsubscribePropertyChanged(value);
+            }
+        }
+
+        private WeakEventSource<ModelPropertyChangedEventArgs> _wes_ModelPropertyChanged = null;
+        public event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged
+        {
+            add
+            {
+                if (_wes_ModelPropertyChanged == null)
+                {
+                    _wes_ModelPropertyChanged = new WeakEventSource<ModelPropertyChangedEventArgs>();
+                }
+                _wes_ModelPropertyChanged.Subscribe(value);
+            }
+            remove
+            {
+                _wes_ModelPropertyChanged?.Unsubscribe(value);
+            }
+        }
+
+        #region serialize
+        [DataMember(Order = 0)]
 		private FilterObjectList<T> _data;
 		[DataMember(Order = 1)]
 		private string _fieldName;
 		[DataMember(Order = 2)]
 		private string _fieldFullName;
 
-		#endregion
+        
 
-		#region ICriteriaTreeNode
-		public CriteriaOperator GetCondition()
+        // de serialization
+        protected virtual void wakeup() {; }
+        [OnDeserialized()]
+        internal void OnDeserializedMethod(StreamingContext context)
+        {
+            _data.ListChanged += internal_data_ListChanged;
+            wakeup();
+        }
+
+        #endregion
+
+        #region ICriteriaTreeNode
+        public CriteriaOperator GetCondition()
 		{
             //return _data.Count > 0 ? new ContainsOperator(GetFullFieldName(), CriteriaOperator.And(_data.Select(o => o.GetCondition()).AsEnumerable())) : null;
             return _data.Count > 0 ? CriteriaOperator.And(_data.Select(o => new ContainsOperator(GetFullFieldName(), o.GetCondition())).AsEnumerable()) : null;
@@ -76,11 +118,52 @@ namespace xwcs.core.db.fo
 		public FilterObjectsCollection(string pn, string fn) : base()
 		{
 			_data = new FilterObjectList<T>();
+            _data.ListChanged += internal_data_ListChanged;
 			_fieldName = fn;
 			_fieldFullName = pn != "" ? pn + "." + fn : fn;
 		}
 
-		public ICollection<T> Data {
+        private void internal_data_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            if(e.ListChangedType == ListChangedType.ItemChanged)
+            {
+                if(e.PropertyDescriptor != null)
+                {
+                    //froward event 
+                    _wes_ModelPropertyChanged?.Raise(
+                            this,
+                            new ModelPropertyChangedEventArgs(
+                                e.PropertyDescriptor.Name,
+                                new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
+                                {
+                                    Container = _data[e.NewIndex],
+                                    PropertyDescriptor = e.PropertyDescriptor,
+                                    PropertyName = e.PropertyDescriptor.Name,
+                                    Position = e.NewIndex,
+                                    Collection = this
+                                }
+                            )
+                   );
+                }
+                else
+                {
+                _wes_ModelPropertyChanged?.Raise(
+                        this,
+                        new ModelPropertyChangedEventArgs(
+                            "",
+                            new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
+                            {
+                                Container = _data[e.NewIndex],
+                                Position = e.NewIndex,
+                                Collection = this
+                             }
+                        )
+                   );
+                }               
+            }
+        }
+
+        public ICollection<T> Data {
 			get {
 				return _data;
 			}
@@ -99,10 +182,19 @@ namespace xwcs.core.db.fo
 
 	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
 	[DataContract(IsReference = true)]
-	public abstract class FilterObjectbase : INotifyPropertyChanged, ICriteriaTreeNode//, IXmlSerializable
+	public abstract class FilterObjectbase : INotifyPropertyChanged, INotifyModelPropertyChanged, ICriteriaTreeNode//, IXmlSerializable
 	{
-		//public event PropertyChangedEventHandler PropertyChanged;
-		private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+        protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(FilterObjectbase));
+
+        // this is for some FO internals handling
+        internal class fake_filter_field
+        {
+            public string name;
+            public Type type;
+        }
+
+        
+        private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
 		public event PropertyChangedEventHandler PropertyChanged
 		{
 			add
@@ -111,12 +203,31 @@ namespace xwcs.core.db.fo
 				{
 					_wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
 				}
-				_wes_PropertyChanged.Subscribe(new EventHandler<PropertyChangedEventArgs>(value));
-			}
-			remove { _wes_PropertyChanged.Unsubscribe(new EventHandler<PropertyChangedEventArgs>(value)); }
+                _wes_PropertyChanged.SubscribePropertyChanged(value);
+            }
+			remove {
+                _wes_PropertyChanged?.UnsubscribePropertyChanged(value);
+            }
 		}
 
-        
+        private WeakEventSource<ModelPropertyChangedEventArgs> _wes_ModelPropertyChanged = null;
+        public event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged
+        {
+            add
+            {
+                if (_wes_ModelPropertyChanged == null)
+                {
+                    _wes_ModelPropertyChanged = new WeakEventSource<ModelPropertyChangedEventArgs>();
+                }
+                _wes_ModelPropertyChanged.Subscribe(value);
+            }
+            remove
+            {
+                _wes_ModelPropertyChanged?.Unsubscribe(value);
+            }
+        }
+
+
 
         #region serialize
         [DataMember(Order = 0)]
@@ -136,6 +247,15 @@ namespace xwcs.core.db.fo
             {
                 _advancedCriteria = value == "" ? null : CriteriaOperator.Parse(value);
             }
+        }
+
+        // de serialization
+        protected virtual void wakeup() {;}
+        [OnDeserialized()]
+        internal void OnDeserializedMethod(StreamingContext context)
+        {
+            BindToNesteds();
+            wakeup();      
         }
         #endregion
 
@@ -246,39 +366,119 @@ namespace xwcs.core.db.fo
         public void ResetFieldByName(string FieldName)
         {
             GetFilterFieldByPath(FieldName)?.Reset();
-            OnPropertyChanged();
+            OnPropertyChanged(FieldName);
         }
 
 
 
         protected void SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
 		{
-			MethodBase info = new StackFrame(3).GetMethod();
-			Console.WriteLine(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
-			storage.Value = (T)value;
-			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
-		}
+            // skip if not changed
+            if (storage.ValueEquals(value)) return;
 
-		protected void SetFieldCriteria<T>(ref FilterField<T> storage, CriteriaOperator value, [CallerMemberName] string propertyName = null)
+#if DEBUG
+            MethodBase info = new StackFrame(3).GetMethod();
+            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
+#endif
+
+            storage.Value = (T)value;
+            OnPropertyChanged(propertyName);
+        }
+
+        private void OnNestedPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            // add root type name to nested property changed event
+            e.AddInChain((sender as ICriteriaTreeNode)?.GetFieldName(), new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
+            {
+                PropertyName = (sender as ICriteriaTreeNode)?.GetFieldName(),
+                Container = this
+            });
+            _wes_ModelPropertyChanged?.Raise(this, e);
+        }
+
+        protected void SetField<T>(ref T storage, object value, [CallerMemberName] string propertyName = null)
+        {
+            // skip if not changed
+            if (ReferenceEquals(storage, value)) return;
+#if DEBUG
+                MethodBase info = new StackFrame(3).GetMethod();
+            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
+#endif
+            // handle real change
+            if (!ReferenceEquals(null, storage))
+            {
+                //remove old changed handler
+                (storage as INotifyModelPropertyChanged).ModelPropertyChanged -= OnNestedPropertyChanged;
+            }
+
+            storage = (T)value;
+            // new handler
+            (storage as INotifyModelPropertyChanged).ModelPropertyChanged += OnNestedPropertyChanged;
+            // notify that nested was changed
+            OnPropertyChanged(propertyName);
+        }
+
+        protected void SetField<T>(ref FilterObjectsCollection<T> storage, ICollection<T> value, [CallerMemberName] string propertyName = null) where T : ICriteriaTreeNode
+        {
+            // skip if not changed
+            if (ReferenceEquals(storage.Data, value)) return;
+#if DEBUG
+            MethodBase info = new StackFrame(3).GetMethod();
+            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
+#endif
+            // handle real change
+            if (!ReferenceEquals(null, storage))
+            {
+                //remove old changed handler
+                (storage as INotifyModelPropertyChanged).ModelPropertyChanged -= OnNestedPropertyChanged;
+            }
+
+            storage.Data = value;
+            // new handler
+            (storage as INotifyModelPropertyChanged).ModelPropertyChanged += OnNestedPropertyChanged;
+            // notify that nested was changed
+            OnPropertyChanged(propertyName);
+        }
+
+
+
+        protected void SetFieldCriteria<T>(ref FilterField<T> storage, CriteriaOperator value, [CallerMemberName] string propertyName = null)
 		{
-			var oldValue = storage.Value;	
+#if DEBUG
+            MethodBase info = new StackFrame(3).GetMethod();
+            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
+#endif
+            var oldValue = storage.Value;	
 			storage.Condition = value;
 			//condition set value to null, so if old was something else notify property change
 			if(oldValue != null)
-				//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-				_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName)); //value set to null
-		}
+                OnPropertyChanged(propertyName);
+        }
 
-		protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-		{
-			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-			_wes_PropertyChanged.Raise(this, new PropertyChangedEventArgs(propertyName));
-		}
+        //protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected void OnPropertyChanged(string propertyName = null)
+        {
 
-		
+#if DEBUG
+            _logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
+#endif
+            _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));
 
-		private ICriteriaTreeNode GetFilterFieldByPath(ICriteriaTreeNode obj, string path) {
+            // model changes
+            _wes_ModelPropertyChanged?.Raise(
+                this,
+                new ModelPropertyChangedEventArgs(
+                    propertyName,
+                    new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
+                    {
+                        Container = this,
+                        PropertyName = propertyName
+                    }
+                )
+            );
+        }
+
+        private ICriteriaTreeNode GetFilterFieldByPath(ICriteriaTreeNode obj, string path) {
 			if (obj == null) { return null; }
 
 			int l = path.IndexOf(".");
@@ -381,5 +581,24 @@ namespace xwcs.core.db.fo
             return ntb.CreateType();
         }
 
+        protected void BindToNesteds()
+        {
+            // fields   
+            GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectbase)) || f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectsCollection<>)))
+            .Select(field => field.GetValue(this))
+            .Cast<INotifyModelPropertyChanged>()
+            .ToList()
+            .ForEach(c =>
+            {
+                if (!ReferenceEquals(null, c))
+                {
+                    //remove old changed handler
+                    c.ModelPropertyChanged -= OnNestedPropertyChanged;
+                }
+                // new handler
+                c.ModelPropertyChanged += OnNestedPropertyChanged;
+            });
+        }
     }
 }

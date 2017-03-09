@@ -8,7 +8,44 @@ namespace xwcs.core.db
 	using model;
 	using model.attributes;
 	using System.Collections.Generic;
-	public class PropertyDeserialized : EventArgs
+
+    // structured changes in model will propagate this event
+    public class ModelPropertyChangedEventArgs : EventArgs {
+        public class PropertyChangedChainEntry
+        {
+            public object Container = null;
+            public string PropertyName = "";
+            public PropertyDescriptor PropertyDescriptor = null; // eventually this
+            public int Position = -1; // used in nested Collections
+            public object Collection = null;
+        }
+
+        public List<PropertyChangedChainEntry> PropertyChain = new List<PropertyChangedChainEntry>();
+        public List<string> PropertyNamesChian = new List<string>();
+
+        public ModelPropertyChangedEventArgs(string Name, PropertyChangedChainEntry Prop)
+        {
+            AddInChain(Name, Prop);
+        }
+
+        public void AddInChain(string Name, PropertyChangedChainEntry Prop)
+        {
+            PropertyChain.Insert(0, Prop);
+            PropertyNamesChian.Insert(0, Name);
+        }
+
+        public override string ToString()
+        {
+            return string.Join(".", PropertyNamesChian);
+        }
+    }
+    public interface INotifyModelPropertyChanged
+    {
+        event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged;
+    }
+
+
+    public class PropertyDeserialized : EventArgs
 	{
 		public PropertyDeserialized(object property, string propertyName)
 		{

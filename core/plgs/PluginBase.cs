@@ -18,10 +18,11 @@ namespace xwcs.core.plgs
 			try {
 				return input.RsMan.GetString(key, input.RsManCulture);
 			}catch(Exception e) {
-				Console.WriteLine(e.Message);
-				Console.Write(e.StackTrace);
-				Console.WriteLine("");
-				return def ?? key;
+                SLogManager.getInstance().getClassLogger(typeof(T)).Warn(string.Format(e.Message));
+#if DEBUG
+                SLogManager.getInstance().getClassLogger(typeof(T)).Debug(string.Format(e.StackTrace));
+#endif
+                return def ?? key;
 			}			
 		}
 	}

@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using xwcs.core.db.binding.attributes;
+using xwcs.core.ui.db;
 
 namespace xwcs.core.db.binding
 {
@@ -49,12 +50,12 @@ namespace xwcs.core.db.binding
     public interface IDataSourceProvider
     {
         object DataSource { get; set; }
-    }
+    }   
 
     public interface IEditorsHost
 	{
 		void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
-		//void onGetQueryable(object sender, GetFieldQueryableEventData qd);
+		IFormSupport FormSupport { get; }
 	}
 
 	public class ViewEditorShownEventArgs : EventArgs

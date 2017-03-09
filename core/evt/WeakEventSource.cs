@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -41,6 +42,19 @@ namespace xwcs.core.evt
             }
         }
 
+        public void SubscribePropertyChanged(PropertyChangedEventHandler handler)
+        {
+            var weakHandlers = handler
+                .GetInvocationList()
+                .Select(d => new WeakDelegate(d))
+                .ToList();
+
+            lock (_handlers)
+            {
+                _handlers.AddRange(weakHandlers);
+            }
+        }
+
         public void Unsubscribe(EventHandler<TEventArgs> handler)
         {
             lock (_handlers)
@@ -48,6 +62,19 @@ namespace xwcs.core.evt
                 int index = _handlers.FindIndex(h => h.IsMatch(handler));
                 if (index >= 0)
                     _handlers.RemoveAt(index);
+            }
+        }
+
+        public void UnsubscribePropertyChanged(PropertyChangedEventHandler handler)
+        {
+            var weakHandlers = handler
+                .GetInvocationList()
+                .Select(d => new WeakDelegate(d))
+                .ToList();
+
+            lock (_handlers)
+            {
+                _handlers.AddRange(weakHandlers);
             }
         }
 
@@ -106,9 +133,8 @@ namespace xwcs.core.evt
                 object target = null;
                 if (_weakTarget != null)
                 {
+                    if (!_weakTarget.IsAlive) return false;
                     target = _weakTarget.Target;
-                    if (target == null)
-                        return false;
                 }
                 _openHandler(target, sender, e);
                 return true;
