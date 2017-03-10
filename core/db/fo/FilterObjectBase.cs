@@ -369,8 +369,6 @@ namespace xwcs.core.db.fo
             OnPropertyChanged(FieldName);
         }
 
-
-
         protected void SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
 		{
             // skip if not changed
@@ -382,7 +380,7 @@ namespace xwcs.core.db.fo
 #endif
 
             storage.Value = (T)value;
-            OnPropertyChanged(propertyName);
+            OnPropertyChanged(propertyName, storage);
         }
 
         private void OnNestedPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
@@ -415,7 +413,7 @@ namespace xwcs.core.db.fo
             // new handler
             (storage as INotifyModelPropertyChanged).ModelPropertyChanged += OnNestedPropertyChanged;
             // notify that nested was changed
-            OnPropertyChanged(propertyName);
+            OnPropertyChanged(propertyName, storage);
         }
 
         protected void SetField<T>(ref FilterObjectsCollection<T> storage, ICollection<T> value, [CallerMemberName] string propertyName = null) where T : ICriteriaTreeNode
@@ -437,7 +435,7 @@ namespace xwcs.core.db.fo
             // new handler
             (storage as INotifyModelPropertyChanged).ModelPropertyChanged += OnNestedPropertyChanged;
             // notify that nested was changed
-            OnPropertyChanged(propertyName);
+            OnPropertyChanged(propertyName, storage);
         }
 
 
@@ -452,11 +450,11 @@ namespace xwcs.core.db.fo
 			storage.Condition = value;
 			//condition set value to null, so if old was something else notify property change
 			if(oldValue != null)
-                OnPropertyChanged(propertyName);
+                OnPropertyChanged(propertyName, storage);
         }
 
         //protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        protected void OnPropertyChanged(string propertyName = null)
+        protected void OnPropertyChanged(string propertyName = null, object value = null)
         {
 
 #if DEBUG
@@ -472,7 +470,8 @@ namespace xwcs.core.db.fo
                     new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
                     {
                         Container = this,
-                        PropertyName = propertyName
+                        PropertyName = propertyName,
+                        Value = value
                     }
                 )
             );

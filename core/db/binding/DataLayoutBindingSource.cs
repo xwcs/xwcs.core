@@ -9,17 +9,18 @@ using DevExpress.XtraDataLayout;
 
 namespace xwcs.core.db.binding
 {
-	using attributes;
-	using DevExpress.XtraEditors.Container;
-	using DevExpress.XtraGrid;
-	using evt;
-	using System.Collections;
-	using System.Data;
-	using System.Reflection;
-	
+    using attributes;
+    using DevExpress.XtraEditors.Container;
+    using DevExpress.XtraGrid;
+    using DevExpress.XtraLayout;
+    using evt;
+    using System.Collections;
+    using System.Data;
+    using System.Reflection;
 
-	public class DataLayoutBindingSource : BindingSource, IDataBindingSource, IDisposable
-	{
+
+    public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, IDisposable
+    {
 		protected static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
 		// this variable will be propagated to all datasource chain down to the 
@@ -50,6 +51,10 @@ namespace xwcs.core.db.binding
 		private void start(IEditorsHost eh)
 		{
 			_editorsHost = eh;
+            if(_editorsHost != null)
+            {
+                _editorsHost.FormSupport.AddBindingSource(this);
+            }
 			CurrentChanged += handleCurrentChanged;
             
         }
@@ -60,17 +65,31 @@ namespace xwcs.core.db.binding
 #if DEBUG
             _logger.Debug(string.Format("CC-Current Item Property: {0} changed", e));
 #endif
-            HandleCurrentItemPropertyChanged(sender, e);
+            _wes_ModelPropertyChanged.Raise(this, e);
         }
-        protected virtual void HandleCurrentItemPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
+        
+        private WeakEventSource<ModelPropertyChangedEventArgs> _wes_ModelPropertyChanged = null;
+        public event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged
         {
-            // should be overridden
+            add
+            {
+                if (_wes_ModelPropertyChanged == null)
+                {
+                    _wes_ModelPropertyChanged = new WeakEventSource<ModelPropertyChangedEventArgs>();
+                }
+                _wes_ModelPropertyChanged.Subscribe(value);
+            }
+            remove
+            {
+                _wes_ModelPropertyChanged?.Unsubscribe(value);
+            }
         }
 
 
         #region IDisposable Support
         protected bool disposedValue = false; // To detect redundant calls
-		protected override void Dispose(bool disposing)
+        
+        protected override void Dispose(bool disposing)
 		{
 			if (!disposedValue)
 			{
@@ -386,5 +405,17 @@ namespace xwcs.core.db.binding
 			_attributesCache.Values.ToList().ForEach(e => { e.ToList().ForEach(a => a.unbind(this)); e.Clear(); });
 			_attributesCache.Clear();
 		}
-	}
+
+        // walk trough Datalayout component and find control  by Model property name      
+        public Control GetControlByModelProperty(string ModelPropertyName)
+        {
+            if (ReferenceEquals(null, _cnt)) return null;
+
+            return _cnt.Items.Cast<LayoutControlItem>()
+            .Where(o => o.Control.DataBindings.Count > 0 && o.Control.DataBindings[0].BindingMemberInfo.BindingMember == ModelPropertyName)
+            .Select(o => o.Control)
+            .FirstOrDefault();
+        }
+        
+    }
 }

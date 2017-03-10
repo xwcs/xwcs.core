@@ -10,15 +10,16 @@ namespace xwcs.core.db.binding.attributes
      * THis attribute will mark field for some future dynamic changes on form
      * it need ACTION tag and eventual PARAM,
      * for first instance we will handle
-     * MaskedEnable:
-     *      ACTION: MaskedEnable
+     * MaskedEnableTarget:
+     *      ACTION: MaskedEnableTarget
      *      PARAM: 64bit mask => if controll have correct mask it will remain enabed
      */
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
     public class DynamicAspectAttribute : CustomAttribute
     {
-        protected DynamicFormActionType _Action;
-        protected object _Param;
+        protected DynamicFormActionElementType _elementType;
+        protected DynamicFormActionType _action;
+        protected object _param;
 
 
         public override bool Equals(object obj)
@@ -26,7 +27,7 @@ namespace xwcs.core.db.binding.attributes
             DynamicAspectAttribute o = obj as DynamicAspectAttribute;
             if (o != null)
             {
-                return Action == o.Action && Param == o.Param;
+                return _elementType == o._elementType &&  _action == o._action && _param == o._param;
             }
             return false;
         }
@@ -37,89 +38,107 @@ namespace xwcs.core.db.binding.attributes
             if (hashCode == 0)
             {
                 int code = 133;
-                code = multiplier * code + (int)Action;
-                code = multiplier * code + Param.GetHashCode();
+                code = multiplier * code + (int)_elementType;
+                code = multiplier * code + (int)_action;
+                code = multiplier * code + (_param != null ? _param.GetHashCode() : 0);
                 hashCode = code;
             }
             return hashCode;
         }
 
-
-        public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
-        {
-        }
-
         public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
         {
-            src.EditorsHost.FormSupport.RegisterAction(_Action, new DynamicFormAction(e.FieldName, _Param, null));
+            if(_elementType == DynamicFormActionElementType.Action)
+            {
+                src.EditorsHost.FormSupport.RegisterAction(new DynamicFormAction(_action, e.FieldName, _param, null));
+            }else
+            {
+                src.EditorsHost.FormSupport.RegisterActionTrigger(new DynamicFormActionTrigger(_action, e.FieldName, _param, null));
+            }
+            
         }
 
-        // grid like container
-        public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e)
-        {
-        }
-        public override void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e)
-        {
-        }
-        public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e)
-        {
-        }       
+
 
         public DynamicFormActionType Action
         {
-            get { return _Action; }
-            set { _Action = value; }
+            get { return _action; }
+            set { _action = value; }
         }
 
         public object Param
         {
             get
             {
-                return _Param;
+                return _param;
             }
 
             set
             {
-                _Param = value;
+                _param = value;
             }
         }
 
-        
+        protected DynamicFormActionElementType ElementType
+        {
+            get
+            {
+                return _elementType;
+            }
+
+            set
+            {
+               _elementType = value;
+            }
+        }
     }
 
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-    public class MaskedEnable : DynamicAspectAttribute
+    public class MaskedEnableTarget : DynamicAspectAttribute
     {
-        public MaskedEnable(params object[] vals)
+        public MaskedEnableTarget(params object[] vals)
         {
             int tmp = 0;
 
-            _Action = DynamicFormActionType.MaskedEnable;
+            _action = DynamicFormActionType.MaskedEnable;
+            _elementType = DynamicFormActionElementType.Action;
 
             foreach (object v in vals)
             {
                 tmp |= (int)v;
             }
 
-            _Param = tmp;
+            _param = tmp;
         }
     }
 
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-    public class MaskedVisible : DynamicAspectAttribute
+    public class MaskedEnableTrigger : DynamicAspectAttribute
     {
-        public MaskedVisible(params object[] vals)
+        public MaskedEnableTrigger()
+        {
+            _action = DynamicFormActionType.MaskedEnable;
+            _elementType = DynamicFormActionElementType.ActionTrigger;
+            _param = null;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    public class MaskedVisibleTarget : DynamicAspectAttribute
+    {
+        public MaskedVisibleTarget(params object[] vals)
         {
             int tmp = 0;
 
-            _Action = DynamicFormActionType.MaskedVisible;
+            _action = DynamicFormActionType.MaskedVisible;
+            _elementType = DynamicFormActionElementType.Action;
 
             foreach (object v in vals)
             {
                 tmp |= (int)v;
             }
 
-            _Param = tmp;
+            _param = tmp;
         }
     }
 }

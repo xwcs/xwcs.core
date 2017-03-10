@@ -18,6 +18,7 @@ namespace xwcs.core.db
             public PropertyDescriptor PropertyDescriptor = null; // eventually this
             public int Position = -1; // used in nested Collections
             public object Collection = null;
+            public object Value = null;
         }
 
         public List<PropertyChangedChainEntry> PropertyChain = new List<PropertyChangedChainEntry>();
@@ -37,6 +38,14 @@ namespace xwcs.core.db
         public override string ToString()
         {
             return string.Join(".", PropertyNamesChian);
+        }
+
+        public object Value
+        {
+            get
+            {
+                return PropertyChain[PropertyChain.Count - 1].Value;
+            }
         }
     }
     public interface INotifyModelPropertyChanged

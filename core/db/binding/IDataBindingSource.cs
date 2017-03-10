@@ -40,7 +40,8 @@ namespace xwcs.core.db.binding
 		object Current { get; }
 		IEditorsHost EditorsHost { get;  }
 		Dictionary<string, IList<CustomAttribute>> AttributesCache { get; }
-	}	
+        Control GetControlByModelProperty(string ModelropertyName);
+    }	
 
 	public interface IEditorsHostProvider 
 	{

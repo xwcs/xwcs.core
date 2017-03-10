@@ -55,11 +55,12 @@ namespace xwcs.core.db.binding
 		private void start(IEditorsHost eh)
 		{
 			_editorsHost = eh;
+            _editorsHost.FormSupport.AddBindingSource(this);
             ListChanged += handleListItemChanged;
         }
-
-		#region IDisposable Support
-		protected bool disposedValue = false; // To detect redundant calls
+        
+        #region IDisposable Support
+        protected bool disposedValue = false; // To detect redundant calls
 		protected override void Dispose(bool disposing)
 		{
 			if (!disposedValue)
@@ -343,5 +344,10 @@ namespace xwcs.core.db.binding
 				}
 			}
 		}
-	}
+
+        public Control GetControlByModelProperty(string ModelropertyName)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

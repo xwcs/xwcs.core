@@ -14,27 +14,35 @@ namespace xwcs.core.ui.db
         MaskedVisible = 1
     }
 
+    public enum DynamicFormActionElementType
+    {
+        ActionTrigger = 0,
+        Action = 1
+    }
 
     /*
     * Classes for Form support handling
     */
     public interface IFormSupport
     {
-        void RegisterAction(DynamicFormActionType t, DynamicFormAction a);
+        void RegisterAction(DynamicFormAction a);
+        void RegisterActionTrigger(DynamicFormActionTrigger a);
+        void AddBindingSource(IDataBindingSource bs);
     }
     
 
     public class DynamicFormAction
     {
-        private string _FieldName;
-        private WeakReference _Control;
-        private object _Param;
+        private DynamicFormActionType _type;
+        private string _fieldName;
+        private WeakReference _control;
+        private object _param;
 
         public string FieldName
         {
             get
             {
-                return _FieldName;
+                return _fieldName;
             }
         }
 
@@ -42,11 +50,15 @@ namespace xwcs.core.ui.db
         {
             get
             {
-                if (_Control.IsAlive)
+                if (_control.IsAlive)
                 {
-                    return (_Control.Target as Control);
+                    return (_control.Target as Control);
                 }
                 return null;
+            }
+            set
+            {
+                _control = new WeakReference(value);
             }
         }
 
@@ -54,23 +66,101 @@ namespace xwcs.core.ui.db
         {
             get
             {
-                return _Param;
+                return _param;
             }
 
             set
             {
-                _Param = value;
+                _param = value;
             }
         }
 
-        public DynamicFormAction(string fn, object p, Control cnt)
+        public DynamicFormActionType ActionType
         {
-            _FieldName = fn;
-            _Control = new WeakReference(cnt);
-            _Param = p;
+            get
+            {
+                return _type;
+            }
+
+            set
+            {
+                _type = value;
+            }
         }
 
+        public DynamicFormAction(DynamicFormActionType t, string fn, object p, Control cnt)
+        {
+            _type = t;
+            _fieldName = fn;
+            _control = new WeakReference(cnt);
+            _param = p;
+        }
+    }
 
+    public class DynamicFormActionTrigger
+    {
+        private DynamicFormActionType _type;
+        private string _fieldName;
+        private WeakReference _control;
+        private object _param;
+
+        public string FieldName
+        {
+            get
+            {
+                return _fieldName;
+            }
+        }
+
+        public Control Control
+        {
+            get
+            {
+                if (_control.IsAlive)
+                {
+                    return (_control.Target as Control);
+                }
+                return null;
+            }
+            set
+            {
+                _control = new WeakReference(value);
+            }
+        }
+
+        public object Param
+        {
+            get
+            {
+                return _param;
+            }
+
+            set
+            {
+                _param = value;
+            }
+        }
+
+        public DynamicFormActionTrigger(DynamicFormActionType t, string fn, object p, Control cnt)
+        {
+            _type = t;
+            _fieldName = fn;
+            _control = new WeakReference(cnt);
+            _param = p;
+        }
+
+        public DynamicFormActionType ActionType
+        {
+            get
+            {
+                return _type;
+            }
+
+            set
+            {
+                _type = value;
+            }
+        }
     }
 
     public class DynamicFormActions
@@ -90,6 +180,25 @@ namespace xwcs.core.ui.db
         }
     }
 
+    public class DynamicFormActionTriggers
+    {
+        // key is field name
+        private Dictionary<string, List<DynamicFormActionTrigger>> _actions = new Dictionary<string, List<DynamicFormActionTrigger>>();
 
-    
+        public List<DynamicFormActionTrigger> this[string tag]
+        {
+            get
+            {
+                if (!_actions.ContainsKey(tag))
+                {
+                    _actions[tag] = new List<DynamicFormActionTrigger>();
+                }
+                return _actions[tag];
+            }
+        }
+        
+    }
+
+
+
 }
