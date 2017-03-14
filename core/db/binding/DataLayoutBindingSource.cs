@@ -19,7 +19,7 @@ namespace xwcs.core.db.binding
     using System.Reflection;
 
 
-    public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, IDisposable
+    public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, INotifyCurrentObjectChanged, IDisposable
     {
 		protected static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
@@ -35,7 +35,7 @@ namespace xwcs.core.db.binding
 
         protected Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
 		private object _oldCurrent = null;
-        protected bool _fieldsAreRetrieved = true;
+        protected bool _fieldsAreRetrieved = false;
 		private bool _resetLayoutRequest = false;
 		
 		//if we work with serialized entities
@@ -82,6 +82,23 @@ namespace xwcs.core.db.binding
             remove
             {
                 _wes_ModelPropertyChanged?.Unsubscribe(value);
+            }
+        }
+
+        private WeakEventSource<CurrentObjectChangedEventArgs> _wes_CurrentObjectChanged = null;
+        public event EventHandler<CurrentObjectChangedEventArgs> CurrentObjectChanged
+        {
+            add
+            {
+                if (_wes_CurrentObjectChanged == null)
+                {
+                    _wes_CurrentObjectChanged = new WeakEventSource<CurrentObjectChangedEventArgs>();
+                }
+                _wes_CurrentObjectChanged.Subscribe(value);
+            }
+            remove
+            {
+                _wes_CurrentObjectChanged?.Unsubscribe(value);
             }
         }
 
@@ -229,10 +246,16 @@ namespace xwcs.core.db.binding
 
 				// load fields eventually, layout should be assigned before
 				// so we need do eventually also this
-				if (!_fieldsAreRetrieved)
+				if (!_fieldsAreRetrieved && !ReferenceEquals(null, _cnt))
 				{
 					_cnt.RetrieveFields();
-				}
+
+                    if (_fieldsAreRetrieved)
+                    {
+                        // there should be registered all triggers
+                        _wes_CurrentObjectChanged.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
+                    }                    
+                }
 
 			}
 		}
@@ -270,7 +293,13 @@ namespace xwcs.core.db.binding
 					_fieldsAreRetrieved = false;
 					//connect
 					_cnt.DataSource = this;
-				}
+
+                    if (_fieldsAreRetrieved)
+                    {
+                        // there should be registered all triggers
+                        _wes_CurrentObjectChanged.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
+                    }
+                }
 				else {
 					_cnt = null;
 				}				
@@ -339,11 +368,17 @@ namespace xwcs.core.db.binding
                 {
                     (base.Current as INotifyModelPropertyChanged).ModelPropertyChanged += CurrentItemPropertyChanged;
                 }
-                
-				_oldCurrent = base.Current;
 
-				//if there is no more valid layout reset is
-				if (_resetLayoutRequest)
+                // notify rest of new current object but just if layout is ready
+                if (_fieldsAreRetrieved)
+                {
+                    _wes_CurrentObjectChanged.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
+                }                
+
+                _oldCurrent = base.Current;                
+
+                //if there is no more valid layout reset is
+                if (_resetLayoutRequest)
 				{
 					resetDataLayout();
 				}
@@ -411,10 +446,25 @@ namespace xwcs.core.db.binding
         {
             if (ReferenceEquals(null, _cnt)) return null;
 
-            return _cnt.Items.Cast<LayoutControlItem>()
+            List<Control> l1 = _cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
+                .Where(o => o.Control.DataBindings.Count > 0 && o.Control.DataBindings[0].BindingMemberInfo.BindingMember == ModelPropertyName)
+                .Select(o => o.Control)
+                .ToList();
+
+            return _cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
             .Where(o => o.Control.DataBindings.Count > 0 && o.Control.DataBindings[0].BindingMemberInfo.BindingMember == ModelPropertyName)
             .Select(o => o.Control)
             .FirstOrDefault();
+        }
+
+        public void SuspendLayout()
+        {
+            _cnt.SuspendLayout();
+        }
+
+        public void ResumeLayout()
+        {
+            _cnt.ResumeLayout();
         }
         
     }

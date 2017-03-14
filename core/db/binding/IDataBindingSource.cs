@@ -41,6 +41,8 @@ namespace xwcs.core.db.binding
 		IEditorsHost EditorsHost { get;  }
 		Dictionary<string, IList<CustomAttribute>> AttributesCache { get; }
         Control GetControlByModelProperty(string ModelropertyName);
+        void SuspendLayout();
+        void ResumeLayout();
     }	
 
 	public interface IEditorsHostProvider 

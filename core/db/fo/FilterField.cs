@@ -117,7 +117,12 @@ namespace xwcs.core.db.fo
 			}
 		}
 
-		public CriteriaOperator Condition {
+        public override string ToString()
+        {
+            return _field != null ? _field.ToString() : "";
+        }
+
+        public CriteriaOperator Condition {
 			get {
 				if(_hasCriteria) {
 					return _condition;

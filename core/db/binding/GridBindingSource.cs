@@ -347,7 +347,17 @@ namespace xwcs.core.db.binding
 
         public Control GetControlByModelProperty(string ModelropertyName)
         {
-            throw new NotImplementedException();
+            return null;
+        }
+
+        public void SuspendLayout()
+        {
+            return;
+        }
+
+        public void ResumeLayout()
+        {
+            return;
         }
     }
 }

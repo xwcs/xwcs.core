@@ -183,20 +183,24 @@ namespace xwcs.core.ui.db
     public class DynamicFormActionTriggers
     {
         // key is field name
-        private Dictionary<string, List<DynamicFormActionTrigger>> _actions = new Dictionary<string, List<DynamicFormActionTrigger>>();
+        private Dictionary<string, List<DynamicFormActionTrigger>> _triggers = new Dictionary<string, List<DynamicFormActionTrigger>>();
 
         public List<DynamicFormActionTrigger> this[string tag]
         {
             get
             {
-                if (!_actions.ContainsKey(tag))
+                if (!_triggers.ContainsKey(tag))
                 {
-                    _actions[tag] = new List<DynamicFormActionTrigger>();
+                    _triggers[tag] = new List<DynamicFormActionTrigger>();
                 }
-                return _actions[tag];
+                return _triggers[tag];
             }
         }
         
+        public List<List<DynamicFormActionTrigger>> AllTriggerLists()
+        {
+            return _triggers.Values.ToList();
+        }
     }
 
 

@@ -46,6 +46,7 @@ namespace xwcs.core.db.binding.attributes
             return hashCode;
         }
 
+        /*
         public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
         {
             if(_elementType == DynamicFormActionElementType.Action)
@@ -56,6 +57,19 @@ namespace xwcs.core.db.binding.attributes
                 src.EditorsHost.FormSupport.RegisterActionTrigger(new DynamicFormActionTrigger(_action, e.FieldName, _param, null));
             }
             
+        }
+        */
+
+        public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
+        {
+            if (_elementType == DynamicFormActionElementType.Action)
+            {
+                src.EditorsHost.FormSupport.RegisterAction(new DynamicFormAction(_action, e.FieldName, _param, null));
+            }
+            else
+            {
+                src.EditorsHost.FormSupport.RegisterActionTrigger(new DynamicFormActionTrigger(_action, e.FieldName, _param, null));
+            }
         }
 
 
@@ -115,11 +129,25 @@ namespace xwcs.core.db.binding.attributes
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
     public class MaskedEnableTrigger : DynamicAspectAttribute
     {
+
         public MaskedEnableTrigger()
         {
             _action = DynamicFormActionType.MaskedEnable;
             _elementType = DynamicFormActionElementType.ActionTrigger;
             _param = null;
+        }
+
+        public Type MaskEnumType
+        {
+            get
+            {
+                return _param as Type;
+            }
+
+            set
+            {
+                _param = value;
+            }
         }
     }
 

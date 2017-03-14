@@ -182,7 +182,7 @@ namespace xwcs.core.db.fo
 
 	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
 	[DataContract(IsReference = true)]
-	public abstract class FilterObjectbase : INotifyPropertyChanged, INotifyModelPropertyChanged, ICriteriaTreeNode//, IXmlSerializable
+	public abstract class FilterObjectbase : INotifyPropertyChanged, INotifyModelPropertyChanged, ICriteriaTreeNode, IModelEntity
 	{
         protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(FilterObjectbase));
 
@@ -598,6 +598,48 @@ namespace xwcs.core.db.fo
                 // new handler
                 c.ModelPropertyChanged += OnNestedPropertyChanged;
             });
+        }
+
+
+        public object GetModelPropertyValueByName(string PropName)
+        {
+            return GetModelPropertyValueByNameInternal(this, PropName);
+        }
+
+        protected object GetModelPropertyValueByNameInternal(object obj, string path)
+        {
+            if (obj == null) { return null; }
+
+            int l = path.IndexOf(".");
+            string name = path;
+            string suffix = "";
+            if (l > 0)
+            {
+                name = path.Substring(0, l);
+                suffix = path.Substring(l + 1);
+            }
+
+            try
+            {
+                obj = obj.GetType()
+                .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(field => field.Name == '_' + name)
+                .Select(field => field.GetValue(obj))
+                .Single();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            //not done			
+            if (suffix != "")
+            {
+                return GetModelPropertyValueByNameInternal(obj, suffix);
+            }
+
+            //done
+            return obj;
         }
     }
 }

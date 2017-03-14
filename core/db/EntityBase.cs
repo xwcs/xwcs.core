@@ -54,6 +54,18 @@ namespace xwcs.core.db
     }
 
 
+    public class CurrentObjectChangedEventArgs : EventArgs
+    {
+        public object Old = null;
+        public object Current = null;
+    }
+
+    public interface INotifyCurrentObjectChanged
+    {
+        event EventHandler<CurrentObjectChangedEventArgs> CurrentObjectChanged;
+    }
+
+
     public class PropertyDeserialized : EventArgs
 	{
 		public PropertyDeserialized(object property, string propertyName)
@@ -64,6 +76,12 @@ namespace xwcs.core.db
 		public object SourceProperty { get; private set; }
 		public string SourcePropertyName { get; private set; }
 	}
+
+
+    public interface IModelEntity
+    {
+        object GetModelPropertyValueByName(string PropName);
+    }
 
 	//public delegate void PropertyDeserializedEventHandler(EntityBase sender, PropertyDeserialized e);
 
