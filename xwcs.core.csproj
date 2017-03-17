@@ -115,6 +115,8 @@
     <Compile Include="core\db\model\ReflectionHelper.cs" />
     <Compile Include="core\db\EntityBase.cs" />
     <Compile Include="core\db\model\serialize\XmlWriterExt.cs" />
+    <Compile Include="core\CollectionExtender.cs" />
+    <Compile Include="core\ObjectExtender.cs" />
     <Compile Include="core\EnumExtender.cs" />
     <Compile Include="core\evt\VisualControlActionEvent.cs" />
     <Compile Include="core\evt\DocumentChangedEvent.cs" />

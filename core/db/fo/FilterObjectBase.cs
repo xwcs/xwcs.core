@@ -82,6 +82,7 @@ namespace xwcs.core.db.fo
         {
             _data.ListChanged += internal_data_ListChanged;
             wakeup();
+            _changed = false;
         }
 
         #endregion
@@ -127,6 +128,10 @@ namespace xwcs.core.db.fo
         {
             if(e.ListChangedType == ListChangedType.ItemChanged)
             {
+
+                // handle changed
+                _changed = true;
+
                 if(e.PropertyDescriptor != null)
                 {
                     //froward event 
@@ -150,7 +155,7 @@ namespace xwcs.core.db.fo
                 _wes_ModelPropertyChanged?.Raise(
                         this,
                         new ModelPropertyChangedEventArgs(
-                            "",
+                            "*",
                             new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
                             {
                                 Container = _data[e.NewIndex],
@@ -176,8 +181,14 @@ namespace xwcs.core.db.fo
 				if(value != null)
 					value.ToList().ForEach(e => _data.Add(e));
 			}
-		}		
-	} 
+		}
+
+        private bool _changed = false;
+        public bool IsChanged()
+        {
+           return _changed;
+        }
+    } 
 
 
 	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
@@ -227,7 +238,11 @@ namespace xwcs.core.db.fo
             }
         }
 
-
+        private bool _changed = false;
+        public bool IsChanged()
+        {
+            return _changed;
+        }
 
         #region serialize
         [DataMember(Order = 0)]
@@ -255,7 +270,10 @@ namespace xwcs.core.db.fo
         internal void OnDeserializedMethod(StreamingContext context)
         {
             BindToNesteds();
-            wakeup();      
+            wakeup();
+
+            //restore default state
+            _changed = false;
         }
         #endregion
 
@@ -310,7 +328,7 @@ namespace xwcs.core.db.fo
             _fakeFilterObject = null;
         }      
 
-        // retur fake filter object
+        // return fake filter object
         public object GetFakeFilterObject()
         {
             if (_fakeFilterObject == null)
@@ -331,6 +349,7 @@ namespace xwcs.core.db.fo
         public void SaveToAdvancedCriteria()
         {
             _advancedCriteria = GetCriteriaOperator();
+            _changed = true;
         }
 
 
@@ -341,7 +360,11 @@ namespace xwcs.core.db.fo
         }
         public void  SetAdvancedCriteria(CriteriaOperator c)
         {
-            _advancedCriteria = c;
+            if (ReferenceEquals(null, _advancedCriteria) || !_advancedCriteria.Equals(c))
+            {
+                _advancedCriteria = c;
+                _changed = true;
+            }            
         }
         public bool GetIsAdvanced()  
         {
@@ -351,6 +374,7 @@ namespace xwcs.core.db.fo
         public void SetIsAdvanced(bool a)
         {
             _isAdvanced = a;
+            _changed = true;
         }
 
         public ICriteriaTreeNode GetFilterFieldByPath(string path)
@@ -391,6 +415,11 @@ namespace xwcs.core.db.fo
                 PropertyName = (sender as ICriteriaTreeNode)?.GetFieldName(),
                 Container = this
             });
+
+            // handle changed
+            _changed = true; // false positive it will do true even if object was empty
+
+            // notify
             _wes_ModelPropertyChanged?.Raise(this, e);
         }
 
@@ -457,6 +486,9 @@ namespace xwcs.core.db.fo
         protected void OnPropertyChanged(string propertyName = null, object value = null)
         {
 
+            // handle changed
+            _changed = true; // false positive it will do true even if object was empty
+
 #if DEBUG
             _logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
 #endif
@@ -466,11 +498,11 @@ namespace xwcs.core.db.fo
             _wes_ModelPropertyChanged?.Raise(
                 this,
                 new ModelPropertyChangedEventArgs(
-                    propertyName,
+                    propertyName == string.Empty ? "*" : propertyName,
                     new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
                     {
                         Container = this,
-                        PropertyName = propertyName,
+                        PropertyName = propertyName == string.Empty ? "*" : propertyName,
                         Value = value
                     }
                 )
