@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace xwcs.core.db
 {
@@ -40,6 +41,18 @@ namespace xwcs.core.db
             return string.Join(".", PropertyNamesChian);
         }
 
+        public bool HasWildCharInName()
+        {
+            return ToString().Contains("*");
+        }
+
+        public string ToRegExp()
+        {
+            return (PropertyNamesChian.Count == 1 && PropertyNamesChian[0] == "*") ? 
+                        @"^(?:(?:[^\.]*?)\.?)+$" : 
+                        string.Format(@"^{0}$", string.Join(@"\.", PropertyNamesChian.Select( n => n.Replace("*", @"[^\.]*?"))));
+        }
+
         public object Value
         {
             get
@@ -51,6 +64,7 @@ namespace xwcs.core.db
     public interface INotifyModelPropertyChanged
     {
         event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged;
+        bool IsChanged();
     }
 
 

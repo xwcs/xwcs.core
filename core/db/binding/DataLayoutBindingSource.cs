@@ -57,50 +57,7 @@ namespace xwcs.core.db.binding
             }
 			CurrentChanged += handleCurrentChanged;
             
-        }
-
-        // we will hook model properties changed event
-        private void CurrentItemPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
-        {
-#if DEBUG
-            _logger.Debug(string.Format("CC-Current Item Property: {0} changed", e));
-#endif
-            _wes_ModelPropertyChanged.Raise(this, e);
-        }
-        
-        private WeakEventSource<ModelPropertyChangedEventArgs> _wes_ModelPropertyChanged = null;
-        public event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged
-        {
-            add
-            {
-                if (_wes_ModelPropertyChanged == null)
-                {
-                    _wes_ModelPropertyChanged = new WeakEventSource<ModelPropertyChangedEventArgs>();
-                }
-                _wes_ModelPropertyChanged.Subscribe(value);
-            }
-            remove
-            {
-                _wes_ModelPropertyChanged?.Unsubscribe(value);
-            }
-        }
-
-        private WeakEventSource<CurrentObjectChangedEventArgs> _wes_CurrentObjectChanged = null;
-        public event EventHandler<CurrentObjectChangedEventArgs> CurrentObjectChanged
-        {
-            add
-            {
-                if (_wes_CurrentObjectChanged == null)
-                {
-                    _wes_CurrentObjectChanged = new WeakEventSource<CurrentObjectChangedEventArgs>();
-                }
-                _wes_CurrentObjectChanged.Subscribe(value);
-            }
-            remove
-            {
-                _wes_CurrentObjectChanged?.Unsubscribe(value);
-            }
-        }
+        }      
 
 
         #region IDisposable Support
@@ -140,9 +97,7 @@ namespace xwcs.core.db.binding
 			}
 		}
 		#endregion
-
-
-
+        
 		#region properties
 
 		public Dictionary<string, IList<CustomAttribute>> AttributesCache { get { return _attributesCache; } }
@@ -306,9 +261,58 @@ namespace xwcs.core.db.binding
 			}
 		}
 
-		#endregion
+        #endregion
 
-		private void resetDataLayout() {
+        // we will hook model properties changed event
+        private void CurrentItemPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+#if DEBUG
+            _logger.Debug(string.Format("CC-Current Item Property: {0} changed", e));
+#endif
+            _wes_ModelPropertyChanged.Raise(this, e);
+        }
+
+        private WeakEventSource<ModelPropertyChangedEventArgs> _wes_ModelPropertyChanged = null;
+        public event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged
+        {
+            add
+            {
+                if (_wes_ModelPropertyChanged == null)
+                {
+                    _wes_ModelPropertyChanged = new WeakEventSource<ModelPropertyChangedEventArgs>();
+                }
+                _wes_ModelPropertyChanged.Subscribe(value);
+            }
+            remove
+            {
+                _wes_ModelPropertyChanged?.Unsubscribe(value);
+            }
+        }
+
+        private WeakEventSource<CurrentObjectChangedEventArgs> _wes_CurrentObjectChanged = null;
+        public event EventHandler<CurrentObjectChangedEventArgs> CurrentObjectChanged
+        {
+            add
+            {
+                if (_wes_CurrentObjectChanged == null)
+                {
+                    _wes_CurrentObjectChanged = new WeakEventSource<CurrentObjectChangedEventArgs>();
+                }
+                _wes_CurrentObjectChanged.Subscribe(value);
+            }
+            remove
+            {
+                _wes_CurrentObjectChanged?.Unsubscribe(value);
+            }
+        }
+
+        // not used for this object type, but necessary for interface
+        public bool IsChanged()
+        {
+            return false;
+        }
+
+        private void resetDataLayout() {
 			// reset layout if
 			// there is one active
 			if (_cnt != null && DataSource != null && _fieldsAreRetrieved)

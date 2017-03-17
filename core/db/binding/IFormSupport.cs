@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using xwcs.core.db.binding;
 
+
 namespace xwcs.core.ui.db
 {
     public enum DynamicFormActionType
@@ -28,6 +29,7 @@ namespace xwcs.core.ui.db
         void RegisterAction(DynamicFormAction a);
         void RegisterActionTrigger(DynamicFormActionTrigger a);
         void AddBindingSource(IDataBindingSource bs);
+        Control FindControlByPropertyName(string name);
     }
     
 
@@ -200,6 +202,11 @@ namespace xwcs.core.ui.db
         public List<List<DynamicFormActionTrigger>> AllTriggerLists()
         {
             return _triggers.Values.ToList();
+        }
+
+        public List<List<DynamicFormActionTrigger>> AllTriggerListsByPattern(string tag)
+        {
+            return (List < List < DynamicFormActionTrigger >> )_triggers.GetItemsByKeyPattern(tag);
         }
     }
 
