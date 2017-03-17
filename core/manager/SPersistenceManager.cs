@@ -13,7 +13,8 @@ namespace xwcs.core.manager
     {
 		public enum AssetKind{
 			Image,
-			Layout
+			Layout,
+			Print
 		}
 
         private static SPersistenceManager instance;
@@ -145,6 +146,7 @@ namespace xwcs.core.manager
 			switch(k) {
 				case AssetKind.Image: return "img";
 				case AssetKind.Layout: return "layout";
+				case AssetKind.Print: return "print";
 			}
 			return "";
 		}
