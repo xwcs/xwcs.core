@@ -256,7 +256,7 @@ namespace xwcs.core.db.fo
         {
             get
             {
-                return !ReferenceEquals(null, _advancedCriteria) ? _advancedCriteria.LegacyToString() : "";
+                return !ReferenceEquals(null, _advancedCriteria) ? _advancedCriteria.ToString() : "";
             }
             set
             {
