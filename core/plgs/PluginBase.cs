@@ -133,7 +133,7 @@ namespace xwcs.core.plgs
 
         public void setImageToButtonItem(DevExpress.XtraBars.BarButtonItem buttonItem, string fileName, bool global = false)
         {
-            Bitmap bmp = getBitmapFromFile("img\\" + fileName);
+            Bitmap bmp = getBitmapFromFile(fileName);
             if (bmp != null) buttonItem.Glyph = bmp;
         }
     }

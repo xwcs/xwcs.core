@@ -208,7 +208,7 @@ namespace xwcs.core.db.binding
                     if (_fieldsAreRetrieved)
                     {
                         // there should be registered all triggers
-                        _wes_CurrentObjectChanged.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
+                        _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
                     }                    
                 }
 
@@ -252,7 +252,7 @@ namespace xwcs.core.db.binding
                     if (_fieldsAreRetrieved)
                     {
                         // there should be registered all triggers
-                        _wes_CurrentObjectChanged.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
+                        _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
                     }
                 }
 				else {
@@ -376,7 +376,7 @@ namespace xwcs.core.db.binding
                 // notify rest of new current object but just if layout is ready
                 if (_fieldsAreRetrieved)
                 {
-                    _wes_CurrentObjectChanged.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
+                    _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
                 }                
 
                 _oldCurrent = base.Current;                
