@@ -9,17 +9,18 @@ using DevExpress.XtraDataLayout;
 
 namespace xwcs.core.db.binding
 {
-    using attributes;
-    using DevExpress.XtraEditors.Container;
-    using DevExpress.XtraGrid;
-    using DevExpress.XtraLayout;
-    using evt;
-    using System.Collections;
-    using System.Data;
-    using System.Reflection;
+	using attributes;
+	using DevExpress.XtraEditors;
+	using DevExpress.XtraEditors.Container;
+	using DevExpress.XtraGrid;
+	using DevExpress.XtraLayout;
+	using evt;
+	using System.Collections;
+	using System.Data;
+	using System.Reflection;
 
 
-    public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, INotifyCurrentObjectChanged, IDisposable
+	public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, INotifyCurrentObjectChanged, IDisposable
     {
 		protected static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
@@ -460,6 +461,23 @@ namespace xwcs.core.db.binding
             .Select(o => o.Control)
             .FirstOrDefault();
         }
+
+		public void readOnly(bool bOn)
+		{
+			List<Control> l1 = _cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
+				.Where(o => o.Control.DataBindings.Count > 0)
+				.Select(o => o.Control)
+				.ToList();
+
+
+			foreach (Control c in l1)
+			{
+				if (c.GetType() == typeof(TextEdit)) ((TextEdit)c).ReadOnly = bOn;
+				if (c.GetType() == typeof(TextBox)) ((TextBox)c).ReadOnly = bOn;
+				if (c.GetType() == typeof(DateEdit)) ((DateEdit)c).ReadOnly = bOn;
+				if (c.GetType() == typeof(CheckEdit)) ((CheckEdit)c).ReadOnly = bOn;
+			}
+		}
 
         public void SuspendLayout()
         {
