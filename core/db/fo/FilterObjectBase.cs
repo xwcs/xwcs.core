@@ -17,9 +17,11 @@ namespace xwcs.core.db.fo
     using evt;
     using System.Diagnostics;
     using System.Reflection.Emit;
+    using System.Linq.Expressions;
+    using DevExpress.Data.Linq;
 
 
-    
+
 
     /*
 	 * NOTE:
@@ -244,6 +246,8 @@ namespace xwcs.core.db.fo
             return _changed;
         }
 
+        private CriteriaToEFExpressionConverter _converter = null;
+
         #region serialize
         [DataMember(Order = 0)]
 		private string _fieldName;
@@ -284,7 +288,6 @@ namespace xwcs.core.db.fo
         private object _fakeFilterObject;
 
 		#region ICriteriaTreeNode
-
 		public CriteriaOperator GetCondition() {
             return _isAdvanced ? _advancedCriteria : GetCriteriaOperator();
 		}
@@ -313,7 +316,6 @@ namespace xwcs.core.db.fo
             _isAdvanced = false;
             _advancedCriteria = null;
         }
-
         #endregion
 
         public FilterObjectbase() : this("", "") { }
@@ -326,7 +328,24 @@ namespace xwcs.core.db.fo
             _isAdvanced = false;
             _advancedCriteria = null;
             _fakeFilterObject = null;
+
+
+            //call eventual init in partial
+            MethodInfo mi = GetType().GetMethod("InitPartial");
+            if(mi != null)
+            {
+                mi.Invoke(this, null);
+            }
         }      
+
+        public Expression GetLinqExpression<T>()
+        {
+            if(ReferenceEquals(null, _converter))
+            {
+                _converter = new CriteriaToEFExpressionConverter();
+            }
+            return  _converter.Convert(Expression.Parameter(typeof(T), "el"), _isAdvanced ? _advancedCriteria : GetCriteriaOperator());
+        }
 
         // return fake filter object
         public object GetFakeFilterObject()
@@ -612,6 +631,8 @@ namespace xwcs.core.db.fo
             return ntb.CreateType();
         }
 
+       
+
         protected void BindToNesteds()
         {
             // fields   
@@ -625,10 +646,8 @@ namespace xwcs.core.db.fo
                 if (!ReferenceEquals(null, c))
                 {
                     //remove old changed handler
-                    c.ModelPropertyChanged -= OnNestedPropertyChanged;
+                    c.ModelPropertyChanged += OnNestedPropertyChanged;
                 }
-                // new handler
-                c.ModelPropertyChanged += OnNestedPropertyChanged;
             });
         }
 
