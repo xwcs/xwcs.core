@@ -52,7 +52,7 @@ namespace xwcs.core.db.binding
 		private void start(IEditorsHost eh)
 		{
 			_editorsHost = eh;
-            if(_editorsHost != null)
+            if(_editorsHost != null && _editorsHost.FormSupport != null)
             {
                 _editorsHost.FormSupport.AddBindingSource(this);
             }
