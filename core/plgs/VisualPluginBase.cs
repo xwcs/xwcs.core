@@ -35,12 +35,12 @@ namespace xwcs.core.plgs
                 }
             }           
 
-            EventProxy.addEventHandler(EventType.WorkSpaceLoadedEvent, HandleWorkspaceLoaded);
+            EventProxy.addEventHandler<Event>(EventType.WorkSpaceLoadedEvent, HandleWorkspaceLoaded);
 
             afterInit();            
         }
 
-        private void HandleWorkspaceLoaded(Event e)
+        private void HandleWorkspaceLoaded(object sender, Event e)
         {
             AfterWorkSpaceLoaded();
         }

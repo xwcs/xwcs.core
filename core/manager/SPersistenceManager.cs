@@ -8,10 +8,14 @@ using System.Runtime.Serialization;
 
 namespace xwcs.core.manager
 {
-
-    [xwcs.core.cfg.attr.Config("MainAppConfig")]
+	[xwcs.core.cfg.attr.Config("MainAppConfig")]
     public class SPersistenceManager : cfg.Configurable
     {
+		public enum AssetKind{
+			Image,
+			Layout,
+			Print
+		}
 
         private static SPersistenceManager instance;
 
@@ -136,6 +140,20 @@ namespace xwcs.core.manager
 			}
 
 			return false;
+		}
+
+		private string AssetsPath(AssetKind k) {
+			switch(k) {
+				case AssetKind.Image: return "img";
+				case AssetKind.Layout: return "layout";
+				case AssetKind.Print: return "print";
+			}
+			return "";
+		}
+
+		//file system support
+		public string GetDefaultAssetsPath(Type t, AssetKind kind) {
+			return AppDomain.CurrentDomain.BaseDirectory + "assets" + "\\" + t.Namespace + "\\" + AssetsPath(kind);
 		}
 	}
 }

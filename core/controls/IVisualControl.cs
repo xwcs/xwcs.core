@@ -1,4 +1,6 @@
-﻿namespace xwcs.core.controls
+﻿using DevExpress.XtraBars.Ribbon;
+
+namespace xwcs.core.controls
 {
 	public enum VisualControlStartingKind {
 		ActivateOpened,
@@ -14,6 +16,8 @@
 			VisualControlStartingKind startingKind = VisualControlStartingKind.StartingNew,
 			object data = null
 		);
+
+		RibbonControl Ribbon { get; }
     }
 }
 

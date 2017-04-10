@@ -26,12 +26,13 @@ namespace xwcs.core.manager
         private static SLogManager instance;
 		private ILogger global = null;
 
+        private Dictionary<string, ILogger> _loggers = new Dictionary<string, ILogger>();
 
-		private class SimpleLogger : ILogger
+        private class SimpleLogger : ILogger
 		{
 
 			private static SEventProxy _proxy;
-			private ILog logger = null;
+            private ILog logger = null;
 
 			public SimpleLogger() : this("Global")
 			{
@@ -99,8 +100,13 @@ namespace xwcs.core.manager
         }
 
 		public ILogger getClassLogger(Type t) {
-			return new SimpleLogger(t);
-		}
+            if (!_loggers.ContainsKey(t.ToString()))
+            {
+                _loggers[t.ToString()] = new SimpleLogger(t.ToString());
+            }
+            return _loggers[t.ToString()];
+
+        }
 
 
 		/****

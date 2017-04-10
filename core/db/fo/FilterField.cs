@@ -9,16 +9,27 @@ using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Linq;
 using System.Runtime.Serialization;
+using System.Data;
+using System.Reflection.Emit;
+using System.Reflection;
+using xwcs.core.db.model;
 
 namespace xwcs.core.db.fo
 {
-	public interface ICriteriaTreeNode {
+
+    
+
+
+    public interface ICriteriaTreeNode {
 		CriteriaOperator GetCondition();
 		string GetFieldName();
 		string GetFullFieldName();
 		bool HasCriteria();
-	}
+		void Reset();
+    }
+
 	
+
 	[DataContract(IsReference=true)]
 	public class FilterField<T> : ICriteriaTreeNode
 	{
@@ -29,7 +40,7 @@ namespace xwcs.core.db.fo
 		[DataMember(Order = 1)]
 		private string _conditionStr {
 			get {
-				return _condition != null ? _condition.LegacyToString() : "";	
+				return !ReferenceEquals(null, _condition) ? _condition.LegacyToString() : "";	
 			}
 			set {
 				_condition = value == "" ? null : CriteriaOperator.Parse(value);
@@ -52,10 +63,20 @@ namespace xwcs.core.db.fo
 		{
 			return _fieldName;
 		}
-		#endregion
+		public void Reset()
+		{
+			_field = null;
+			_hasCriteria = false;
+			_condition = null;
+		}
+		public bool HasCriteria()
+		{
+			return _hasCriteria;
+		}
+        #endregion
 
-		//private need for de-serialize
-		private FilterField() : this("", "") { }		
+        //private need for de-serialize
+        private FilterField() : this("", "") { }		
 		public FilterField(string pn, string fn) {
 
 			if (typeof(T).IsValueType)
@@ -74,6 +95,12 @@ namespace xwcs.core.db.fo
 
 		#region Properties
 
+        
+        public bool ValueEquals(object what)
+        {
+            return _field != null ? _field.Equals(what) : (what == null);
+        }
+
 		public T Value {
 			get {
 				return (T)_field;
@@ -81,11 +108,21 @@ namespace xwcs.core.db.fo
 
 			set {
 				_field = value;
-				_hasCriteria = false;
+				// see note up: value is weaker then criteria!!
+				// but real value reset criteria, just null no
+				if(value != null) {
+					_condition = null;
+					_hasCriteria = false;
+				}
 			}
 		}
 
-		public CriteriaOperator Condition {
+        public override string ToString()
+        {
+            return _field != null ? _field.ToString() : "";
+        }
+
+        public CriteriaOperator Condition {
 			get {
 				if(_hasCriteria) {
 					return _condition;
@@ -97,29 +134,24 @@ namespace xwcs.core.db.fo
 			}
 
 			set {
-				_condition = value;
-				_hasCriteria = true;
+				if(ReferenceEquals(null, value)) {
+					// reset of condition!!!
+					// so value become main
+					_hasCriteria = false;
+					_condition = null;
+				}else {
+					_condition = value;
+					_field = null;
+					_hasCriteria = true;
+				}				
 			}
 		}
 
 		#endregion
 
-		public bool Cmp(object rhs) {
-			return Equals(_field, rhs);
-		}
-
-		public bool HasCriteria() {
-			return _hasCriteria;
-		}
 		
-		/*
-		public bool Cmp(CriteriaOperator rhs) {
-			return _condition.Equals(rhs);
-		}
 
-		public bool Cmp(FilterField<T> rhs) {
-			return Equals((T)_field, rhs.Value) && _condition.Equals(rhs.Condition);
-		}
-		*/
+		
+
 	}
 }
