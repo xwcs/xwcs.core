@@ -1,5 +1,4 @@
-﻿// Converting C:\xwee\gitRepos\database\support\DocumentStates\DocumentStates\DocumentStates.tastate into .cs file
-using System;
+﻿using System;
 using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
