@@ -26,6 +26,7 @@ namespace xwcs.core.db.fo
 		string GetFullFieldName();
 		bool HasCriteria();
 		void Reset();
+        string ToString();
     }
 
 	
