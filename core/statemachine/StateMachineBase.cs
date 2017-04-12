@@ -111,6 +111,14 @@ namespace xwcs.core.statemachine
         /// The state machine this state belongs to.
         /// </summary>
         public StateMachine StateMachine { get; private set; }
+
+        /// <summary>
+        /// This function will fire trigger on state machine
+        /// </summary>
+        public void Fire()
+        {
+            this.StateMachine.ProcessTrigger(this);
+        } 
     }
 
     /// <summary>
@@ -142,11 +150,13 @@ namespace xwcs.core.statemachine
     /// Base class for all States of the State Machine.
     /// </summary>
     public abstract class StateBase
-	{ 
-		/// <summary>
-		/// Creates a new instance of this state with a reference to the state machine.
-		/// </summary>
-		public StateBase(StateMachine machine, string Name)
+	{
+        private Dictionary<string, TriggerBase> _triggers = new Dictionary<string, TriggerBase>();
+
+        /// <summary>
+        /// Creates a new instance of this state with a reference to the state machine.
+        /// </summary>
+        public StateBase(StateMachine machine, string Name)
 		{
 			this.StateMachine = machine;
             this.Name = Name;
@@ -164,18 +174,65 @@ namespace xwcs.core.statemachine
         /// <summary>
         /// Initializes this state before the machine actually enters it.
         /// </summary>
-        protected virtual void Initialize() 
-		{
-		}
+        protected virtual void Initialize(){}
+
+        /// <summary>
+        /// Make triggers
+        /// </summary>
+        protected virtual void InitTriggers(){}
+        private void InitTriggersInternal(){
+            if(_triggers.Count == 0)
+            {
+                InitTriggers();
+            }
+        }
 
         /// <summary>
         /// Returns a list of callable triggers
         /// </summary>
-        public virtual List<TriggerBase> GetTriggers()
+        public virtual IReadOnlyCollection<TriggerBase> Triggers
         {
-            return new List<TriggerBase>();
+            get
+            {
+                InitTriggersInternal();
+                return _triggers.Values;
+            }           
         }
 
+        /// <summary>
+        /// Check presence of some triger by name
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public virtual bool HasTrigger(string name)
+        {
+            InitTriggersInternal();
+            return _triggers.ContainsKey(name);
+        }
+
+
+        /// <summary>
+        /// Get trigger by name
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public virtual TriggerBase GetTrigger(string name)
+        {
+            InitTriggersInternal();
+            if (_triggers.ContainsKey(name))
+            {
+                return _triggers[name];
+            }
+
+            throw new ApplicationException(string.Format("State {0} has no trigger {1}!", this.Name, name));
+        }
+
+        protected void AddTrigger(TriggerBase t)
+        {
+            if(!_triggers.ContainsKey(t.Name))
+                _triggers[t.Name] = t;
+        }
+      
         /// <summary>
         /// Is executed when the state machine enters this state.
         /// </summary>
@@ -201,9 +258,7 @@ namespace xwcs.core.statemachine
         /// </summary>
         public override void OnEntry(TriggerBase trigger) {
             // Ask for available triggers.
-            List<TriggerBase> tList = GetTriggers();
-
-            foreach (TriggerBase t in tList)
+            foreach (TriggerBase t in Triggers)
             {
                 this.StateMachine.ProcessTrigger(t);
             }
@@ -284,7 +339,7 @@ namespace xwcs.core.statemachine
         #endregion
 
         /// <summary>
-        /// Allows custom initailization code.
+        /// Allows custom initialization code.
         /// </summary>
         protected virtual void Initialize() { }
 
@@ -384,7 +439,7 @@ namespace xwcs.core.statemachine
         }
 
         /// <summary>
-        /// Makes the state machine processo a command. Depending on its current state
+        /// Makes the state machine process a command. Depending on its current state
         /// and the designed transitions the machine reacts to the trigger.
         /// </summary>
         protected abstract void ProcessTriggerInternal(TriggerBase trigger);
@@ -431,9 +486,6 @@ namespace xwcs.core.statemachine
 
         protected void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-//            if (this.PropertyChanged != null)
-//                this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-
             if (PropertyChanged != null)
             {
                 if (_invokeDelegate.InvokeRequired)
