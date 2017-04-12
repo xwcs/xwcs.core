@@ -65,9 +65,7 @@ namespace xwcs.core.statemachine.test
             _myButtons.Clear();
 
             // Ask for available triggers.
-            List<TriggerBase> tList = _machine.CurrentState.GetTriggers();
-
-            foreach (TriggerBase t in tList)
+            foreach (TriggerBase t in _machine.CurrentState.Triggers)
             {
                 Button newButton = new Button();
                 newButton.Text = t.GetType().Name;
