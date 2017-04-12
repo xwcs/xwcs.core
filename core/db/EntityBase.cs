@@ -5,10 +5,11 @@ using System.Linq;
 
 namespace xwcs.core.db
 {
-	using evt;
-	using model;
-	using model.attributes;
-	using System.Collections.Generic;
+    using evt;
+    using model;
+    using model.attributes;
+    using System.Collections.Generic;
+    using System.Reflection;
 
     // structured changes in model will propagate this event
     public class ModelPropertyChangedEventArgs : EventArgs {
@@ -103,7 +104,17 @@ namespace xwcs.core.db
 	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
 	public abstract class EntityBase : INotifyPropertyChanged
 	{
-		//public event PropertyChangedEventHandler PropertyChanged;
+        public EntityBase()
+        {
+            //call eventual init in partial
+            MethodInfo mi = GetType().GetMethod("InitPartial");
+            if (mi != null)
+            {
+                mi.Invoke(this, null);
+            }
+        }
+        
+        //public event PropertyChangedEventHandler PropertyChanged;
 		private readonly WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
 		public event PropertyChangedEventHandler PropertyChanged
 		{
