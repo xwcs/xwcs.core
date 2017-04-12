@@ -55,10 +55,10 @@ namespace xwcs.core.db.binding
 		private void start(IEditorsHost eh)
 		{
 			_editorsHost = eh;
-            if(!ReferenceEquals(null, _editorsHost))
-            {
-                _editorsHost.FormSupport.AddBindingSource(this);
-            }            
+			if (_editorsHost != null && _editorsHost.FormSupport != null)
+			{
+				_editorsHost.FormSupport.AddBindingSource(this);
+			}
             ListChanged += handleListItemChanged;
         }
         
