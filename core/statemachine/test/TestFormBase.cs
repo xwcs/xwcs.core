@@ -30,6 +30,9 @@ namespace xwcs.core.statemachine.test
 
 		public TestFormBase()
         {
+            // connect to StateMachine context
+            SStateMachineCtx.getInstance().InvokeDelegate = this;
+
             InitializeComponent();
 			
 			if(!DesignMode) {

@@ -3,6 +3,8 @@ using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Windows.Forms;
+using System.Windows.Threading;
 
 namespace xwcs.core.statemachine
 {
@@ -284,12 +286,12 @@ namespace xwcs.core.statemachine
     {
 		public string Name { get; protected set; } = "unknown";
 
-		/// <summary>
-		/// Creates a new instance of this state machine.
-		/// </summary>
-		public StateMachine(ISynchronizeInvoke invokeDelegate)
+        
+        /// <summary>
+        /// Creates a new instance of this state machine.
+        /// </summary>
+        public StateMachine()
 		{
-            _invokeDelegate = invokeDelegate;
             _CurrentState = null;
 			this.Initialize();
 
@@ -299,6 +301,7 @@ namespace xwcs.core.statemachine
             _sync = new object();
             consumerThread = new Thread(ConsumerThread);
             consumerThread.Start();
+
         }
 
         #region IDisposable Support
@@ -382,7 +385,6 @@ namespace xwcs.core.statemachine
 			OnTransitionEvent(EndTransition, previousState, this.CurrentState, causedByTrigger);
         }
 
-        private ISynchronizeInvoke _invokeDelegate;
         private StateBase _CurrentState;
         private Thread consumerThread = null;
 
@@ -472,14 +474,9 @@ namespace xwcs.core.statemachine
 		private void OnTransitionEvent(TransitionEventHandler handler, StateBase prev, StateBase next, TriggerBase why) {
 			if (handler != null)
 			{
-				if (_invokeDelegate.InvokeRequired)
-				{
-					_invokeDelegate.Invoke(new TransitionEventHandler(handler), 
-									new[] { this, (object) new TransitionEventArgs(prev, next, why) }
-					);
-					return;
-				}
-				handler(this, new TransitionEventArgs(prev, next, why));
+				if (!SStateMachineCtx.getInstance().Invoke(new TransitionEventHandler(handler),
+                                                           new[] { this, (object)new TransitionEventArgs(prev, next, why) }))
+                    handler(this, new TransitionEventArgs(prev, next, why));
 			}
 		}
 
@@ -488,13 +485,10 @@ namespace xwcs.core.statemachine
         {
             if (PropertyChanged != null)
             {
-                if (_invokeDelegate.InvokeRequired)
-                {
-                    _invokeDelegate.Invoke(new PropertyChangedEventHandler(PropertyChanged), new[] { sender, e });
-                    return;
-                }
-                PropertyChanged(this, e);
+                if(!SStateMachineCtx.getInstance().Invoke(new PropertyChangedEventHandler(PropertyChanged), new[] { sender, e }))
+                    PropertyChanged(this, e);
             }
+
         }
         public event PropertyChangedEventHandler PropertyChanged;
 

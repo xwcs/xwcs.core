@@ -192,6 +192,7 @@
     <Compile Include="core\plgs\SPluginsLoader.cs" />
     <Compile Include="core\controls\VisualControlInfo.cs" />
     <Compile Include="core\plgs\VisualPluginBase.cs" />
+    <Compile Include="core\statemachine\SStateMachineCtx.cs" />
     <Compile Include="core\statemachine\StateMachineBase.cs" />
     <Compile Include="core\statemachine\test\TestFormBase.cs">
       <SubType>Form</SubType>
