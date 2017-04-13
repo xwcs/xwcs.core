@@ -84,6 +84,11 @@ namespace xwcs.core
             return obj;
         }
 
+        public static object GetPropertyByName<T>(this T obj, string name) where T : class
+        {
+            return obj.GetType().GetProperty(name).GetValue(obj, null);
+        }
+
         public static void SetPropValueByPathUsingReflection(this object obj, string name, object value)
         {
             try

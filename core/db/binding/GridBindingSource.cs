@@ -224,7 +224,7 @@ namespace xwcs.core.db.binding
 			Current.CopyFrom(rec);
 		}
 
-		public void setCurrentRecord(object rec)
+        public void setCurrentRecord(object rec)
 		{
 			Current.CopyFrom(rec);
 		}
