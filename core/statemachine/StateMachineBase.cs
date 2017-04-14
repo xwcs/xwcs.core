@@ -5,9 +5,90 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using xwcs.core.evt;
+using System.Runtime.CompilerServices;
 
 namespace xwcs.core.statemachine
 {
+
+    #region State machine context
+    /// <summary>
+    /// This class will hold any state machine created weak reference
+    /// So we guaranties that when we go kill app it will kill anything
+    /// </summary>
+    public class StateMachinesDisposer : IDisposable
+    {
+        private List<WeakReference<StateMachine>> _machines = new List<WeakReference<StateMachine>>();
+
+        private long _counter = 0;
+
+
+        public void RegisterSM(StateMachine sm)
+        {
+            _machines.Add(new WeakReference<StateMachine>(sm));
+            ++_counter;
+        }
+
+        public void UnRegisterSM(StateMachine sm)
+        {
+            // just decrement            
+            --_counter;
+        }
+        private static StateMachinesDisposer instance;
+
+        //singleton need private ctor
+        private StateMachinesDisposer() { }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public static StateMachinesDisposer getInstance()
+        {
+            if (instance == null)
+            {
+                instance = new StateMachinesDisposer();
+            }
+            return instance;
+        }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // Per rilevare chiamate ridondanti
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    foreach(WeakReference<StateMachine> s in _machines)
+                    {
+                        StateMachine tsm = null;
+                        if (s.TryGetTarget(out tsm))
+                        {
+                            tsm.Dispose();
+                        }
+                    }
+                }
+
+#if DEBUG
+                Console.WriteLine("State machine count on exit : " + _counter.ToString()); 
+#endif
+                disposedValue = true;
+            }
+        }
+
+        // Questo codice viene aggiunto per implementare in modo corretto il criterio Disposable.
+        public void Dispose()
+        {
+            // Non modificare questo codice. Inserire il codice di pulizia in Dispose(bool disposing) sopra.
+            Dispose(true);
+            // TODO: rimuovere il commento dalla riga seguente se è stato eseguito l'override del finalizzatore.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
+
+
+    }
+    #endregion
+
     #region SyncClasses
     /// <summary>
     /// Syncronization Class.
@@ -292,8 +373,16 @@ namespace xwcs.core.statemachine
         /// </summary>
         public StateMachine()
 		{
+            // register for dispose
+            StateMachinesDisposer.getInstance().RegisterSM(this);
+
             _CurrentState = null;
-			this.Initialize();
+            _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+            _wes_StartTransition = new WeakEventSource<TransitionEventArgs>();
+            _wes_BeforeExitingPreviousState = new WeakEventSource<TransitionEventArgs>();
+            _wes_EndTransition = new WeakEventSource<TransitionEventArgs>();
+
+            this.Initialize();
 
             // Now start the Transition Consumer Thread
             _queue = new Queue<TriggerBase>();
@@ -320,6 +409,10 @@ namespace xwcs.core.statemachine
                 // TODO: set large fields to null.
                 _syncEvents.ExitThreadEvent.Set();
                 consumerThread.Join();
+
+
+                // decrement
+                StateMachinesDisposer.getInstance().UnRegisterSM(this);
 
                 disposedValue = true;
             }
@@ -354,20 +447,20 @@ namespace xwcs.core.statemachine
         /// <summary>
         /// Makes the state machine go into another state.
         /// </summary>
-        public void TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, TransitionEventHandler EffectHandler)
+        public void TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, WeakEventSource<TransitionEventArgs> EffectHandler)
 		{
             if (disposedValue)
             { // Silent
                 throw new InvalidOperationException("State Machine Disposed");
             }
-			// Pull the trigger to find if condition is Ok.
-			OnTransitionEvent(StartTransition, this.CurrentState, newState, causedByTrigger);
-            if ( guard != null )
+            // Pull the trigger to find if condition is Ok.
+            _wes_StartTransition.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
+			if ( guard != null )
             {
                 if (!guard.Execute()) return; // Guard said this trigger can't go on
             }
 
-			OnTransitionEvent(BeforeExitingPreviousState, this.CurrentState, newState, causedByTrigger);
+			_wes_BeforeExitingPreviousState.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
             // exit the current state
             if (this.CurrentState != null)
 				this.CurrentState.OnExit(causedByTrigger);
@@ -377,12 +470,13 @@ namespace xwcs.core.statemachine
 			
 			//call effect
 			if(EffectHandler != null)
-				OnTransitionEvent(EffectHandler, previousState, this.CurrentState, causedByTrigger);
-
+                EffectHandler.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
+            
             // enter the new state
             if (this.CurrentState != null)
 				this.CurrentState.OnEntry(causedByTrigger);
-			OnTransitionEvent(EndTransition, previousState, this.CurrentState, causedByTrigger);
+
+            _wes_EndTransition.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
         }
 
         private StateBase _CurrentState;
@@ -405,7 +499,7 @@ namespace xwcs.core.statemachine
 				_CurrentState = value; 
                 if ( !(_CurrentState is ConditionStateBase) )
                 {
-                    OnPropertyChanged(this, new PropertyChangedEventArgs("CurrentState"));
+                    _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs("CurrentState"));
                 }
             }
 		}
@@ -465,33 +559,33 @@ namespace xwcs.core.statemachine
             // Console.WriteLine("Consumer Thread: consumed {0} items", count);
         }
 
-
-		//base events
-        public event TransitionEventHandler StartTransition;
-		public event TransitionEventHandler BeforeExitingPreviousState;
-		public event TransitionEventHandler EndTransition;
-
-		private void OnTransitionEvent(TransitionEventHandler handler, StateBase prev, StateBase next, TriggerBase why) {
-			if (handler != null)
-			{
-				if (!SStateMachineCtx.getInstance().Invoke(new TransitionEventHandler(handler),
-                                                           new[] { this, (object)new TransitionEventArgs(prev, next, why) }))
-                    handler(this, new TransitionEventArgs(prev, next, why));
-			}
-		}
-
-
-        protected void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
+        
+        // base events
+        private WeakEventSource<TransitionEventArgs> _wes_StartTransition = null;
+        public event EventHandler<TransitionEventArgs> StartTransition
         {
-            if (PropertyChanged != null)
-            {
-                if(!SStateMachineCtx.getInstance().Invoke(new PropertyChangedEventHandler(PropertyChanged), new[] { sender, e }))
-                    PropertyChanged(this, e);
-            }
-
+            add { _wes_StartTransition.Subscribe(value); }
+            remove { _wes_StartTransition.Unsubscribe(value); }
         }
-        public event PropertyChangedEventHandler PropertyChanged;
-
+        private WeakEventSource<TransitionEventArgs> _wes_BeforeExitingPreviousState = null;
+        public event EventHandler<TransitionEventArgs> BeforeExitingPreviousState
+        {
+            add { _wes_BeforeExitingPreviousState.Subscribe(value); }
+            remove { _wes_BeforeExitingPreviousState.Unsubscribe(value); }
+        }
+        private WeakEventSource<TransitionEventArgs> _wes_EndTransition = null;
+        public event EventHandler<TransitionEventArgs> EndTransition
+        {
+            add { _wes_EndTransition.Subscribe(value); }
+            remove { _wes_EndTransition.Unsubscribe(value); }
+        }
+        
+        private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
+        public event PropertyChangedEventHandler PropertyChanged
+        {
+            add{ _wes_PropertyChanged.SubscribePropertyChanged(value); }
+            remove{ _wes_PropertyChanged.UnsubscribePropertyChanged(value); }
+        }
     }
 	#endregion
 }

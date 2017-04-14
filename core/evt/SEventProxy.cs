@@ -74,5 +74,71 @@ namespace xwcs.core.evt
 				(_eventSources[e.Type] as EventSource<T>).Fire(e);
 			}
 		}
+
+        /* Multi thread synchronization */
+        private static ISynchronizeInvoke _invokeDelegate = null;
+        public static ISynchronizeInvoke InvokeDelegate
+        {
+            get
+            {
+                return _invokeDelegate;
+            }
+            set
+            {
+                _invokeDelegate = value;
+            }
+        }
+
+        public static bool InvokeOnUIThread(Delegate what, object[] args)
+        {
+            if (_invokeDelegate != null)
+            {
+                if (_invokeDelegate.InvokeRequired)
+                {
+                    _invokeDelegate.Invoke(what, args);
+                    return true;
+                }
+
+                return false;
+            }
+
+            throw new ApplicationException("Missing Invocation delegate!");
+        }
+
+
+        /* globally allow and disallow events */
+        static private HashSet<Type> _blockedEvents = new HashSet<Type>();
+        public static void BlockEventTypes(Type[] events)
+        {
+            foreach (Type ea in events)
+                if (!_blockedEvents.Contains(ea)) _blockedEvents.Add(ea);
+        }
+        public static void BlockEventType(Type ea)
+        {
+            if (!_blockedEvents.Contains(ea)) _blockedEvents.Add(ea);
+        }
+        public static void BlockModelEvents()
+        {
+            BlockEventTypes(new Type[] { typeof(db.ModelPropertyChangedEventArgs), typeof(PropertyChangedEventArgs) });
+        }
+
+        public static void AllowEventTypes(Type[] events)
+        {
+            foreach (Type ea in events)
+                if (_blockedEvents.Contains(ea)) _blockedEvents.Remove(ea);        
+        }
+        public static void AllowEventType(Type ea)
+        {
+            if (_blockedEvents.Contains(ea)) _blockedEvents.Remove(ea);
+        }
+        public static void AllowModelEvents()
+        {
+            AllowEventTypes(new Type[] { typeof(db.ModelPropertyChangedEventArgs), typeof(PropertyChangedEventArgs) });
+        }
+
+        public static bool CanFireEvent(Type ea)
+        {
+            return _blockedEvents.Count == 0 || !_blockedEvents.Contains(ea);
+        }
     }
 }

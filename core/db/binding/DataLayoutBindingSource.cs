@@ -270,7 +270,7 @@ namespace xwcs.core.db.binding
 #if DEBUG
             _logger.Debug(string.Format("CC-Current Item Property: {0} changed", e));
 #endif
-            _wes_ModelPropertyChanged.Raise(this, e);
+            _wes_ModelPropertyChanged?.Raise(this, e);
         }
 
         private WeakEventSource<ModelPropertyChangedEventArgs> _wes_ModelPropertyChanged = null;
@@ -488,6 +488,12 @@ namespace xwcs.core.db.binding
         {
             _cnt.ResumeLayout();
         }
-        
+
+
+        public string GetFieldName()
+        {
+            // not handled name so just send type
+            return "DataLayoutBindingSource";
+        }
     }
 }

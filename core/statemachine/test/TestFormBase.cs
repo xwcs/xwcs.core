@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using xwcs.core.evt;
 using xwcs.core.statemachine;
 
 namespace xwcs.core.statemachine.test
@@ -31,7 +32,7 @@ namespace xwcs.core.statemachine.test
 		public TestFormBase()
         {
             // connect to StateMachine context
-            SStateMachineCtx.getInstance().InvokeDelegate = this;
+            SEventProxy.InvokeDelegate = this;
 
             InitializeComponent();
 			

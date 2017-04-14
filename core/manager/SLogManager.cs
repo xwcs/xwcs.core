@@ -49,35 +49,35 @@ namespace xwcs.core.manager
 			public void Debug(string msg)
 			{
 				if (!logger.IsDebugEnabled) return;
-				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1}", logger.Logger.Name, msg) }));
 				logger.Debug(msg);
 			}
 
 			public void Info(string msg)
 			{
 				if (!logger.IsInfoEnabled) return;
-				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1}", logger.Logger.Name, msg) }));
 				logger.Info(msg);
 			}
 
 			public void Warn(string msg)
 			{
 				if (!logger.IsWarnEnabled) return;
-				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1}", logger.Logger.Name, msg) }));
 				logger.Warn(msg);
 			}
 
 			public void Error(string msg)
 			{
 				if (!logger.IsErrorEnabled) return;
-				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1}", logger.Logger.Name, msg) }));
 				logger.Error(msg);
 			}
 
 			public void Fatal(string msg)
 			{
 				if (!logger.IsFatalEnabled) return;
-				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = msg }));
+				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1}", logger.Logger.Name, msg) }));
 				logger.Fatal(msg);
 			}
 		}

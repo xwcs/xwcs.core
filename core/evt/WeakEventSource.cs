@@ -136,7 +136,12 @@ namespace xwcs.core.evt
                     if (!_weakTarget.IsAlive) return false;
                     target = _weakTarget.Target;
                 }
-                _openHandler(target, sender, e);
+                if (SEventProxy.CanFireEvent(e.GetType()))
+                {
+                    // if we are on UI thread just invoke if not go trough InvokeDelegate 
+                    if (!SEventProxy.InvokeDelegate.InvokeRequired || !SEventProxy.InvokeOnUIThread(_openHandler, new object[] { target, sender, e }))
+                    _openHandler(target, sender, e);
+                }                    
                 return true;
             }
 
