@@ -31,7 +31,7 @@ namespace xwcs.core.statemachine
 
         public void UnRegisterSM(StateMachine sm)
         {
-            // just decrement            
+            // machine will be destroyed anyway so we just remove count
             --_counter;
         }
         private static StateMachinesDisposer instance;
@@ -89,6 +89,7 @@ namespace xwcs.core.statemachine
     }
     #endregion
 
+    /*
     #region SyncClasses
     /// <summary>
     /// Syncronization Class.
@@ -123,6 +124,7 @@ namespace xwcs.core.statemachine
         private WaitHandle[] _eventArray;
     }
     #endregion
+    */
 
     #region TransitionClasses
     /// <summary>
@@ -216,7 +218,6 @@ namespace xwcs.core.statemachine
 
         public virtual bool Execute()
         {
-            // Will never throw an exception
             return true;
         }
 
@@ -348,17 +349,15 @@ namespace xwcs.core.statemachine
         }
     }
 
+    
     /// <summary>
-    /// This state represents the start of the StateMachine.
+    /// Base interface for all hosts
     /// </summary>
-    /* 
-    public partial class StartState : StateBase
+    public interface IStateMachineHost
     {
-        public StartState(StateMachine machine) : base(machine, "StartState") {}
-        public override void OnEntry(TriggerBase causedByTrigger) { }
-        public override void OnExit(TriggerBase causedByTrigger) { }
+
     }
-    */
+
 
     /// <summary>
     /// Base class for the state machine. Implements main functionality.
@@ -367,12 +366,23 @@ namespace xwcs.core.statemachine
     {
 		public string Name { get; protected set; } = "unknown";
 
+        private IStateMachineHost _host;
+        public IStateMachineHost Host
+        {
+            get
+            {
+                return _host;
+            }
+        }
+
+
         
         /// <summary>
         /// Creates a new instance of this state machine.
         /// </summary>
-        public StateMachine()
+        public StateMachine(IStateMachineHost host)
 		{
+            _host = host;
             // register for dispose
             StateMachinesDisposer.getInstance().RegisterSM(this);
 
@@ -386,10 +396,10 @@ namespace xwcs.core.statemachine
 
             // Now start the Transition Consumer Thread
             _queue = new Queue<TriggerBase>();
-            _syncEvents = new SyncEvents();
-            _sync = new object();
-            consumerThread = new Thread(ConsumerThread);
-            consumerThread.Start();
+            //_syncEvents = new SyncEvents();
+            //_sync = new object();
+            //consumerThread = new Thread(ConsumerThread);
+            //consumerThread.Start();
 
         }
 
@@ -407,8 +417,9 @@ namespace xwcs.core.statemachine
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
                 // TODO: set large fields to null.
-                _syncEvents.ExitThreadEvent.Set();
-                consumerThread.Join();
+                
+                //_syncEvents.ExitThreadEvent.Set();
+                //consumerThread.Join();
 
 
                 // decrement
@@ -516,8 +527,13 @@ namespace xwcs.core.statemachine
         } }
 
         private Queue<TriggerBase> _queue;
-        private SyncEvents _syncEvents;
-        private readonly object _sync;
+        //private SyncEvents _syncEvents;
+        //private readonly object _sync;
+
+        // this flag indicate if we are working on queue
+        private bool _handlingQueue = false;
+        
+
 
         /// <summary>
         /// Makes the state machine recive a command and dispatch it through the internal Queue.
@@ -527,11 +543,19 @@ namespace xwcs.core.statemachine
             { // Silent
                 throw new InvalidOperationException("State Machine Disposed");
             }
+            /*
             lock (((ICollection)_queue).SyncRoot)
             {
                  _queue.Enqueue(trigger);
                  _syncEvents.NewTransitionEvent.Set();
             }
+            */
+
+            _queue.Enqueue(trigger);
+
+            // call method for working
+            ConsumeQueue();
+
         }
 
         /// <summary>
@@ -540,6 +564,7 @@ namespace xwcs.core.statemachine
         /// </summary>
         protected abstract void ProcessTriggerInternal(TriggerBase trigger);
 
+        /*
         /// <summary>
         /// Internal Transition Thread.
         /// </summary>
@@ -557,6 +582,33 @@ namespace xwcs.core.statemachine
                 }
             }
             // Console.WriteLine("Consumer Thread: consumed {0} items", count);
+        }
+        */
+
+        private void ConsumeQueue()
+        {
+            if (_handlingQueue) return; // we are here from recursive call
+
+            _handlingQueue = true;
+
+            bool done = false;
+
+            while (!done)
+            {
+                if(_queue.Count > 0)
+                {
+                    TriggerBase t = _queue.Dequeue();
+                    ProcessTriggerInternal(t);
+                }
+
+                // now we have to check actual queue size , cause trigger could fire many UI actions
+                // which could enque many new triggers
+
+                done = _queue.Count == 0;
+            }
+
+            // reset _handling flag just before exit
+            _handlingQueue = false;
         }
 
         
