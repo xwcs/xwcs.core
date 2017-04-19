@@ -37,6 +37,8 @@ namespace xwcs.core.db.binding
 		private Dictionary<string, RepositoryItem> _repositories = new Dictionary<string, RepositoryItem>();
 		private bool _gridIsConnected = false;
 
+        // hold last position before position changed occurs
+        private int _oldPosition = -1;
 
 
 		public Dictionary<string, IList<CustomAttribute>> AttributesCache { get { return _attributesCache; } }
@@ -270,13 +272,25 @@ namespace xwcs.core.db.binding
 			}
 		}
 
+        
 		protected virtual void GetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs e) {
 			//just to be overloaded if necessary	
 		}
+        
 
 		private void CustomColumnDisplayText(object sender, CustomColumnDisplayTextEventArgs e){
-			GetFieldDisplayText(sender, e);
-		}
+
+            if (_attributesCache.ContainsKey(e.Column.FieldName))
+            {
+                foreach (CustomAttribute a in _attributesCache[e.Column.FieldName])
+                {
+                    a.applyGetFieldDisplayText(this, e);
+                }
+            }
+
+            // eventual override
+            GetFieldDisplayText(sender, e);
+        }
 
 		private void EditorShownHandler(object sender, EventArgs e) {
 			ColumnView view = (ColumnView)sender;
@@ -361,6 +375,22 @@ namespace xwcs.core.db.binding
         public void ResumeLayout()
         {
             return;
+        }
+
+
+        protected override void OnPositionChanged(EventArgs e)
+        {
+            base.OnPositionChanged(e);
+            //store curent in old
+            _oldPosition = Position; // this means first one will not exist!!!
+        }
+
+        public int LastPosition
+        {
+            get
+            {
+                return _oldPosition;
+            }
         }
     }
 }

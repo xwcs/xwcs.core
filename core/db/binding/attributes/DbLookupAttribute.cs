@@ -5,6 +5,7 @@ using DevExpress.XtraGrid.Views.Grid;
 using DevExpress.XtraGrid.Columns;
 using System.Linq;
 using DevExpress.XtraEditors.Filtering;
+using DevExpress.XtraGrid.Views.Base;
 
 namespace xwcs.core.db.binding.attributes
 {
@@ -60,17 +61,33 @@ namespace xwcs.core.db.binding.attributes
 		}
 		public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e) {
 			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
-			setupRle(src, rle, e.FieldName);
+            rle.EditValueChanged += Rle_EditValueChanged;
+            setupRle(src, rle, e.FieldName);
 		}
 
 		//filter control
 		public override void applyCustomEditShownFilterControl(IDataBindingSource src, ShowValueEditorEventArgs e) {
 			RepositoryItemLookUpEdit rle = new RepositoryItemLookUpEdit();
 			e.CustomRepositoryItem = rle;
-			setupRle(src, rle, e.CurrentNode.FirstOperand.PropertyName);
+            setupRle(src, rle, e.CurrentNode.FirstOperand.PropertyName);
 		}
 
-		private void setupRle(IDataBindingSource src, RepositoryItemLookUpEdit rle, string fn) {
+        private void Rle_EditValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                DevExpress.XtraEditors.LookUpEdit le = (sender as DevExpress.XtraEditors.LookUpEdit);
+                if(le != null)
+                {
+                    ((DevExpress.XtraGrid.GridControl)le.Parent)?.FocusedView?.PostEditor();
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private void setupRle(IDataBindingSource src, RepositoryItemLookUpEdit rle, string fn) {
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
 			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
@@ -80,5 +97,9 @@ namespace xwcs.core.db.binding.attributes
 				rle.DataSource = qd.Data;
 			}
 		}
-	}
+
+        public override void applyGetFieldDisplayText(IDataBindingSource src, CustomColumnDisplayTextEventArgs e) {
+            src.EditorsHost.onGetFieldDisplayText(src, e);
+        }
+    }
 }

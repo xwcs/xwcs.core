@@ -58,7 +58,9 @@ namespace xwcs.core.db.binding
     public interface IEditorsHost
 	{
 		void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
-		IFormSupport FormSupport { get; }
+        void onGetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs cc);
+
+        IFormSupport FormSupport { get; }
 	}
 
 	public class ViewEditorShownEventArgs : EventArgs

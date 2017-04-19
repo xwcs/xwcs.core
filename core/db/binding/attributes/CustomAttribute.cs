@@ -3,6 +3,7 @@ using DevExpress.XtraDataLayout;
 using DevExpress.XtraGrid.Views.Grid;
 using DevExpress.XtraEditors.Repository;
 using DevExpress.XtraEditors.Filtering;
+using DevExpress.XtraGrid.Views.Base;
 
 namespace xwcs.core.db.binding.attributes
 {
@@ -17,9 +18,10 @@ namespace xwcs.core.db.binding.attributes
 		public virtual void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e) { }
 		public virtual void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e) { }
 		public virtual void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e) { }
+        public virtual void applyGetFieldDisplayText(IDataBindingSource src, CustomColumnDisplayTextEventArgs e) { }
 
-		//filter control like 
-		public virtual void applyCustomEditShownFilterControl(IDataBindingSource src, ShowValueEditorEventArgs e) { }
+        //filter control like 
+        public virtual void applyCustomEditShownFilterControl(IDataBindingSource src, ShowValueEditorEventArgs e) { }
 		
 
 		//do eventual cleaning here
