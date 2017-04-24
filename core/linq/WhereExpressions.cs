@@ -215,7 +215,7 @@ namespace xwcs.core.linq
 
         public string GetExpression()
         {
-            return _result.ToString().Replace("\"", "");
+            return ! ReferenceEquals(null, _result) ? _result.ToString().Replace("\"", "") : "";
         }
 
         public string GetReduced()

@@ -9,18 +9,20 @@ using DevExpress.XtraDataLayout;
 
 namespace xwcs.core.db.binding
 {
-	using attributes;
-	using DevExpress.XtraEditors;
-	using DevExpress.XtraEditors.Container;
-	using DevExpress.XtraGrid;
-	using DevExpress.XtraLayout;
-	using evt;
-	using System.Collections;
-	using System.Data;
-	using System.Reflection;
+    using attributes;
+    using DevExpress.XtraEditors;
+    using DevExpress.XtraEditors.Container;
+    using DevExpress.XtraGrid;
+    using DevExpress.XtraLayout;
+    using evt;
+    using manager;
+    using System.Collections;
+    using System.Data;
+    using System.IO;
+    using System.Reflection;
 
 
-	public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, INotifyCurrentObjectChanged, IDisposable
+    public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, INotifyCurrentObjectChanged, IDisposable
     {
 		protected static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
@@ -250,6 +252,9 @@ namespace xwcs.core.db.binding
 					//connect
 					_cnt.DataSource = this;
 
+                    // handle eventual layout loading here
+                    TryLoadLayuotFromFile();
+
                     if (_fieldsAreRetrieved)
                     {
                         // there should be registered all triggers
@@ -263,6 +268,26 @@ namespace xwcs.core.db.binding
 		}
 
         #endregion
+
+        private bool TryLoadLayuotFromFile()
+        {
+            // check if connected to host
+            if (ReferenceEquals(null, _editorsHost) || !SPersistenceManager.getInstance().IsAllowed_LoadLayoutFromXml) return false;
+
+            
+
+            string filePath = string.Format("{0}/{1}", _editorsHost.LayoutAssetsPath, "search_form.xml");
+            if (File.Exists(filePath))
+            {
+                _cnt.BeginUpdate();
+                _cnt.RestoreLayoutFromXml(filePath);
+                _cnt.EndUpdate();
+                return true;
+            }
+
+            return false;
+           
+        }
 
         // we will hook model properties changed event
         private void CurrentItemPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
@@ -330,6 +355,9 @@ namespace xwcs.core.db.binding
 				resetAttributes();
 				// now set new source
 				_cnt.DataSource = this;
+
+                // handle eventual layout loading here
+                TryLoadLayuotFromFile();
             }			
 		}
 

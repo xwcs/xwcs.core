@@ -24,6 +24,14 @@ namespace xwcs.core.manager
         {
         }
 
+        public bool IsAllowed_LoadLayoutFromXml
+        {
+            get
+            {
+                return "Yes".Equals(getCfgParam("DataLayout/AllowLoadFromXml", "No"));
+            }
+        }
+
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static SPersistenceManager getInstance()
         {

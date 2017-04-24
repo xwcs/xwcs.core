@@ -59,6 +59,7 @@ namespace xwcs.core.db.binding
 	{
 		void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
         void onGetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs cc);
+        string LayoutAssetsPath { get; }
 
         IFormSupport FormSupport { get; }
 	}
