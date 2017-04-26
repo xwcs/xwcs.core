@@ -76,5 +76,6 @@ namespace xwcs.core.db.binding
 	{
 		public string FieldName { get; set; }
 		public RepositoryItem RepositoryItem { get; set; }
-	}
+        public DevExpress.XtraGrid.Columns.GridColumn Column { get; set; }
+    }
 }

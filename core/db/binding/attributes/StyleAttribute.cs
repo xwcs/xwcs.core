@@ -65,7 +65,10 @@ namespace xwcs.core.db.binding.attributes
 		uint _backGrndColorDisabled;
 		uint _backGrndColorFocused;
 		uint _backGrndColorReadOnly;
-		
+
+
+        // separate styling
+        public int ColumnWidth { get; set; } = -1; // auto
 
 
 		public StyleAttribute()
@@ -116,5 +119,15 @@ namespace xwcs.core.db.binding.attributes
 		{
 			(e.Control as TextEdit).StyleController = _styleController;
 		}
-	}	
+
+        public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e) {
+            if (!ReferenceEquals(e.Column, null) && ColumnWidth != -1)
+            {
+                // set column width
+                e.Column.Width = ColumnWidth;
+            }
+            
+                      
+        }
+    }	
 }

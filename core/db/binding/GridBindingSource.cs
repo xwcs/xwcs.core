@@ -246,7 +246,12 @@ namespace xwcs.core.db.binding
 					IList<CustomAttribute> ac = new List<CustomAttribute>();
 					foreach (CustomAttribute a in attrs)
 					{
-						GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null };
+                        DevExpress.XtraGrid.Columns.GridColumn gc = null;
+                        if (_grid.MainView is ColumnView)
+                        {
+                            gc = (_grid.MainView as ColumnView).Columns.ColumnByFieldName(pi.Name);
+                        }
+						GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
 						a.applyGridColumnPopulation(this, gcp);
 						RepositoryItem ri = gcp.RepositoryItem;
 						ac.Add(a as CustomAttribute);
