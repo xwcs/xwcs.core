@@ -692,5 +692,13 @@ namespace xwcs.core.db.fo
             //done
             return obj;
         }
+
+        public bool IsTheSame(FilterObjectbase right)
+        {
+            CriteriaOperator co = GetCondition();
+            CriteriaOperator cor = right.GetCondition();
+
+            return (ReferenceEquals(null, co) ? "" : co.ToString()).Equals(ReferenceEquals(null, cor) ? "" : cor.ToString());
+        }
     }
 }

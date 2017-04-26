@@ -142,7 +142,16 @@ namespace xwcs.core.linq
 
 
             // reduce to DNF
-            string nff = helper.ToDNF(GetExpression());
+            string expr = GetExpression();
+            if(expr.Length == 0)
+            {
+                List<Dictionary<Type, Expression>> ret = new List<Dictionary<Type, Expression>>();
+                ret.Add(new Dictionary<Type, Expression>()); 
+                return ret;
+            }
+
+            // if not empty work!
+            string nff = helper.ToDNF(expr);
 
             // now take or gorups
             string[] ors = nff.Split('|');

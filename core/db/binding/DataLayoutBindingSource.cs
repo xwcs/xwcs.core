@@ -272,7 +272,10 @@ namespace xwcs.core.db.binding
         private bool TryLoadLayuotFromFile()
         {
             // check if connected to host
-            if (ReferenceEquals(null, _editorsHost) || !SPersistenceManager.getInstance().IsAllowed_LoadLayoutFromXml) return false;
+            if (
+                ReferenceEquals(base.DataSource, null) || 
+                ReferenceEquals(null, _editorsHost) || 
+                !SPersistenceManager.getInstance().IsAllowed_LoadLayoutFromXml) return false;
 
             
 
