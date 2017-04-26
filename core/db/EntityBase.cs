@@ -9,7 +9,7 @@ namespace xwcs.core.db
     using model;
     using model.attributes;
     using System.Collections.Generic;
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
     using System.Diagnostics;
 #endif
     using System.Reflection;
@@ -262,7 +262,7 @@ namespace xwcs.core.db
             // skip if not changed
             if (Equals(storage, value)) return;
 
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             //MethodBase info = new StackFrame(3).GetMethod();
             //_logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
 #endif
@@ -295,7 +295,7 @@ namespace xwcs.core.db
         {
             // skip if not changed
             if (ReferenceEquals(storage, value)) return;
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             //MethodBase info = new StackFrame(3).GetMethod();
             //_logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
 #endif
@@ -320,7 +320,7 @@ namespace xwcs.core.db
             // handle changed
             _changed = true; // false positive it will do true even if object was empty
 
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             //_logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
 #endif
             _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));

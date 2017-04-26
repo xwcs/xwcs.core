@@ -325,7 +325,7 @@ namespace xwcs.core.linq.filter
 				string propertyName = pi.Name;
 				string propertyPath = _scan_ctx.Path + pi.Name;
 
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 				manager.SLogManager.getInstance().getClassLogger(this.GetType()).Debug("Make filter predicate for : " + propertyPath);
 #endif
 				

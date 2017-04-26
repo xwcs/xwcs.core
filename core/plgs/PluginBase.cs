@@ -19,7 +19,7 @@ namespace xwcs.core.plgs
 				return input.RsMan.GetString(key, input.RsManCulture);
 			}catch(Exception e) {
                 SLogManager.getInstance().getClassLogger(typeof(T)).Warn(string.Format(e.Message));
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
                 SLogManager.getInstance().getClassLogger(typeof(T)).Debug(string.Format(e.StackTrace));
 #endif
                 return def ?? key;

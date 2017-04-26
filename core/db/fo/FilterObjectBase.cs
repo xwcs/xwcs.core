@@ -417,7 +417,7 @@ namespace xwcs.core.db.fo
             // skip if not changed
             if (storage.ValueEquals(value)) return;
 
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             MethodBase info = new StackFrame(3).GetMethod();
             _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
 #endif
@@ -446,7 +446,7 @@ namespace xwcs.core.db.fo
         {
             // skip if not changed
             if (ReferenceEquals(storage, value)) return;
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
                 MethodBase info = new StackFrame(3).GetMethod();
             _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
 #endif
@@ -468,7 +468,7 @@ namespace xwcs.core.db.fo
         {
             // skip if not changed
             if (ReferenceEquals(storage.Data, value)) return;
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             MethodBase info = new StackFrame(3).GetMethod();
             _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
 #endif
@@ -490,7 +490,7 @@ namespace xwcs.core.db.fo
 
         protected void SetFieldCriteria<T>(ref FilterField<T> storage, CriteriaOperator value, [CallerMemberName] string propertyName = null)
 		{
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             MethodBase info = new StackFrame(3).GetMethod();
             _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType.Name, info.Name, propertyName));
 #endif
@@ -508,7 +508,7 @@ namespace xwcs.core.db.fo
             // handle changed
             _changed = true; // false positive it will do true even if object was empty
 
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             _logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
 #endif
             _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));

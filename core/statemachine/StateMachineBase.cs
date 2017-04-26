@@ -68,7 +68,7 @@ namespace xwcs.core.statemachine
                     }
                 }
 
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
                 Console.WriteLine("State machine count on exit : " + _counter.ToString()); 
 #endif
                 disposedValue = true;

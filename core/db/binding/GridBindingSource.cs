@@ -197,7 +197,7 @@ namespace xwcs.core.db.binding
 			}
 
 			set {
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 				_logger.Debug("Set-GRID : New");
 #endif
 				if (_grid == value) return;
@@ -360,7 +360,7 @@ namespace xwcs.core.db.binding
 						resetSlavesOfModifiedProperty(ra.First());
 					}
 					
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 					_logger.Debug("Item changed! " + args.PropertyDescriptor.Name);
 #endif
 				}
@@ -395,6 +395,15 @@ namespace xwcs.core.db.binding
             get
             {
                 return _oldPosition;
+            }
+        }
+
+        private Dictionary<TextEdit, IStyleController> _DefaultStyles = new Dictionary<TextEdit, IStyleController>();
+        public Dictionary<TextEdit, IStyleController> DefaultStyles
+        {
+            get
+            {
+                return _DefaultStyles;
             }
         }
     }

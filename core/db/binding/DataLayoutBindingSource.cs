@@ -206,7 +206,15 @@ namespace xwcs.core.db.binding
 				// so we need do eventually also this
 				if (!_fieldsAreRetrieved && !ReferenceEquals(null, _cnt))
 				{
-					_cnt.RetrieveFields();
+                    _cnt.SuspendLayout();
+                    _cnt.BeginUpdate();
+
+                    _cnt.RetrieveFields();
+
+                    TryLoadLayuotFromFile();
+
+                    _cnt.EndUpdate();
+                    _cnt.ResumeLayout();
 
                     if (_fieldsAreRetrieved)
                     {
@@ -226,7 +234,7 @@ namespace xwcs.core.db.binding
 			}
 			set
 			{
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 				_logger.Debug("Set-DL : New");
 #endif
 
@@ -239,7 +247,11 @@ namespace xwcs.core.db.binding
 				}
 				if (value != null) {
 					_cnt = value;
-					_cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
+
+                    _cnt.SuspendLayout();
+                    _cnt.BeginUpdate();
+
+                    _cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
                     _cnt.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
 					_cnt.AutoRetrieveFields = true;
 					_cnt.AllowCustomization = false;
@@ -249,8 +261,11 @@ namespace xwcs.core.db.binding
 					//variables first
 					_resetLayoutRequest = false;
 					_fieldsAreRetrieved = false;
-					//connect
-					_cnt.DataSource = this;
+
+                   
+                    //connect
+                    _cnt.DataSource = this;
+                    
 
                     // handle eventual layout loading here
                     TryLoadLayuotFromFile();
@@ -260,6 +275,9 @@ namespace xwcs.core.db.binding
                         // there should be registered all triggers
                         _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
                     }
+
+                    _cnt.EndUpdate();
+                    _cnt.ResumeLayout();
                 }
 				else {
 					_cnt = null;
@@ -282,9 +300,9 @@ namespace xwcs.core.db.binding
             string filePath = string.Format("{0}/{1}", _editorsHost.LayoutAssetsPath, "search_form.xml");
             if (File.Exists(filePath))
             {
-                _cnt.BeginUpdate();
+                //_cnt.BeginUpdate();
                 _cnt.RestoreLayoutFromXml(filePath);
-                _cnt.EndUpdate();
+                //_cnt.EndUpdate();
                 return true;
             }
 
@@ -295,7 +313,7 @@ namespace xwcs.core.db.binding
         // we will hook model properties changed event
         private void CurrentItemPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
         {
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
             _logger.Debug(string.Format("CC-Current Item Property: {0} changed", e));
 #endif
             _wes_ModelPropertyChanged?.Raise(this, e);
@@ -346,21 +364,29 @@ namespace xwcs.core.db.binding
 			// there is one active
 			if (_cnt != null && DataSource != null && _fieldsAreRetrieved)
 			{
-#if DEBUG
+                _cnt.SuspendLayout();
+                _cnt.BeginUpdate();
+                
+#if DEBUG_TRACE_LOG_ON
 				if (CurrencyManager.Position >= 0)
 					_logger.Debug("Reset layout");
-#endif				
-				_cnt.DataSource = null;
+#endif
+                _cnt.DataSource = null;
 				_cnt.DataBindings.Clear();
 				_cnt.Clear();
 				_resetLayoutRequest = false;
 				_fieldsAreRetrieved = false;
 				resetAttributes();
+
+                
 				// now set new source
-				_cnt.DataSource = this;
+				_cnt.DataSource = this;               
 
                 // handle eventual layout loading here
                 TryLoadLayuotFromFile();
+
+                _cnt.EndUpdate();
+                _cnt.ResumeLayout();
             }			
 		}
 
@@ -380,7 +406,7 @@ namespace xwcs.core.db.binding
 
 		private void handleCurrentChanged(object sender, object args)
 		{
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 			_logger.Debug("CC-Current ["+sender+"] : " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
 #endif
 
@@ -388,7 +414,7 @@ namespace xwcs.core.db.binding
 				
 				if(_structureWatcher != null) {
 					//de-serialize if necessary
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 					_logger.Debug("CC-Current Deserialize");
 #endif
 					(base.Current as SerializedEntityBase).DeserializeFields();
@@ -419,7 +445,7 @@ namespace xwcs.core.db.binding
 					resetDataLayout();
 				}
 			}
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 			_logger.Debug("CC-OUT-Current: " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
 #endif
 		}
@@ -427,7 +453,7 @@ namespace xwcs.core.db.binding
        
         virtual protected void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
 		{
-#if DEBUG
+#if DEBUG_TRACE_LOG_ON
 				_logger.Debug("Retrieving for field:" + e.FieldName);
 #endif
 				if (_attributesCache.ContainsKey(e.FieldName))
@@ -444,7 +470,7 @@ namespace xwcs.core.db.binding
 
 		private void FieldRetrievingHandler(object sender, FieldRetrievingEventArgs e)
 		{
-#if DEBUG
+#if DEBUG_TIMING_LOG_ON
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
 #endif
@@ -460,14 +486,14 @@ namespace xwcs.core.db.binding
 					_attributesCache[e.FieldName] = ac;
 			}
 
-#if DEBUG
+#if DEBUG_TIMING_LOG_ON
 			sw.Stop();
 			_logger.Debug(String.Format("Elapsed={0}", sw.Elapsed));
 #endif
-			
-		
-			// fixed things
-			e.DataSourceUpdateMode = DataSourceUpdateMode.OnPropertyChanged;
+
+
+            // fixed things
+            e.DataSourceUpdateMode = DataSourceUpdateMode.OnPropertyChanged;
 			e.Handled = true;
 		}
 
@@ -525,6 +551,15 @@ namespace xwcs.core.db.binding
         {
             // not handled name so just send type
             return "DataLayoutBindingSource";
+        }
+
+        private Dictionary<TextEdit, IStyleController> _DefaultStyles = new Dictionary<TextEdit, IStyleController>();
+        public Dictionary<TextEdit, IStyleController> DefaultStyles 
+        {
+            get
+            {
+                return _DefaultStyles;
+            }
         }
     }
 }
