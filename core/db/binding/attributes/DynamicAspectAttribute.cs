@@ -64,11 +64,11 @@ namespace xwcs.core.db.binding.attributes
         {
             if (_elementType == DynamicFormActionElementType.Action)
             {
-                src.EditorsHost.FormSupport.RegisterAction(new DynamicFormAction(_action, e.FieldName, _param, null));
+                src.EditorsHost.FormSupport.RegisterAction(new DynamicFormAction(_action, e.FieldName, _param, null, src));
             }
             else
             {
-                src.EditorsHost.FormSupport.RegisterActionTrigger(new DynamicFormActionTrigger(_action, e.FieldName, _param, null));
+                src.EditorsHost.FormSupport.RegisterActionTrigger(new DynamicFormActionTrigger(_action, e.FieldName, _param, null, src));
             }
         }
 

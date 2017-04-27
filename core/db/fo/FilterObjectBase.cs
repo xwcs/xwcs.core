@@ -409,7 +409,7 @@ namespace xwcs.core.db.fo
         public void ResetFieldByName(string FieldName)
         {
             GetFilterFieldByPath(FieldName)?.Reset();
-            OnPropertyChanged(FieldName);
+            OnPropertyChanged(FieldName, null, ModelPropertyChangedEventKind.Reset);
         }
 
         protected void SetField<T>(ref FilterField<T> storage, object value, [CallerMemberName] string propertyName = null)
@@ -502,7 +502,7 @@ namespace xwcs.core.db.fo
         }
 
         //protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        protected void OnPropertyChanged(string propertyName = null, object value = null)
+        protected void OnPropertyChanged(string propertyName = null, object value = null, ModelPropertyChangedEventKind kind = ModelPropertyChangedEventKind.SetValue)
         {
 
             // handle changed
@@ -523,7 +523,8 @@ namespace xwcs.core.db.fo
                         Container = this,
                         PropertyName = propertyName == string.Empty ? "*" : propertyName,
                         Value = value
-                    }
+                    },
+                    kind
                 )
             );
         }

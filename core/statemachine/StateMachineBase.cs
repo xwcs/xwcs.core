@@ -412,7 +412,10 @@ namespace xwcs.core.statemachine
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects).
+                    _wes_PropertyChanged = null;
+                    _wes_StartTransition = null;
+                    _wes_BeforeExitingPreviousState = null;
+                    _wes_EndTransition = null;
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
@@ -507,7 +510,11 @@ namespace xwcs.core.statemachine
             }
 			private set
 			{
-				_CurrentState = value; 
+                if (disposedValue)
+                { // Silent
+                    throw new InvalidOperationException("State Machine Disposed");
+                }
+                _CurrentState = value; 
                 if ( !(_CurrentState is ConditionStateBase) )
                 {
                     _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs("CurrentState"));

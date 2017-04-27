@@ -118,7 +118,7 @@ namespace xwcs.core.db.binding.attributes
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) 
 		{
             // register default style controller
-            src.DefaultStyles[(e.Control as TextEdit)] = _styleController;
+            src.EditorsHost.FormSupport.DefaultStyles[(e.Control as TextEdit)] = _styleController;
             (e.Control as TextEdit).StyleController = _styleController;
 		}
 

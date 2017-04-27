@@ -206,21 +206,21 @@ namespace xwcs.core.db.binding
 				// so we need do eventually also this
 				if (!_fieldsAreRetrieved && !ReferenceEquals(null, _cnt))
 				{
-                    _cnt.SuspendLayout();
-                    _cnt.BeginUpdate();
+                    SuspendLayout();
 
                     _cnt.RetrieveFields();
 
                     TryLoadLayuotFromFile();
 
-                    _cnt.EndUpdate();
-                    _cnt.ResumeLayout();
+                    
 
                     if (_fieldsAreRetrieved)
                     {
                         // there should be registered all triggers
                         _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
-                    }                    
+                    }
+
+                    ResumeLayout();
                 }
 
 			}
@@ -248,8 +248,7 @@ namespace xwcs.core.db.binding
 				if (value != null) {
 					_cnt = value;
 
-                    _cnt.SuspendLayout();
-                    _cnt.BeginUpdate();
+                    SuspendLayout();
 
                     _cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
                     _cnt.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
@@ -276,8 +275,7 @@ namespace xwcs.core.db.binding
                         _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
                     }
 
-                    _cnt.EndUpdate();
-                    _cnt.ResumeLayout();
+                    ResumeLayout();
                 }
 				else {
 					_cnt = null;
@@ -364,8 +362,7 @@ namespace xwcs.core.db.binding
 			// there is one active
 			if (_cnt != null && DataSource != null && _fieldsAreRetrieved)
 			{
-                _cnt.SuspendLayout();
-                _cnt.BeginUpdate();
+                SuspendLayout();
                 
 #if DEBUG_TRACE_LOG_ON
 				if (CurrencyManager.Position >= 0)
@@ -385,8 +382,7 @@ namespace xwcs.core.db.binding
                 // handle eventual layout loading here
                 TryLoadLayuotFromFile();
 
-                _cnt.EndUpdate();
-                _cnt.ResumeLayout();
+                ResumeLayout();
             }			
 		}
 
@@ -538,12 +534,14 @@ namespace xwcs.core.db.binding
 
         public void SuspendLayout()
         {
-            _cnt.SuspendLayout();
+            _cnt.BeginUpdate();
+            _cnt.SuspendLayout();           
         }
 
         public void ResumeLayout()
         {
             _cnt.ResumeLayout();
+            _cnt.EndUpdate();
         }
 
 
@@ -553,13 +551,6 @@ namespace xwcs.core.db.binding
             return "DataLayoutBindingSource";
         }
 
-        private Dictionary<TextEdit, IStyleController> _DefaultStyles = new Dictionary<TextEdit, IStyleController>();
-        public Dictionary<TextEdit, IStyleController> DefaultStyles 
-        {
-            get
-            {
-                return _DefaultStyles;
-            }
-        }
+        
     }
 }

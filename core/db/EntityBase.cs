@@ -14,6 +14,14 @@ namespace xwcs.core.db
 #endif
     using System.Reflection;
 
+
+    public enum ModelPropertyChangedEventKind
+    {
+        Default = 0,
+        SetValue = 1,
+        Reset = 2
+    }
+
     // structured changes in model will propagate this event
     public class ModelPropertyChangedEventArgs : EventArgs {
         public class PropertyChangedChainEntry
@@ -26,13 +34,27 @@ namespace xwcs.core.db
             public object Value = null;
             public ListChangedType ListChangedType = ListChangedType.ItemChanged; // default is this, in case of list change this will change
         }
-
+        
         public List<PropertyChangedChainEntry> PropertyChain = new List<PropertyChangedChainEntry>();
         public List<string> PropertyNamesChian = new List<string>();
+        private ModelPropertyChangedEventKind _changeKind = ModelPropertyChangedEventKind.Default;
 
         public ModelPropertyChangedEventArgs(string Name, PropertyChangedChainEntry Prop)
         {
             AddInChain(Name, Prop);
+        }
+
+        public ModelPropertyChangedEventArgs(string Name, PropertyChangedChainEntry Prop, ModelPropertyChangedEventKind kind) : this(Name, Prop)
+        {
+            _changeKind = kind;
+        }
+
+        public ModelPropertyChangedEventKind ChangeKind
+        {
+            get
+            {
+                return _changeKind;
+            }
         }
 
         public void AddInChain(string Name, PropertyChangedChainEntry Prop)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DevExpress.XtraEditors;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -30,6 +31,7 @@ namespace xwcs.core.ui.db
         void RegisterActionTrigger(DynamicFormActionTrigger a);
         void AddBindingSource(IDataBindingSource bs);
         Control FindControlByPropertyName(string name);
+        Dictionary<TextEdit, IStyleController> DefaultStyles { get; }
     }
     
 
@@ -39,6 +41,8 @@ namespace xwcs.core.ui.db
         private string _fieldName;
         private WeakReference _control;
         private object _param;
+        private WeakReference _bs;
+
 
         public string FieldName
         {
@@ -74,6 +78,18 @@ namespace xwcs.core.ui.db
             set
             {
                 _param = value;
+            }
+        }
+
+        public IDataBindingSource BindingSource
+        {
+            get
+            {
+                if (_bs.IsAlive)
+                {
+                    return _bs.Target as IDataBindingSource;
+                }
+                return null;
             }
         }
 
@@ -90,12 +106,13 @@ namespace xwcs.core.ui.db
             }
         }
 
-        public DynamicFormAction(DynamicFormActionType t, string fn, object p, Control cnt)
+        public DynamicFormAction(DynamicFormActionType t, string fn, object p, Control cnt, IDataBindingSource bs)
         {
             _type = t;
             _fieldName = fn;
             _control = new WeakReference(cnt);
             _param = p;
+            _bs = new WeakReference(bs);
         }
     }
 
@@ -105,6 +122,7 @@ namespace xwcs.core.ui.db
         private string _fieldName;
         private WeakReference _control;
         private object _param;
+        private WeakReference _bs;
 
         public string FieldName
         {
@@ -143,12 +161,25 @@ namespace xwcs.core.ui.db
             }
         }
 
-        public DynamicFormActionTrigger(DynamicFormActionType t, string fn, object p, Control cnt)
+        public IDataBindingSource BindingSource
+        {
+            get
+            {
+                if (_bs.IsAlive)
+                {
+                    return _bs.Target as IDataBindingSource;
+                }
+                return null;
+            }
+        }
+
+        public DynamicFormActionTrigger(DynamicFormActionType t, string fn, object p, Control cnt, IDataBindingSource bs)
         {
             _type = t;
             _fieldName = fn;
             _control = new WeakReference(cnt);
             _param = p;
+            _bs = new WeakReference(bs);
         }
 
         public DynamicFormActionType ActionType

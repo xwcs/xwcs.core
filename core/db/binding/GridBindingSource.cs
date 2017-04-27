@@ -398,13 +398,6 @@ namespace xwcs.core.db.binding
             }
         }
 
-        private Dictionary<TextEdit, IStyleController> _DefaultStyles = new Dictionary<TextEdit, IStyleController>();
-        public Dictionary<TextEdit, IStyleController> DefaultStyles
-        {
-            get
-            {
-                return _DefaultStyles;
-            }
-        }
+        
     }
 }

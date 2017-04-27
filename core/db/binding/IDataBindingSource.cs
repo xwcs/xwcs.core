@@ -44,7 +44,6 @@ namespace xwcs.core.db.binding
         Control GetControlByModelProperty(string ModelropertyName);
         void SuspendLayout();
         void ResumeLayout();
-        Dictionary<TextEdit, IStyleController> DefaultStyles { get; }
     }	
 
 	public interface IEditorsHostProvider 
