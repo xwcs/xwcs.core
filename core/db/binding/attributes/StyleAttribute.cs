@@ -118,8 +118,8 @@ namespace xwcs.core.db.binding.attributes
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) 
 		{
             // register default style controller
-            src.EditorsHost.FormSupport.DefaultStyles[(e.Control as TextEdit)] = _styleController;
-            (e.Control as TextEdit).StyleController = _styleController;
+            src.EditorsHost.FormSupport.DefaultStyles[(e.Control as BaseEdit)] = _styleController;
+            (e.Control as BaseEdit).StyleController = _styleController;
 		}
 
         public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e) {

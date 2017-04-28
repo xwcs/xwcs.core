@@ -9,20 +9,20 @@ using DevExpress.XtraDataLayout;
 
 namespace xwcs.core.db.binding
 {
-    using attributes;
-    using DevExpress.XtraEditors;
-    using DevExpress.XtraEditors.Container;
-    using DevExpress.XtraGrid;
-    using DevExpress.XtraLayout;
-    using evt;
-    using manager;
-    using System.Collections;
-    using System.Data;
-    using System.IO;
-    using System.Reflection;
+	using attributes;
+	using DevExpress.XtraEditors;
+	using DevExpress.XtraEditors.Container;
+	using DevExpress.XtraGrid;
+	using DevExpress.XtraLayout;
+	using evt;
+	using manager;
+	using System.Collections;
+	using System.Data;
+	using System.IO;
+	using System.Reflection;
+	using ui.db;
 
-
-    public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, INotifyCurrentObjectChanged, IDisposable
+	public class DataLayoutBindingSource : BindingSource, IDataBindingSource, INotifyModelPropertyChanged, INotifyCurrentObjectChanged, IDisposable
     {
 		protected static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(DataLayoutBindingSource));
 
@@ -50,6 +50,7 @@ namespace xwcs.core.db.binding
 		public DataLayoutBindingSource(IEditorsHost eh) : base() { start(eh); }
 		public DataLayoutBindingSource(IEditorsHost eh, IContainer c) : base(c){ start(eh); }
 		public DataLayoutBindingSource(IEditorsHost eh, object o, string s) : base(o, s){ start(eh); }
+		
 		
 		private void start(IEditorsHost eh)
 		{
@@ -504,11 +505,6 @@ namespace xwcs.core.db.binding
         {
             if (ReferenceEquals(null, _cnt)) return null;
 
-            List<Control> l1 = _cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
-                .Where(o => o.Control.DataBindings.Count > 0 && o.Control.DataBindings[0].BindingMemberInfo.BindingMember == ModelPropertyName)
-                .Select(o => o.Control)
-                .ToList();
-
             return _cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
             .Where(o => o.Control.DataBindings.Count > 0 && o.Control.DataBindings[0].BindingMemberInfo.BindingMember == ModelPropertyName)
             .Select(o => o.Control)
@@ -517,19 +513,25 @@ namespace xwcs.core.db.binding
 
 		public void readOnly(bool bOn)
 		{
-			List<Control> l1 = _cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
+			//List<Control> l1 =
+			IFormSupport fs = _editorsHost.FormSupport;
+			_cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
 				.Where(o => o.Control.DataBindings.Count > 0)
 				.Select(o => o.Control)
-				.ToList();
-
-
-			foreach (Control c in l1)
-			{
-				if (c.GetType() == typeof(TextEdit)) ((TextEdit)c).ReadOnly = bOn;
-				if (c.GetType() == typeof(TextBox)) ((TextBox)c).ReadOnly = bOn;
-				if (c.GetType() == typeof(DateEdit)) ((DateEdit)c).ReadOnly = bOn;
-				if (c.GetType() == typeof(CheckEdit)) ((CheckEdit)c).ReadOnly = bOn;
-			}
+				.ToList().ForEach(e => {
+					if(bOn) {
+						// read only for all
+						if(e is BaseEdit) {
+							(e as BaseEdit).ReadOnly = true;
+						}
+					}
+					else {
+						if (e is BaseEdit)
+						{
+							(e as BaseEdit).ReadOnly = !fs.ControlsMeta.ContainsKey((e as BaseEdit)) ?  false : fs.ControlsMeta[(e as BaseEdit)].ReadOnly;
+						}
+					}	
+				});
 		}
 
         public void SuspendLayout()
