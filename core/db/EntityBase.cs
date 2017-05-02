@@ -340,8 +340,8 @@ namespace xwcs.core.db
             // notify
             _wes_ModelPropertyChanged?.Raise(this, e);
 
-			// we need forward also Property chaged
-			OnPropertyChanged(s.GetFieldName(), sender);
+            // we need forward also Property changed, so if we are in binding list it know it
+            _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(s.GetFieldName()));
         }
 
         protected void SetNavigProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null) where T : INotifyModelPropertyChanged
