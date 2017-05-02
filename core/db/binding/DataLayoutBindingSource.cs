@@ -398,9 +398,9 @@ namespace xwcs.core.db.binding
             Current.CopyFrom(rec);
         }
 
-		
 
-		private void handleCurrentChanged(object sender, object args)
+
+        private void handleCurrentChanged(object sender, object args)
 		{
 #if DEBUG_TRACE_LOG_ON
 			_logger.Debug("CC-Current ["+sender+"] : " + (base.Current != null ? base.Current.GetPropValueByPathUsingReflection("id") : "null"));
