@@ -161,8 +161,16 @@ namespace xwcs.core.db
             this.ListChanged += internal_data_ListChanged;
         }
 
+
+
         private void internal_data_ListChanged(object sender, ListChangedEventArgs e)
         {
+			// when entity is added in list we need connect ourself to its model property chaged event
+			if (e.ListChangedType == ListChangedType.ItemAdded) {
+				//this[e.NewIndex].ModelPropertyChanged += OnNestedPropertyChanged;
+			}
+
+
             if (e.ListChangedType == ListChangedType.ItemChanged || 
                 e.ListChangedType == ListChangedType.ItemAdded ||
                 e.ListChangedType == ListChangedType.ItemDeleted || 
@@ -209,7 +217,27 @@ namespace xwcs.core.db
                 }
             }
         }
-    }
+
+		private void OnNestedPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
+		{
+			INotifyModelPropertyChanged s = sender as INotifyModelPropertyChanged;
+
+			// if not recoginzed return
+			if (s == null) return;
+			// add root type name to nested property changed event
+			e.AddInChain(s.GetFieldName(), new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
+			{
+				PropertyName = s.GetFieldName(),
+				Container = this
+			});
+
+			// handle changed
+			_changed = true; // false positive it will do true even if object was empty
+
+			// notify
+			_wes_ModelPropertyChanged?.Raise(this, e);
+		}
+	}
 
 
 	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
@@ -311,6 +339,9 @@ namespace xwcs.core.db
 
             // notify
             _wes_ModelPropertyChanged?.Raise(this, e);
+
+			// we need forward also Property chaged
+			OnPropertyChanged(s.GetFieldName(), sender);
         }
 
         protected void SetNavigProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null) where T : INotifyModelPropertyChanged

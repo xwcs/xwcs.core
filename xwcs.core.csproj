@@ -133,6 +133,7 @@
     <Compile Include="core\db\binding\attributes\DbComboAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbLookupAttribute.cs" />
     <Compile Include="core\db\binding\attributes\ResetSlavesAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\ReadOnlyAttribute.cs" />
     <Compile Include="core\db\binding\attributes\StyleAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DynamicAspectAttribute.cs" />
     <Compile Include="core\db\binding\attributes\TokenEditAttribute.cs" />

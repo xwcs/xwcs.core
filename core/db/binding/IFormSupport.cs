@@ -10,6 +10,11 @@ using xwcs.core.db.binding;
 
 namespace xwcs.core.ui.db
 {
+	public class ControlMeta
+	{
+		public bool ReadOnly = false;
+	}
+
     public enum DynamicFormActionType
     {
         MaskedEnable = 0,
@@ -31,8 +36,9 @@ namespace xwcs.core.ui.db
         void RegisterActionTrigger(DynamicFormActionTrigger a);
         void AddBindingSource(IDataBindingSource bs);
         Control FindControlByPropertyName(string name);
-        Dictionary<TextEdit, IStyleController> DefaultStyles { get; }
-    }
+        Dictionary<BaseEdit, IStyleController> DefaultStyles { get; }
+		Dictionary<BaseEdit, ControlMeta> ControlsMeta { get; }
+	}
     
 
     public class DynamicFormAction
