@@ -429,17 +429,20 @@ namespace xwcs.core.db.fo
         private void OnNestedPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
         {
             // add root type name to nested property changed event
-            e.AddInChain((sender as ICriteriaTreeNode)?.GetFieldName(), new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
+            if (e.AddInChain((sender as ICriteriaTreeNode)?.GetFieldName(),
+                            new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
+                            {
+                                PropertyName = (sender as ICriteriaTreeNode)?.GetFieldName(),
+                                Container = this
+                            }
+            ))
             {
-                PropertyName = (sender as ICriteriaTreeNode)?.GetFieldName(),
-                Container = this
-            });
+                // handle changed
+                _changed = true; // false positive it will do true even if object was empty
 
-            // handle changed
-            _changed = true; // false positive it will do true even if object was empty
-
-            // notify
-            _wes_ModelPropertyChanged?.Raise(this, e);
+                // notify
+                _wes_ModelPropertyChanged?.Raise(this, e);
+            }            
         }
 
         protected void SetField<T>(ref T storage, object value, [CallerMemberName] string propertyName = null)
