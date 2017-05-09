@@ -89,6 +89,7 @@
     <Reference Include="DevExpress.XtraGrid.v16.2, Version=16.2.4.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="DevExpress.XtraPrinting.v16.2, Version=16.2.4.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="DevExpress.XtraLayout.v16.2, Version=16.2.4.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+    <Reference Include="DevExpress.XtraRichEdit.v16.2, Version=16.2.4.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="Es.Logging, Version=1.1.0.0, Culture=neutral, PublicKeyToken=776b289507df5578, processorArchitecture=MSIL">
       <HintPath>..\packages\Es.Logging.1.1.0\lib\net45\Es.Logging.dll</HintPath>
       <Private>True</Private>
@@ -130,8 +131,8 @@
     <Compile Include="core\controls\WidgetDescriptor.cs" />
     <Compile Include="core\Core.cs" />
     <Compile Include="core\db\binding\attributes\CustomAttribute.cs" />
-    <Compile Include="core\db\binding\attributes\DbRichTextAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbComboAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\DbRichTextAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbLookupAttribute.cs" />
     <Compile Include="core\db\binding\attributes\ResetSlavesAttribute.cs" />
     <Compile Include="core\db\binding\attributes\ReadOnlyAttribute.cs" />
