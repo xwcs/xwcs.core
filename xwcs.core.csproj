@@ -90,6 +90,13 @@
     <Reference Include="DevExpress.XtraPrinting.v16.2, Version=16.2.4.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="DevExpress.XtraLayout.v16.2, Version=16.2.4.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
     <Reference Include="DevExpress.XtraRichEdit.v16.2, Version=16.2.4.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a, processorArchitecture=MSIL" />
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Es.Logging, Version=1.1.0.0, Culture=neutral, PublicKeyToken=776b289507df5578, processorArchitecture=MSIL">
       <HintPath>..\packages\Es.Logging.1.1.0\lib\net45\Es.Logging.dll</HintPath>
       <Private>True</Private>
@@ -147,6 +154,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="core\db\binding\IDataBindingSource.cs" />
+    <Compile Include="core\db\DBContextBase.cs" />
     <Compile Include="core\db\fo\FilterObjectBase.cs" />
     <Compile Include="core\db\fo\FilterField.cs" />
     <None Include="app.config" />
