@@ -8,6 +8,40 @@ namespace xwcs.core.db
 {
     using cfg;
     using System.Data.Entity;
+    using System.Runtime.CompilerServices;
+
+    public class DBContextManager
+    {
+        
+        #region singleton
+
+        private static DBContextManager instance;
+
+        //singleton need private ctor
+        protected DBContextManager() { }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public static DBContextManager getInstance()
+        {
+            if (instance == null)
+            {
+                instance = new DBContextManager();
+            }
+            return instance;
+        }
+
+        #endregion
+
+        private DBContextBase _currentDbContext = null;
+
+        public DBContextBase CurrentDbContext
+        {
+            get { return _currentDbContext; }
+            set { _currentDbContext = value; }
+        }
+
+
+    }
 
     public class DBLockException : ApplicationException
     {
@@ -72,6 +106,31 @@ namespace xwcs.core.db
             }
         }
 
+        public void SetAsCurrentDbContext()
+        {
+            DBContextManager.getInstance().CurrentDbContext = this;
+        }
+
+
+        public void LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
+        {
+            // load note
+            if (!Entry(e).Reference(PropertyName).IsLoaded)
+            {
+                Entry(e).Reference(PropertyName).Load();
+            }
+        }
+
+        public void LazyLoadOrDefaultCollection(EntityBase e, string PropertyName)
+        {
+            // load note
+            if (!Entry(e).Collection(PropertyName).IsLoaded)
+            {
+                Entry(e).Collection(PropertyName).Load();
+            }
+        }
+
+
         public LockResult EntityLock(EntityBase e)
         {
             string eid = e.GetLockId().ToString();
@@ -133,5 +192,7 @@ namespace xwcs.core.db
             base.Dispose(disposing);
         }
         #endregion
+
+        
     }
 }
