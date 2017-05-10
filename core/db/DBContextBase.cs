@@ -74,7 +74,7 @@ namespace xwcs.core.db
 
         public LockResult EntityLock(EntityBase e)
         {
-            string eid = e.GetModelPropertyValueByName("id").ToString();
+            string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
 
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}');", _adminDb, eid, ename)).FirstOrDefault();
@@ -91,7 +91,7 @@ namespace xwcs.core.db
 
         public LockResult EntityUnlock(EntityBase e)
         {
-            string eid = e.GetModelPropertyValueByName("id").ToString();
+            string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
 
             LockData ld = new LockData() { id = eid, entity = ename };

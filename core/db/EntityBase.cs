@@ -407,6 +407,12 @@ namespace xwcs.core.db
             }
         }
 
+        public virtual int GetLockId()
+        {
+            object idFiled = GetModelPropertyValueByName("id");
+            return ReferenceEquals(idFiled, null) ? -1 : (int)idFiled;
+        }
+
         private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
         public event PropertyChangedEventHandler PropertyChanged
         {

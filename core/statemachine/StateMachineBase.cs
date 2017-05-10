@@ -355,7 +355,8 @@ namespace xwcs.core.statemachine
     /// </summary>
     public interface IStateMachineHost
     {
-
+        StateMachine GetNewStateMachine();
+        StateMachine CurrentStateMachine { get; }
     }
 
 
