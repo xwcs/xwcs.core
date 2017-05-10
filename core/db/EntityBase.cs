@@ -486,8 +486,10 @@ namespace xwcs.core.db
             }
 
             storage = value;
-            // new handler
-            storage.ModelPropertyChanged += OnNestedPropertyChanged;
+			if(!ReferenceEquals(null, storage)) {
+				// new handler
+				storage.ModelPropertyChanged += OnNestedPropertyChanged;
+			}            
             // notify that nested was changed
             OnPropertyChanged(propertyName, storage);
         }
