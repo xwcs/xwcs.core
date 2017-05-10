@@ -8,6 +8,43 @@ namespace xwcs.core.db
 {
     using cfg;
     using System.Data.Entity;
+    using System.Runtime.CompilerServices;
+
+    public class DBContextManager
+    {
+        
+        #region singleton
+        private static DBContextManager instance;
+
+        //singleton need private ctor
+        protected DBContextManager() { }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public static DBContextManager getInstance()
+        {
+            if (instance == null)
+            {
+                instance = new DBContextManager();
+            }
+            return instance;
+        }
+
+        #endregion
+
+        private WeakReference _currentDbContext = null;
+
+        public DBContextBase CurrentDbContext
+        {
+            get {
+                if(!ReferenceEquals(_currentDbContext, null) && _currentDbContext.IsAlive)
+                {
+                    return ((DBContextBase)_currentDbContext.Target).Valid ? (DBContextBase)_currentDbContext.Target : null;
+                }
+                return null;
+            }
+            set { _currentDbContext = new WeakReference(value); }
+        }
+    }
 
     public class DBLockException : ApplicationException
     {
@@ -35,6 +72,7 @@ namespace xwcs.core.db
     {
         private Config _cfg = new Config("MainAppConfig");
         private string _adminDb = "admin";
+        private bool _entityLockDisabled = false;
 
         private HashSet<LockData> _locks = new HashSet<LockData>();
 
@@ -42,6 +80,7 @@ namespace xwcs.core.db
             : base(nameOrConnectionString)
         {
             _adminDb = _cfg.getCfgParam("Admin/DatabaseName", "admin");
+            _entityLockDisabled = _cfg.getCfgParam("Admin/EntityLockDisabled", "No") == "Yes";
             Database.Connection.StateChange += Connection_StateChange;
         }
 
@@ -72,8 +111,36 @@ namespace xwcs.core.db
             }
         }
 
+        public void SetAsCurrentDbContext()
+        {
+            DBContextManager.getInstance().CurrentDbContext = this;
+        }
+
+
+        public void LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
+        {
+            // load note
+            if (!Entry(e).Reference(PropertyName).IsLoaded)
+            {
+                Entry(e).Reference(PropertyName).Load();
+            }
+        }
+
+        public void LazyLoadOrDefaultCollection(EntityBase e, string PropertyName)
+        {
+            // load note
+            if (!Entry(e).Collection(PropertyName).IsLoaded)
+            {
+                Entry(e).Collection(PropertyName).Load();
+            }
+        }
+
+
         public LockResult EntityLock(EntityBase e)
         {
+            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+
+
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
 
@@ -91,6 +158,8 @@ namespace xwcs.core.db
 
         public LockResult EntityUnlock(EntityBase e)
         {
+            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
 
@@ -111,7 +180,12 @@ namespace xwcs.core.db
 
 
         #region IDisposable Support
-        private bool disposedValue = false; 
+        private bool disposedValue = false;
+        
+        public bool Valid
+        {
+            get { return !disposedValue; }
+        } 
 
         protected override void Dispose(bool disposing)
         {
@@ -133,5 +207,7 @@ namespace xwcs.core.db
             base.Dispose(disposing);
         }
         #endregion
+
+        
     }
 }
