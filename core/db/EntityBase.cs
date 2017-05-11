@@ -307,8 +307,9 @@ namespace xwcs.core.db
             ));
         }
 
+		
 
-        private void internal_data_ListChanged(object sender, ListChangedEventArgs e)
+		private void internal_data_ListChanged(object sender, ListChangedEventArgs e)
         {
             if (e.ListChangedType == ListChangedType.ItemChanged)
             {
