@@ -156,6 +156,8 @@ namespace xwcs.core.db
     public interface IModelEntity
     {
         object GetModelPropertyValueByName(string PropName);
+        DBContextBase GetCtx();
+        void SetCtx(DBContextBase c);
     }
 
     public class EntityList<T> : BindingList<T>, INotifyModelPropertyChanged, IModelEntity where T : EntityBase
@@ -166,6 +168,26 @@ namespace xwcs.core.db
         public bool IsChanged()
         {
             return _changed;
+        }
+
+        private int _currentDataVersion;
+        public int GetDataVersion()
+        {
+            return _currentDataVersion;
+        }
+        public void SetDataVersion(int value)
+        {
+            _currentDataVersion = value;
+        }
+
+        private DBContextBase _ctx;
+        public DBContextBase GetCtx()
+        {
+            return _ctx;
+        }
+        public void SetCtx(DBContextBase c)
+        {
+            _ctx = c;
         }
 
         public string GetFieldName() {
@@ -388,6 +410,26 @@ namespace xwcs.core.db
             return _changed;
         }
 
+        private int _currentDataVersion;
+        public int GetDataVersion()
+        {
+            return _currentDataVersion;
+        }
+        public void SetDataVersion(int value)
+        {
+            _currentDataVersion = value;
+        }
+
+        private DBContextBase _ctx;
+        public DBContextBase GetCtx()
+        {
+            return _ctx;
+        }
+        public void SetCtx(DBContextBase c)
+        {
+            _ctx = c;
+        } 
+
         /// <summary>
         ///  this is convetion, we dont have name settings generated in model
         ///  and properties have type name as proper name
@@ -461,8 +503,8 @@ namespace xwcs.core.db
             if (Equals(storage, value)) return;
 
 #if DEBUG_TRACE_LOG_ON
-            //MethodBase info = new StackFrame(3).GetMethod();
-            //_logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
+            MethodBase info = new StackFrame(3).GetMethod();
+            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
 #endif
 
             storage = value;
@@ -470,40 +512,37 @@ namespace xwcs.core.db
         }
 
         
-
-        protected void SetNavigProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null) where T : INotifyModelPropertyChanged
+        protected void SetNavigProperty<T>(ref T storage, T value, string propertyName = null) where T : INotifyModelPropertyChanged
         {
             // skip if not changed
             if (ReferenceEquals(storage, value)) return;
+
 #if DEBUG_TRACE_LOG_ON
-            //MethodBase info = new StackFrame(3).GetMethod();
-            //_logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
+            MethodBase info = new StackFrame(3).GetMethod();
+            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
 #endif
             // handle real change
             if (!ReferenceEquals(null, storage))
             {
-                //remove old changed handler
                 storage.ModelPropertyChanged -= OnNestedPropertyChanged;
             }
-
             storage = value;
-			if(!ReferenceEquals(null, storage)) {
-				// new handler
-				storage.ModelPropertyChanged += OnNestedPropertyChanged;
-			}            
+            if (!ReferenceEquals(null, storage))
+            {
+                storage.ModelPropertyChanged += OnNestedPropertyChanged;
+            }
             // notify that nested was changed
             OnPropertyChanged(propertyName, storage);
         }
-        
+
 
         protected void OnPropertyChanged(string propertyName = null, object value = null)
         {
 
-            // handle changed
             _changed = true; // false positive it will do true even if object was empty
 
 #if DEBUG_TRACE_LOG_ON
-            //_logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
+            _logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
 #endif
             _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));
 
@@ -539,12 +578,6 @@ namespace xwcs.core.db
             {
                 // handle changed
                 _changed = true; // false positive it will do true even if object was empty
-
-                // we need forward also Property changed, so if we are in binding list it know it
-
-                // first PropertyChanged then ModelProperty changed, cause Model can use something set in normal event
-                //_wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(s.GetFieldName()));
-                // then Model
                 _wes_ModelPropertyChanged?.Raise(this, e);
             }
         }

@@ -704,5 +704,25 @@ namespace xwcs.core.db.fo
 
             return (ReferenceEquals(null, co) ? "" : co.ToString()).Equals(ReferenceEquals(null, cor) ? "" : cor.ToString());
         }
+
+        public int GetDataVersion()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetDataVersion(int value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DBContextBase GetCtx()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetCtx(DBContextBase c)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

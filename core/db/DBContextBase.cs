@@ -8,6 +8,8 @@ namespace xwcs.core.db
 {
     using cfg;
     using System.Data.Entity;
+    using System.Data.Entity.Core.Objects;
+    using System.Data.Entity.Infrastructure;
     using System.Runtime.CompilerServices;
 
     public class DBContextManager
@@ -67,21 +69,62 @@ namespace xwcs.core.db
         public string entity;
     }
 
-
+   
     public class DBContextBase : DbContext, IDisposable
     {
         private Config _cfg = new Config("MainAppConfig");
         private string _adminDb = "admin";
         private bool _entityLockDisabled = false;
+        private ObjectContext _oc;
+
+        // avoid infinity entry creation
+        private Dictionary<EntityBase, DbEntityEntry<EntityBase>> _entries = new Dictionary<EntityBase, DbEntityEntry<EntityBase>>();
+                
 
         private HashSet<LockData> _locks = new HashSet<LockData>();
 
         public DBContextBase(string nameOrConnectionString)
             : base(nameOrConnectionString)
         {
+            // connect to object context 
+            _oc = (this as IObjectContextAdapter).ObjectContext;
+
+            _oc.ObjectMaterialized += _oc_ObjectMaterialized;
+            _oc.ObjectStateManager.ObjectStateManagerChanged += ObjectStateManager_ObjectStateManagerChanged;
+
             _adminDb = _cfg.getCfgParam("Admin/DatabaseName", "admin");
             _entityLockDisabled = _cfg.getCfgParam("Admin/EntityLockDisabled", "No") == "Yes";
             Database.Connection.StateChange += Connection_StateChange;
+
+            // some fixed HC things
+            Database.CommandTimeout = 180;
+            Configuration.LazyLoadingEnabled = false;
+            Configuration.ProxyCreationEnabled = false;
+        }
+
+        private void ObjectStateManager_ObjectStateManagerChanged(object sender, System.ComponentModel.CollectionChangeEventArgs e)
+        {
+            if(e.Action == System.ComponentModel.CollectionChangeAction.Add)
+            {
+                if(e.Element is IModelEntity)
+                {
+                    (e.Element as IModelEntity).SetCtx(this);
+                }
+            }else if (e.Action == System.ComponentModel.CollectionChangeAction.Remove)
+            {
+                if (e.Element is IModelEntity)
+                {
+                    (e.Element as IModelEntity).SetCtx(null);
+                }
+            }
+        }
+
+        private void _oc_ObjectMaterialized(object sender, ObjectMaterializedEventArgs e)
+        {
+            if (e.Entity is IModelEntity)
+            {
+                (e.Entity as IModelEntity).SetCtx(this);
+            }
         }
 
         private void Connection_StateChange(object sender, System.Data.StateChangeEventArgs e)
@@ -116,25 +159,39 @@ namespace xwcs.core.db
             DBContextManager.getInstance().CurrentDbContext = this;
         }
 
+        private DbEntityEntry<EntityBase> MyEntry(EntityBase e)
+        {
+            if (_entries.ContainsKey(e))
+            {
+                return _entries[e];
+            }else
+            {
+                DbEntityEntry<EntityBase> ne = Entry(e);
+                _entries[e] = ne;
+                return ne;
+            }
+        }
 
         public void LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
         {
-            // load note
-            if (!Entry(e).Reference(PropertyName).IsLoaded)
+            DbEntityEntry<EntityBase> et = MyEntry(e); 
+
+            if (!et.Reference(PropertyName).IsLoaded)
             {
-                Entry(e).Reference(PropertyName).Load();
+                et.Reference(PropertyName).Load();
             }
         }
-
         public void LazyLoadOrDefaultCollection(EntityBase e, string PropertyName)
         {
-            // load note
-            if (!Entry(e).Collection(PropertyName).IsLoaded)
+            DbEntityEntry<EntityBase> et = MyEntry(e);
+
+            if (!et.Collection(PropertyName).IsLoaded)
             {
-                Entry(e).Collection(PropertyName).Load();
+                et.Collection(PropertyName).Load();
             }
         }
 
+        
 
         public LockResult EntityLock(EntityBase e)
         {
@@ -178,6 +235,7 @@ namespace xwcs.core.db
             return Database.SqlQuery<LockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
         }
 
+        
 
         #region IDisposable Support
         private bool disposedValue = false;
@@ -193,13 +251,16 @@ namespace xwcs.core.db
             {
                 if (disposing)
                 {
+                    _oc.ObjectMaterialized -= _oc_ObjectMaterialized;
+                    _oc.ObjectStateManager.ObjectStateManagerChanged -= ObjectStateManager_ObjectStateManagerChanged;
+                    Database.Connection.StateChange -= Connection_StateChange;
+
+
                     // unlock pending locks
-                    foreach(LockData ld in _locks)
+                    foreach (LockData ld in _locks)
                     {
                         InternalUnlock(ld);
                     }
-
-                    Database.Connection.StateChange -= Connection_StateChange;
                 }
                 disposedValue = true;
             }

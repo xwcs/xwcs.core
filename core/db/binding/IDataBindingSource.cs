@@ -63,6 +63,7 @@ namespace xwcs.core.db.binding
         string LayoutAssetsPath { get; }
 
         IFormSupport FormSupport { get; }
+        DBContextBase DataCtx { get; }
 	}
 
 	public class ViewEditorShownEventArgs : EventArgs
