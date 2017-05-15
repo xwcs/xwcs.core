@@ -12,6 +12,7 @@ namespace xwcs.core.db
     using System.Data.Entity.Infrastructure;
     using System.Runtime.CompilerServices;
 
+    /*
     public class DBContextManager
     {
         
@@ -47,6 +48,7 @@ namespace xwcs.core.db
             set { _currentDbContext = new WeakReference(value); }
         }
     }
+    */
 
     public class DBLockException : ApplicationException
     {
@@ -154,11 +156,7 @@ namespace xwcs.core.db
             }
         }
 
-        public void SetAsCurrentDbContext()
-        {
-            DBContextManager.getInstance().CurrentDbContext = this;
-        }
-
+       
         private DbEntityEntry<EntityBase> MyEntry(EntityBase e)
         {
             if (_entries.ContainsKey(e))

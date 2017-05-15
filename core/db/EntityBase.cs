@@ -410,17 +410,7 @@ namespace xwcs.core.db
             return _changed;
         }
 
-        private int _currentDataVersion;
-        public int GetDataVersion()
-        {
-            return _currentDataVersion;
-        }
-        public void SetDataVersion(int value)
-        {
-            _currentDataVersion = value;
-        }
-
-        private DBContextBase _ctx;
+        private DBContextBase _ctx = null;
         public DBContextBase GetCtx()
         {
             return _ctx;
