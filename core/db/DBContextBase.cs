@@ -11,45 +11,7 @@ namespace xwcs.core.db
     using System.Data.Entity.Core.Objects;
     using System.Data.Entity.Infrastructure;
     using System.Runtime.CompilerServices;
-
-    /*
-    public class DBContextManager
-    {
-        
-        #region singleton
-        private static DBContextManager instance;
-
-        //singleton need private ctor
-        protected DBContextManager() { }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public static DBContextManager getInstance()
-        {
-            if (instance == null)
-            {
-                instance = new DBContextManager();
-            }
-            return instance;
-        }
-
-        #endregion
-
-        private WeakReference _currentDbContext = null;
-
-        public DBContextBase CurrentDbContext
-        {
-            get {
-                if(!ReferenceEquals(_currentDbContext, null) && _currentDbContext.IsAlive)
-                {
-                    return ((DBContextBase)_currentDbContext.Target).Valid ? (DBContextBase)_currentDbContext.Target : null;
-                }
-                return null;
-            }
-            set { _currentDbContext = new WeakReference(value); }
-        }
-    }
-    */
-
+    
     public class DBLockException : ApplicationException
     {
         public DBLockException(LockResult lr)
@@ -170,23 +132,31 @@ namespace xwcs.core.db
             }
         }
 
-        public void LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
+        public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
         {
             DbEntityEntry<EntityBase> et = MyEntry(e); 
 
-            if (!et.Reference(PropertyName).IsLoaded)
+            DbReferenceEntry en = et.Reference(PropertyName);
+
+            if (!en.IsLoaded)
             {
-                et.Reference(PropertyName).Load();
+                en.Load();
             }
+
+            return en.CurrentValue;
         }
-        public void LazyLoadOrDefaultCollection(EntityBase e, string PropertyName)
+        public object LazyLoadOrDefaultCollection(EntityBase e, string PropertyName)
         {
             DbEntityEntry<EntityBase> et = MyEntry(e);
 
-            if (!et.Collection(PropertyName).IsLoaded)
+            DbCollectionEntry en = et.Collection(PropertyName);
+
+            if (!en.IsLoaded)
             {
-                et.Collection(PropertyName).Load();
+                en.Load();
             }
+
+            return en.CurrentValue;
         }
 
         
