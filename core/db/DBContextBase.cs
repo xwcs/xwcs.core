@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace xwcs.core.db
 {
     using cfg;
@@ -203,7 +204,38 @@ namespace xwcs.core.db
             return Database.SqlQuery<LockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
         }
 
-        
+
+        public void UndoChanges(DbEntityEntry[] entryForCheck = null)
+        {
+            IEnumerable<DbEntityEntry> what = ReferenceEquals(null, entryForCheck) ?
+                    ChangeTracker.Entries() :
+                    ChangeTracker.Entries().Intersect(entryForCheck);
+            // undo db
+            foreach (DbEntityEntry entry in what)
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Modified:
+                        entry.State = EntityState.Unchanged;
+                        break;
+                    case EntityState.Added:
+                        entry.State = EntityState.Detached;
+                        break;
+                    // If the EntityState is the Deleted, reload the date from the database.   
+                    case EntityState.Deleted:
+                        entry.Reload();
+                        break;
+                    default: break;
+                }
+            }
+        }
+
+        public virtual void DeleteRowGeneric<T>(string setName, T what) where T : class
+        {
+            if (ReferenceEquals(null, what)) return;
+            (this.GetPropertyByName(setName) as DbSet<T>).Remove(what as T);
+        }
+
 
         #region IDisposable Support
         private bool disposedValue = false;

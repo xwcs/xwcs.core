@@ -35,7 +35,7 @@ namespace xwcs.core.statemachine
 
         public void RegisterItem(BarItem bi, string n)
         {
-            _triggerUiItems.Add(bi, new StateMachineUiTrigger(bi, n + "Trigger"));
+            _triggerUiItems.Add(bi, new StateMachineUiTrigger(bi, n));
 
             // connect to click
             bi.ItemClick += Bi_ItemClick;
