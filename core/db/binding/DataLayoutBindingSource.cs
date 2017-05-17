@@ -511,7 +511,7 @@ namespace xwcs.core.db.binding
             .FirstOrDefault();
         }
 
-		public void readOnly(bool bOn)
+		public void SetReadOnly(bool bOn)
 		{
 			//List<Control> l1 =
 			IFormSupport fs = _editorsHost.FormSupport;

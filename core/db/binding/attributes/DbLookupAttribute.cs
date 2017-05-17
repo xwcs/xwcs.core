@@ -43,31 +43,31 @@ namespace xwcs.core.db.binding.attributes
 		// data layout like container
 		public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
 		{
-			e.EditorType = typeof(DevExpress.XtraEditors.LookUpEdit);
+            e.EditorType = typeof(DevExpress.XtraEditors.GridLookUpEdit);// LookUpEdit);
 		}
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
-		{
-			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
+        {
+            RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
 			setupRle(src, rle, e.FieldName);
 		}
 
 		// grid like container
 		public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e) {
-			e.RepositoryItem = new RepositoryItemLookUpEdit();
+			e.RepositoryItem = new RepositoryItemGridLookUpEdit();
 		}
 		public override void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e) {
-			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
+            RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
 			rle.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.Standard;
 		}
 		public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e) {
-			RepositoryItemLookUpEdit rle = e.RepositoryItem as RepositoryItemLookUpEdit;
+            RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
             rle.EditValueChanged += Rle_EditValueChanged;
             setupRle(src, rle, e.FieldName);
 		}
 
 		//filter control
 		public override void applyCustomEditShownFilterControl(IDataBindingSource src, ShowValueEditorEventArgs e) {
-			RepositoryItemLookUpEdit rle = new RepositoryItemLookUpEdit();
+            RepositoryItemGridLookUpEdit rle = new RepositoryItemGridLookUpEdit();
 			e.CustomRepositoryItem = rle;
             setupRle(src, rle, e.CurrentNode.FirstOperand.PropertyName);
 		}
@@ -87,7 +87,7 @@ namespace xwcs.core.db.binding.attributes
             }
         }
 
-        private void setupRle(IDataBindingSource src, RepositoryItemLookUpEdit rle, string fn) {
+        private void setupRle(IDataBindingSource src, RepositoryItemGridLookUpEdit rle, string fn) {
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
 			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };

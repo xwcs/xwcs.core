@@ -291,7 +291,7 @@ namespace xwcs.core.statemachine
         public virtual bool HasTrigger(string name)
         {
             InitTriggersInternal();
-            return _triggers.ContainsKey(name);
+            return _triggers.ContainsKey(name + "Trigger");
         }
 
 
@@ -303,11 +303,12 @@ namespace xwcs.core.statemachine
         public virtual TriggerBase GetTrigger(string name)
         {
             InitTriggersInternal();
+            name += "Trigger";
             if (_triggers.ContainsKey(name))
             {
                 return _triggers[name];
             }
-
+            
             throw new ApplicationException(string.Format("State {0} has no trigger {1}!", this.Name, name));
         }
 
@@ -315,6 +316,11 @@ namespace xwcs.core.statemachine
         {
             if(!_triggers.ContainsKey(t.Name))
                 _triggers[t.Name] = t;
+        }
+
+        public void Fire(string triggerName)
+        {
+            GetTrigger(triggerName).Fire();
         }
       
         /// <summary>
@@ -341,11 +347,8 @@ namespace xwcs.core.statemachine
         /// Is executed when the state machine enters this state.
         /// </summary>
         public override void OnEntry(TriggerBase trigger) {
-            // Ask for available triggers.
-            foreach (TriggerBase t in Triggers)
-            {
-                this.StateMachine.ProcessTrigger(t);
-            }
+            // send all triggers
+            this.StateMachine.ProcessTriggers(Triggers);
         }
     }
 
@@ -366,6 +369,8 @@ namespace xwcs.core.statemachine
     public abstract partial class StateMachine : INotifyPropertyChanged, IDisposable
     {
 		public string Name { get; protected set; } = "unknown";
+
+        
 
         private IStateMachineHost _host;
         public IStateMachineHost Host
@@ -395,14 +400,24 @@ namespace xwcs.core.statemachine
 
             this.Initialize();
 
-            // Now start the Transition Consumer Thread
-            _queue = new Queue<TriggerBase>();
-            //_syncEvents = new SyncEvents();
-            //_sync = new object();
-            //consumerThread = new Thread(ConsumerThread);
-            //consumerThread.Start();
+            _queue = new Queue<object>();
+            
+            _timer = new System.Windows.Forms.Timer();
+            _timer.Interval = 1;
+            _timer.Tick += _timer_Tick;
+            _timer.Enabled = false;
 
+            _effectsQueue = new Queue<EffectAction>();
+            _effectsTimer = new System.Windows.Forms.Timer();
+            _effectsTimer.Interval = 1;
+            _effectsTimer.Tick += _effectsTimer_Tick; ;
+            _effectsTimer.Enabled = false;
         }
+
+       
+
+
+
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
@@ -417,14 +432,11 @@ namespace xwcs.core.statemachine
                     _wes_StartTransition = null;
                     _wes_BeforeExitingPreviousState = null;
                     _wes_EndTransition = null;
+                    _timer.Tick -= _timer_Tick;
+                    _timer.Dispose();
+                    _effectsTimer.Tick -= _effectsTimer_Tick;
+                    _effectsTimer.Dispose();
                 }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-                
-                //_syncEvents.ExitThreadEvent.Set();
-                //consumerThread.Join();
-
 
                 // decrement
                 StateMachinesDisposer.getInstance().UnRegisterSM(this);
@@ -462,7 +474,12 @@ namespace xwcs.core.statemachine
         /// <summary>
         /// Makes the state machine go into another state.
         /// </summary>
-        public void TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, WeakEventSource<TransitionEventArgs> EffectHandler)
+        /// <param name="newState"></param>
+        /// <param name="causedByTrigger"></param>
+        /// <param name="guard"></param>
+        /// <param name="EffectHandler"></param>
+        /// <returns>true if done</returns>
+        public bool TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, WeakEventSource<TransitionEventArgs> EffectHandler)
 		{
             if (disposedValue)
             { // Silent
@@ -472,7 +489,7 @@ namespace xwcs.core.statemachine
             _wes_StartTransition.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
 			if ( guard != null )
             {
-                if (!guard.Execute()) return; // Guard said this trigger can't go on
+                if (!guard.Execute()) return false; // Guard said this trigger can't go on
             }
 
 			_wes_BeforeExitingPreviousState.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
@@ -485,13 +502,21 @@ namespace xwcs.core.statemachine
 			
 			//call effect
 			if(EffectHandler != null)
-                EffectHandler.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
-            
+            {
+                ProcessEffect(new EffectAction(EffectHandler, new TransitionEventArgs(previousState, newState, causedByTrigger)));
+            }
+
+            // Process Effect can delete SM itself so handle it
+            if (disposedValue) return false; // we are over end of life just exit
+                
             // enter the new state
             if (this.CurrentState != null)
 				this.CurrentState.OnEntry(causedByTrigger);
 
-            _wes_EndTransition.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
+            _wes_EndTransition.Raise(this, new TransitionEventArgs(previousState, newState, causedByTrigger));
+
+            // we did well so ok send true
+            return true;
         }
 
         private StateBase _CurrentState;
@@ -534,90 +559,126 @@ namespace xwcs.core.statemachine
                 return _CurrentState != null ;
         } }
 
-        private Queue<TriggerBase> _queue;
-        //private SyncEvents _syncEvents;
-        //private readonly object _sync;
 
-        // this flag indicate if we are working on queue
-        private bool _handlingQueue = false;
+        // triggers 
+        private Queue<object> _queue; // it can hold List<TriggerBase> or TriggerBase
+        // this will fire i 1ms we just need to split execution chain
+        private System.Windows.Forms.Timer _timer = null;
+
+
+        struct EffectAction
+        {
+            WeakEventSource<TransitionEventArgs> EffectHandler;
+            TransitionEventArgs Args;
+
+            public EffectAction(WeakEventSource<TransitionEventArgs> e, TransitionEventArgs a)
+            {
+                EffectHandler = e;
+                Args = a;
+            }
+            
+            public void Fire()
+            {
+                EffectHandler.Raise(this, Args);
+            }
+        }
+
+        // effects 
+        private Queue<EffectAction> _effectsQueue;
+        // this will fire i 1ms we just need to split execution chain
+        private System.Windows.Forms.Timer _effectsTimer = null;
+
         
 
-
         /// <summary>
-        /// Makes the state machine recive a command and dispatch it through the internal Queue.
+        ///  Makes the state machine recive a command and dispatch it through the internal Queue.
         /// </summary>
+        /// <param name="trigger"></param>
         public void ProcessTrigger(TriggerBase trigger) {
             if (disposedValue)
             { // Silent
                 throw new InvalidOperationException("State Machine Disposed");
-            }
-            /*
-            lock (((ICollection)_queue).SyncRoot)
-            {
-                 _queue.Enqueue(trigger);
-                 _syncEvents.NewTransitionEvent.Set();
-            }
-            */
-
+            }            
             _queue.Enqueue(trigger);
-
-            // call method for working
+            _timer.Start();
+            Application.DoEvents();
+        }
+        public void ProcessTriggers(IReadOnlyCollection<TriggerBase> triggers)
+        {
+            if (disposedValue)
+            { // Silent
+                throw new InvalidOperationException("State Machine Disposed");
+            }
+            _queue.Enqueue(triggers);
+            _timer.Start();
+            Application.DoEvents();
+        }
+        private void ConsumeQueue()
+        {
+            if (_queue.Count > 0)
+            {
+                object tt = _queue.Dequeue();
+                if(tt is IReadOnlyCollection<TriggerBase>)
+                {
+                    foreach(TriggerBase t in (tt as IReadOnlyCollection<TriggerBase>))
+                    {
+                        if (ProcessTriggerInternal(t as TriggerBase)) return; // we done here we skip others after first good
+                    }
+                }else
+                {
+                    ProcessTriggerInternal(tt as TriggerBase);
+                }                
+            }
+            if (_queue.Count > 0)
+            {
+                _timer.Start();
+            }
+        }
+        private void _timer_Tick(object sender, EventArgs e)
+        {
+            _timer.Stop();
             ConsumeQueue();
+        }
 
+        /// <summary>
+        /// Receive Effect event raise request and dispatch it through the internal Queue.
+        /// </summary>
+        private void ProcessEffect(EffectAction ef)
+        {
+            if (disposedValue)
+            { // Silent
+                throw new InvalidOperationException("State Machine Disposed");
+            }
+
+            _effectsQueue.Enqueue(ef);
+            _effectsTimer.Start();
+            Application.DoEvents();
+        }
+        private void ConsumeEffectQueue()
+        {
+            if (_effectsQueue.Count > 0)
+            {
+                EffectAction ef = _effectsQueue.Dequeue();
+                ef.Fire();
+                // during this event SM can be eventually disposed from outside!!!!!
+                if (disposedValue) return;
+            }
+            if (_effectsQueue.Count > 0)
+            {
+                _effectsTimer.Start();
+            }
+        }
+        private void _effectsTimer_Tick(object sender, EventArgs e)
+        {
+            _effectsTimer.Stop();
+            ConsumeEffectQueue();
         }
 
         /// <summary>
         /// Makes the state machine process a command. Depending on its current state
         /// and the designed transitions the machine reacts to the trigger.
         /// </summary>
-        protected abstract void ProcessTriggerInternal(TriggerBase trigger);
-
-        /*
-        /// <summary>
-        /// Internal Transition Thread.
-        /// </summary>
-        private void ConsumerThread()
-        {
-            while (WaitHandle.WaitAny(_syncEvents.EventArray) != 1)
-            {
-                lock (((ICollection)_queue).SyncRoot)
-                {
-                    while(_queue.Count > 0)
-                    {
-                        TriggerBase t = _queue.Dequeue();
-                        ProcessTriggerInternal(t);
-                    }
-                }
-            }
-            // Console.WriteLine("Consumer Thread: consumed {0} items", count);
-        }
-        */
-
-        private void ConsumeQueue()
-        {
-            if (_handlingQueue) return; // we are here from recursive call
-
-            _handlingQueue = true;
-
-            bool done = false;
-
-            while (!done)
-            {
-                if(_queue.Count > 0)
-                {
-                    TriggerBase t = _queue.Dequeue();
-                    ProcessTriggerInternal(t);
-                }
-
-                // now we have to check actual queue size , cause trigger could fire many UI actions
-                // which could enque many new triggers
-
-                done = _queue.Count == 0;
-            }
-
-            // reset _handling flag just before exit
-            _handlingQueue = false;
-        }
+        protected abstract bool ProcessTriggerInternal(TriggerBase trigger);
 
         
         // base events

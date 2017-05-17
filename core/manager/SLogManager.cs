@@ -7,7 +7,8 @@ using xwcs.core.plgs;
 using xwcs.core.evt;
 using System.Runtime.CompilerServices;
 using log4net;
-
+using System.Diagnostics;
+using System.Reflection;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
 
@@ -70,15 +71,21 @@ namespace xwcs.core.manager
 			public void Error(string msg)
 			{
 				if (!logger.IsErrorEnabled) return;
-				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1}", logger.Logger.Name, msg) }));
-				logger.Error(msg);
+
+                MethodBase info = new StackFrame(1).GetMethod();
+                // Get the line number from the stack frame
+                _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1} - {2}", logger.Logger.Name, msg, info.Name) }));
+				logger.Error(string.Format("{0} in : {1}", msg, info.Name));
 			}
 
 			public void Fatal(string msg)
 			{
 				if (!logger.IsFatalEnabled) return;
-				_proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1}", logger.Logger.Name, msg) }));
-				logger.Fatal(msg);
+
+                MethodBase info = new StackFrame(1).GetMethod();
+
+                _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("{0} - {1} - {2}", logger.Logger.Name, msg, info.Name) }));
+				logger.Fatal(string.Format("{0} in : {1}", msg, info.Name));
 			}
 		}
 

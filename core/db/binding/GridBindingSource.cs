@@ -181,8 +181,9 @@ namespace xwcs.core.db.binding
 					t = tmpT;
 				}
 
-				// make generic Structure watch basing on type of DataSource element
-				base.DataSource = value;
+                // make generic Structure watch basing on type of DataSource element
+                _oldPosition = -1;
+                base.DataSource = value;
 				_dataType = t;
 
 				if (!_gridIsConnected) {
@@ -385,8 +386,9 @@ namespace xwcs.core.db.binding
 
         protected override void OnPositionChanged(EventArgs e)
         {
+            if (_oldPosition == Position) return; // skip call on the same line
             base.OnPositionChanged(e);
-            //store curent in old
+            //store current in old
             _oldPosition = Position; // this means first one will not exist!!!
         }
 
