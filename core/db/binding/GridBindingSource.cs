@@ -125,7 +125,25 @@ namespace xwcs.core.db.binding
 			}
 
 			set {
-				if (value == null) return;
+                if (value == null)
+                {
+                    // just empty grid rows
+                    if(!ReferenceEquals(null, base.DataSource))
+                    {
+                        base.DataSource = null;
+                    }
+
+                    // if grid was not connected , manage remove useless columns
+                    if (!_gridIsConnected)
+                    {
+                        if (!ReferenceEquals(null, _grid) && _grid.MainView is ColumnView)
+                        {
+                            (_grid.MainView as ColumnView).Columns.Clear();
+                        }
+                    }
+
+                    return;
+                }
 
 				Type t = null;
 
@@ -148,17 +166,17 @@ namespace xwcs.core.db.binding
 				if (tmpT == null)
 				{
 					//lets try another way, maybe IList
-					if (tmpDs as IList != null)
+					if (tmpDs is IList)
 					{
 						//try to obtain element type
 						t = (tmpDs as IList).GetType().GetGenericArguments()[0];
 					}
-					else if (tmpDs as IEnumerable != null)
+					else if (tmpDs is IEnumerable)
 					{
 						//try to obtain element type
 						t = (tmpDs as IEnumerable).GetType().GetGenericArguments()[0];
 					}
-					else if (tmpDs as IListSource != null)
+					else if (tmpDs is IListSource)
 					{
 						//try to obtain element type
 						t = (tmpDs as IListSource).GetType().GetGenericArguments()[0];
@@ -187,7 +205,7 @@ namespace xwcs.core.db.binding
 				_dataType = t;
 
 				if (!_gridIsConnected) {
-					ConnectGrid();	
+                    ConnectGrid();	
 				}
 			}
 		}
@@ -238,6 +256,7 @@ namespace xwcs.core.db.binding
 			ConnectGrid();
 		}
 
+        
 		private void ConnectGrid() {
 			if (_grid != null && !_gridIsConnected && _dataType != null)
 			{
