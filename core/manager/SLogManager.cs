@@ -59,7 +59,9 @@ namespace xwcs.core.manager
 		void Warn(string msg);
 		void Error(string msg);
 		void Fatal(string msg);
-	}
+        void ClearQueue();
+
+    }
 
     public enum LogKind
     {
@@ -79,8 +81,11 @@ namespace xwcs.core.manager
         public int Line;
     }
 	
-    public class SLogManager : ILogger, IDisposable
+    [cfg.attr.Config("MainAppConfig")]
+    public class SLogManager : cfg.Configurable, ILogger, IDisposable
     {
+
+        private bool _fastClose = false;
         private static SLogManager instance;
 		private ILogger global = null;
 
@@ -88,7 +93,7 @@ namespace xwcs.core.manager
 
         private class SimpleLogger : ILogger
 		{
-
+            
 			private static SEventProxy _proxy;
             private ILog logger = null;
 
@@ -99,6 +104,24 @@ namespace xwcs.core.manager
             public SimpleLogger() : this("Global")
 			{
                 
+            }
+
+            public void ClearQueue()
+            {
+                if (System.Threading.Monitor.TryEnter(((ICollection)_queue).SyncRoot, 5000))
+                {
+                    try
+                    {
+                        if (_queue.Count > 0)
+                        {
+                            _queue.Clear();
+                        }
+                    }
+                    finally
+                    {
+                        System.Threading.Monitor.Exit(((ICollection)_queue).SyncRoot);
+                    }
+                }
             }
 
             /// <summary>
@@ -289,6 +312,7 @@ namespace xwcs.core.manager
 		private SLogManager()
         {
 			global = new SimpleLogger();
+            _fastClose = getCfgParam("SLogManager/FastClose", "No") == "Yes";
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -339,6 +363,11 @@ namespace xwcs.core.manager
 		{
 			global.Fatal(msg);
 		}
+        public void ClearQueue()
+        {
+            global.ClearQueue();
+        }
+
 
         #region IDisposable Support
         private bool disposedValue = false; // Per rilevare chiamate ridondanti
@@ -352,6 +381,15 @@ namespace xwcs.core.manager
                     //managed here
                 }
 
+                if (_fastClose)
+                {
+                    global.ClearQueue();
+                    //clear queues
+                    foreach (ILogger l in _loggers.Values)
+                    {
+                        l.ClearQueue();
+                    }
+                }
                 foreach (ILogger l in _loggers.Values)
                 {
                     l.Dispose();
@@ -371,6 +409,8 @@ namespace xwcs.core.manager
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+        
         #endregion
     }
 }

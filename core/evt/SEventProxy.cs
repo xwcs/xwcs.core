@@ -103,7 +103,7 @@ namespace xwcs.core.evt
                 {
                     if (_invokeDelegate.InvokeRequired)
                     {
-                        _invokeDelegate.Invoke(what, args);
+                        _invokeDelegate.BeginInvoke(what, args);
                         return true;
                     }
                 }                
