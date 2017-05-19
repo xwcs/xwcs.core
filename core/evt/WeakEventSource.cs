@@ -23,10 +23,23 @@ namespace xwcs.core.evt
 
         public void Raise(object sender, TEventArgs e)
         {
-            lock (_handlers)
-            {
-                _handlers.RemoveAll(h => !h.Invoke(sender, e));
-            }
+            int cnt = 10;
+            while (cnt-- > 0)
+                if (System.Threading.Monitor.TryEnter(_handlers, 5000))
+                {
+                    try
+                    {
+                        _handlers.RemoveAll(h => !h.Invoke(sender, e));
+
+                        return; //done
+                    }
+                    finally
+                    {
+                        System.Threading.Monitor.Exit(_handlers);
+                    }
+                }
+
+            throw new ApplicationException("Cant raise event!");
         }
 
         public void Subscribe(EventHandler<TEventArgs> handler)
@@ -36,10 +49,23 @@ namespace xwcs.core.evt
                 .Select(d => new WeakDelegate(d))
                 .ToList();
 
-            lock (_handlers)
-            {
-                _handlers.AddRange(weakHandlers);
-            }
+            int cnt = 10;
+            while (cnt-- > 0)
+                if(System.Threading.Monitor.TryEnter(_handlers, 5000))
+                {
+                    try
+                    {
+                        _handlers.AddRange(weakHandlers);
+
+                        return; //done
+                    }
+                    finally
+                    {
+                        System.Threading.Monitor.Exit(_handlers);
+                    }
+                }
+
+            throw new ApplicationException("Cant register handler!");
         }
 
         public void SubscribePropertyChanged(PropertyChangedEventHandler handler)
@@ -48,34 +74,68 @@ namespace xwcs.core.evt
                 .GetInvocationList()
                 .Select(d => new WeakDelegate(d))
                 .ToList();
+            
+            int cnt = 10;
+            while (cnt-- > 0)
+                if (System.Threading.Monitor.TryEnter(_handlers, 5000))
+                {
+                    try
+                    {
+                        _handlers.AddRange(weakHandlers);
 
-            lock (_handlers)
-            {
-                _handlers.AddRange(weakHandlers);
-            }
+                        return; //done
+                    }
+                    finally
+                    {
+                        System.Threading.Monitor.Exit(_handlers);
+                    }
+                }
+
+            throw new ApplicationException("Cant register handler!");
         }
 
         public void Unsubscribe(EventHandler<TEventArgs> handler)
         {
-            lock (_handlers)
-            {
-                int index = _handlers.FindIndex(h => h.IsMatch(handler));
-                if (index >= 0)
-                    _handlers.RemoveAt(index);
-            }
+            int cnt = 10;
+            while (cnt-- > 0)
+                if (System.Threading.Monitor.TryEnter(_handlers, 5000))
+                {
+                    try
+                    {
+                        int index = _handlers.FindIndex(h => h.IsMatch(handler));
+                        if (index >= 0)
+                            _handlers.RemoveAt(index);
+
+                        return; // done
+                    }
+                    finally
+                    {
+                        System.Threading.Monitor.Exit(_handlers);
+                    }
+                }
+
+            throw new ApplicationException("Cant unregister handler!");
         }
 
         public void UnsubscribePropertyChanged(PropertyChangedEventHandler handler)
         {
-            var weakHandlers = handler
-                .GetInvocationList()
-                .Select(d => new WeakDelegate(d))
-                .ToList();
-
-            lock (_handlers)
-            {
-                _handlers.AddRange(weakHandlers);
-            }
+            int cnt = 10;
+            while (cnt-- > 0)
+                if (System.Threading.Monitor.TryEnter(_handlers, 5000))
+                {
+                    try
+                    {
+                        int index = _handlers.FindIndex(h => h.IsMatch(handler));
+                        if (index >= 0)
+                            _handlers.RemoveAt(index);
+                        return; // done
+                    }
+                    finally
+                    {
+                        System.Threading.Monitor.Exit(_handlers);
+                    }
+                }
+            throw new ApplicationException("Cant unregister handler!");
         }
 
         class WeakDelegate
@@ -139,13 +199,19 @@ namespace xwcs.core.evt
                 if (SEventProxy.CanFireEvent(e.GetType()))
                 {
                     // if we are on UI thread just invoke if not go trough InvokeDelegate 
-                    if (!SEventProxy.InvokeDelegate.InvokeRequired || !SEventProxy.InvokeOnUIThread(_openHandler, new object[] { target, sender, e }))
+                    if (!SEventProxy.InvokeOnUIThread(_openHandler, new object[] { target, sender, e }))
                     _openHandler(target, sender, e);
                 }                    
                 return true;
             }
 
             public bool IsMatch(EventHandler<TEventArgs> handler)
+            {
+                return ReferenceEquals(handler.Target, _weakTarget?.Target)
+                    && handler.GetMethodInfo().Equals(_method);
+            }
+
+            public bool IsMatch(PropertyChangedEventHandler handler)
             {
                 return ReferenceEquals(handler.Target, _weakTarget?.Target)
                     && handler.GetMethodInfo().Equals(_method);

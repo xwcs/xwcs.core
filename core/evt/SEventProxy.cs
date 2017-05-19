@@ -85,19 +85,28 @@ namespace xwcs.core.evt
             }
             set
             {
-                _invokeDelegate = value;
+                if(value is System.Windows.Forms.Form)
+                {
+                    _invokeDelegate = value;
+                    return;
+                }
+
+                throw new ApplicationException("Invokation delegate must be a Form!");                
             }
         }
 
         public static bool InvokeOnUIThread(Delegate what, object[] args)
         {
-            if (_invokeDelegate != null)
+            if (!ReferenceEquals(_invokeDelegate, null))
             {
-                if (_invokeDelegate.InvokeRequired)
+                if((_invokeDelegate is System.Windows.Forms.Form) && !(_invokeDelegate as System.Windows.Forms.Form).IsDisposed)
                 {
-                    _invokeDelegate.Invoke(what, args);
-                    return true;
-                }
+                    if (_invokeDelegate.InvokeRequired)
+                    {
+                        _invokeDelegate.Invoke(what, args);
+                        return true;
+                    }
+                }                
 
                 return false;
             }
@@ -119,6 +128,11 @@ namespace xwcs.core.evt
         }
         public static void BlockModelEvents()
         {
+            BlockEventType(typeof(db.ModelPropertyChangedEventArgs));
+        }
+
+        public static void BlockAllChangeEvents()
+        {
             BlockEventTypes(new Type[] { typeof(db.ModelPropertyChangedEventArgs), typeof(PropertyChangedEventArgs) });
         }
 
@@ -132,6 +146,11 @@ namespace xwcs.core.evt
             if (_blockedEvents.Contains(ea)) _blockedEvents.Remove(ea);
         }
         public static void AllowModelEvents()
+        {
+            AllowEventType(typeof(db.ModelPropertyChangedEventArgs));
+        }
+
+        public static void AllowAllChangeEvents()
         {
             AllowEventTypes(new Type[] { typeof(db.ModelPropertyChangedEventArgs), typeof(PropertyChangedEventArgs) });
         }
