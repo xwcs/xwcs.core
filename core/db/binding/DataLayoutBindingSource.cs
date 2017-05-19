@@ -536,14 +536,20 @@ namespace xwcs.core.db.binding
 
         public void SuspendLayout()
         {
-            _cnt.BeginUpdate();
-            _cnt.SuspendLayout();           
-        }
+			if (!ReferenceEquals(_cnt, null))
+			{
+				_cnt.BeginUpdate();
+				_cnt.SuspendLayout();
+			}
+		}
 
         public void ResumeLayout()
         {
-            _cnt.ResumeLayout();
-            _cnt.EndUpdate();
+			if (!ReferenceEquals(_cnt, null))
+			{
+				_cnt.ResumeLayout();
+				_cnt.EndUpdate();
+			}
         }
 
 
