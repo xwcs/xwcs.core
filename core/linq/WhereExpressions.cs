@@ -278,6 +278,30 @@ namespace xwcs.core.linq
             return c;
         }
 
+        // unary for us is the same as constant
+        protected override Expression VisitUnary(UnaryExpression u)
+        {
+            if(u.NodeType == ExpressionType.Convert)
+            {
+                // do constant here instead of convert
+
+                _current.Clean = true;
+                _current.Exp = Expression.Constant(u.Operand);
+                _current.CurrentType = new SplitType();
+
+                return _current.Exp;
+            }else
+            {
+                Expression operand = this.Visit(u.Operand);
+                if (operand != u.Operand)
+                {
+                    return Expression.MakeUnary(u.NodeType, operand, u.Type, u.Method);
+                }
+                return u;
+
+            }
+        }
+
         protected override Expression VisitBinary(BinaryExpression b)
         {
             PushStatus(); //new current active

@@ -486,13 +486,13 @@ namespace xwcs.core.statemachine
                 throw new InvalidOperationException("State Machine Disposed");
             }
             // Pull the trigger to find if condition is Ok.
-            _wes_StartTransition.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
+            _wes_StartTransition?.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
 			if ( guard != null )
             {
                 if (!guard.Execute()) return false; // Guard said this trigger can't go on
             }
 
-			_wes_BeforeExitingPreviousState.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
+			_wes_BeforeExitingPreviousState?.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
             // exit the current state
             if (this.CurrentState != null)
 				this.CurrentState.OnExit(causedByTrigger);
@@ -513,7 +513,7 @@ namespace xwcs.core.statemachine
             if (this.CurrentState != null)
 				this.CurrentState.OnEntry(causedByTrigger);
 
-            _wes_EndTransition.Raise(this, new TransitionEventArgs(previousState, newState, causedByTrigger));
+            _wes_EndTransition?.Raise(this, new TransitionEventArgs(previousState, newState, causedByTrigger));
 
             // we did well so ok send true
             return true;
