@@ -11,8 +11,11 @@ namespace xwcs.core.db
     using System.Data.Entity;
     using System.Data.Entity.Core.Objects;
     using System.Data.Entity.Infrastructure;
+    using System.Data.Entity.Validation;
+    using System.Linq.Expressions;
+    using System.Reflection;
     using System.Runtime.CompilerServices;
-    
+
     public class DBLockException : ApplicationException
     {
         public DBLockException(LockResult lr)
@@ -133,6 +136,28 @@ namespace xwcs.core.db
             }
         }
 
+        public void ReplaceEntity<T,P>(T e, P KeyValue, string KeyName) where T : EntityBase
+        {
+            // First resolve the used table according to given type
+            DbSet<T> table = this.GetPropertyByName("tipologie") as DbSet<T>;
+
+            // Get the property according to given column
+            PropertyInfo property = typeof(T).GetTypeInfo().GetDeclaredProperty(KeyName);
+
+            //Func<Data,Data> expressionHere
+            ParameterExpression lambdaArg = Expression.Parameter(typeof(T));
+            Expression propertyAccess = Expression.MakeMemberAccess(lambdaArg, property);
+            Expression propertyEquals = Expression.Equal(propertyAccess, Expression.Constant(KeyValue, typeof(P)));
+            Expression<Func<T, bool>> expressionHere = Expression.Lambda<Func<T, bool>>(propertyEquals, lambdaArg);
+
+            MyEntry(e).CurrentValues.SetValues(table.Where(expressionHere).FirstOrDefault());
+        }
+
+        public void ReloadEntity(EntityBase e)
+        {
+            MyEntry(e).Reload();
+        }
+
         public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
         {
             DbEntityEntry<EntityBase> et = MyEntry(e); 
@@ -234,6 +259,18 @@ namespace xwcs.core.db
         {
             if (ReferenceEquals(null, what)) return;
             (this.GetPropertyByName(setName) as DbSet<T>).Remove(what as T);
+        }
+
+        public string FormatDbValidationError(DbEntityValidationException ex)
+        {
+            string ret = "";
+
+            foreach(DbEntityValidationResult r in ex.EntityValidationErrors)
+            {
+                r.ValidationErrors.ToList().ForEach(e => ret += "\r\n" + e.ErrorMessage);
+            }
+
+            return ret;
         }
 
 

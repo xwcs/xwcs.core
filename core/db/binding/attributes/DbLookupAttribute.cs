@@ -61,7 +61,7 @@ namespace xwcs.core.db.binding.attributes
 		}
 		public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e) {
             RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
-            rle.EditValueChanged += Rle_EditValueChanged;
+           // rle.EditValueChanged += Rle_EditValueChanged;
             setupRle(src, rle, e.FieldName);
 		}
 
