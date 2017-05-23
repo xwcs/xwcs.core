@@ -133,16 +133,24 @@ namespace xwcs.core.db
             }
         }
 
-        public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
+        public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName, bool force = false)
         {
             DbEntityEntry<EntityBase> et = MyEntry(e); 
 
             DbReferenceEntry en = et.Reference(PropertyName);
 
             if (!en.IsLoaded)
-            {
+            {				
                 en.Load();
             }
+			else if (force)
+			{
+				
+				DbEntityEntry<EntityBase> tmp = MyEntry(en.CurrentValue as EntityBase);
+				tmp.Reload();
+				//tmp.
+			}
+
 
             return en.CurrentValue;
         }

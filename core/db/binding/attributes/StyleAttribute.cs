@@ -66,16 +66,14 @@ namespace xwcs.core.db.binding.attributes
 		uint _backGrndColorFocused;
 		uint _backGrndColorReadOnly;
 		int _columnWidth;
+		uint _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
 
 
-        // separate styling
-        public int ColumnWidth 
+		// separate styling
+		public int ColumnWidth 
 		{ 
 			get { return _columnWidth; } 
-			set
-			{
-				_columnWidth = value;
-			}
+			set { _columnWidth = value; }
 		}
 
 
@@ -89,7 +87,7 @@ namespace xwcs.core.db.binding.attributes
 			set 
 			{ 
 				_backGrndColor = value;
-				_styleController.Appearance.BackColor = System.Drawing.Color.FromArgb((int)_backGrndColor);
+				_styleController.Appearance.BackColor = System.Drawing.Color.FromArgb((int)_backGrndColor);				
 			}
 		}
 
@@ -123,6 +121,12 @@ namespace xwcs.core.db.binding.attributes
 			}
 		}
 
+		public uint HAlignment
+		{
+			get { return _halignment; }
+			set { _halignment = value; }
+		}
+
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) 
 		{
             // register default style controller
@@ -137,7 +141,8 @@ namespace xwcs.core.db.binding.attributes
 				//FixedWidth must be set for change column's width runtime
 				e.Column.OptionsColumn.FixedWidth = true;
 				e.Column.Width = ColumnWidth;
-            }           
+				e.Column.AppearanceCell.TextOptions.HAlignment = (DevExpress.Utils.HorzAlignment)_halignment;
+			}           
         }
     }	
 }
