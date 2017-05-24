@@ -64,7 +64,14 @@ namespace xwcs.core.db.binding
 
         IFormSupport FormSupport { get; }
         DBContextBase DataCtx { get; }
+
+        Control GetCustomEditingControl(string ControlName);
 	}
+
+    public interface INamedControl
+    {
+        string ControlName { get; set; }
+    }
 
 	public class ViewEditorShownEventArgs : EventArgs
 	{
