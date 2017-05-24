@@ -516,7 +516,8 @@ namespace xwcs.core.db.binding
 			//List<Control> l1 =
 			IFormSupport fs = _editorsHost.FormSupport;
 			_cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
-				.Where(o => o.Control.DataBindings.Count > 0)
+				//.Where(o => o.Control.DataBindings.Count > 0)
+				.Where(o => (o.Control != null) && (o.Control.DataBindings.Count > 0))
 				.Select(o => o.Control)
 				.ToList().ForEach(e => {
 					if(bOn) {
