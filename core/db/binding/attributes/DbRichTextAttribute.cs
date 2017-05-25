@@ -16,7 +16,18 @@ namespace xwcs.core.db.binding.attributes
 		// data layout like container
 		public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
 		{
-			e.EditorType = typeof(DevExpress.XtraEditors.RichTextEdit);
+			//e.EditorType = typeof(DevExpress.XtraEditors.RichTextEdit);
+			e.EditorType = typeof(DevExpress.XtraEditors.MemoExEdit);
 		}
-    }
+
+		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
+		{
+			//RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;
+			
+			RepositoryItemMemoExEdit rle = e.RepositoryItem as RepositoryItemMemoExEdit;	
+			//rle.LinesCount = 5;
+			//rle.AutoHeight = false;
+			//rle.WordWrap = true;
+		}
+	}
 }

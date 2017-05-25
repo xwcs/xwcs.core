@@ -87,7 +87,9 @@ namespace xwcs.core.db.binding.attributes
             }
         }
 
-        private void setupRle(IDataBindingSource src, RepositoryItemGridLookUpEdit rle, string fn) {
+        private void setupRle(IDataBindingSource src, RepositoryItemGridLookUpEdit rle, string fn) 
+		{
+			rle.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Near;
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
 			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
