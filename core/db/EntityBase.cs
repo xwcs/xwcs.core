@@ -502,7 +502,7 @@ namespace xwcs.core.db
         }
 
         
-        protected void SetNavigProperty<T>(ref T storage, T value, string propertyName = null) where T : INotifyModelPropertyChanged
+        protected void SetNavigProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null) where T : INotifyModelPropertyChanged
         {
             // skip if not changed
             if (ReferenceEquals(storage, value)) return;

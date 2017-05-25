@@ -33,6 +33,7 @@ namespace xwcs.core.db.binding
 
 
 		private DataLayoutControl _cnt = null;
+        private Control _contentContainer = null;
 		private Type  _dataType;
 
 
@@ -211,7 +212,10 @@ namespace xwcs.core.db.binding
 
                     _cnt.RetrieveFields();
 
-                    TryLoadLayuotFromFile();
+                    // use file suffix if present <- used in intial loads
+                    // so file suffix must be set prior ds settings
+
+                    TryLoadLayuotFromFile(CurrentLayoutSuffix);
 
                     
 
@@ -253,10 +257,10 @@ namespace xwcs.core.db.binding
 
                     _cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
                     _cnt.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
-					_cnt.AutoRetrieveFields = true;
-					_cnt.AllowCustomization = false;
+                    _cnt.AutoRetrieveFields = true;
+                    _cnt.AllowCustomization = true;
                     _cnt.OptionsItemText.TextAlignMode = DevExpress.XtraLayout.TextAlignMode.AlignInGroups;
-					_cnt.FieldRetrieved += FieldRetrievedHandler;
+                    _cnt.FieldRetrieved += FieldRetrievedHandler;
 					_cnt.FieldRetrieving += FieldRetrievingHandler;
 					//variables first
 					_resetLayoutRequest = false;
@@ -265,17 +269,26 @@ namespace xwcs.core.db.binding
                    
                     //connect
                     _cnt.DataSource = this;
-                    
 
-                    // handle eventual layout loading here
-                    TryLoadLayuotFromFile();
 
-                    if (_fieldsAreRetrieved)
+                    if (!_fieldsAreRetrieved && !ReferenceEquals(null, _cnt))
                     {
-                        // there should be registered all triggers
-                        _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
-                    }
+                        _cnt.RetrieveFields();
 
+                        // use file suffix if present <- used in intial loads
+                        // so file suffix must be set prior ds settings
+
+                        TryLoadLayuotFromFile(CurrentLayoutSuffix);
+
+
+
+                        if (_fieldsAreRetrieved)
+                        {
+                            // there should be registered all triggers
+                            _wes_CurrentObjectChanged?.Raise(this, new CurrentObjectChangedEventArgs() { Old = _oldCurrent, Current = base.Current });
+                        }
+
+                    }
                     ResumeLayout();
                 }
 				else {
@@ -284,27 +297,92 @@ namespace xwcs.core.db.binding
 			}
 		}
 
+        public string LayoutBaseFileName { get; set; } = "";
+        public string CurrentLayoutSuffix { get; set; } = "";
+
         #endregion
 
-        private bool TryLoadLayuotFromFile()
+        public bool ChangeLayout(string LayoutSuffix)
+        {
+            if (CurrentLayoutSuffix.Equals(LayoutSuffix)) return false;
+
+            if (LayoutSuffix.Length > 0)
+            {
+                CurrentLayoutSuffix = LayoutSuffix;
+                return TryLoadLayuotFromFile(LayoutSuffix);
+            }else
+            {
+                if (CurrentLayoutSuffix.Equals("_Default")) return false;
+
+                CurrentLayoutSuffix = "_Default";
+                return TryLoadLayuotFromFile(CurrentLayoutSuffix);
+            }           
+        }
+
+        /// <summary>
+        ///  sets datalayout container control
+        ///  datalayout control will be dynamic
+        /// </summary>
+    
+        public Control LayoutContainer
+        {
+            get
+            {
+                return _contentContainer;
+            }
+            set
+            {
+                if(value != null && _contentContainer != value)
+                {
+                    _contentContainer = value;
+                    MakeNewLayoutControl();
+                }
+            }
+        }
+
+        private void MakeNewLayoutControl()
+        {
+            // remove old
+            if (!ReferenceEquals(null, _cnt)) {
+                _contentContainer.Controls.Remove(_cnt);
+            }            
+            DataLayoutControl dl = new DataLayoutControl();
+            _contentContainer.Controls.Add(dl);
+            dl.Dock = DockStyle.Fill;
+            dl.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
+            dl.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
+            dl.AutoRetrieveFields = true;
+            dl.AllowCustomization = true;
+            dl.OptionsCustomizationForm.EnableUndoManager = true;
+            dl.OptionsCustomizationForm.ShowPropertyGrid = true;
+            dl.OptionsCustomizationForm.ShowRedoButton = true;
+            dl.OptionsCustomizationForm.ShowUndoButton = true;
+            dl.OptionsItemText.TextAlignMode = DevExpress.XtraLayout.TextAlignMode.CustomSize;
+            this.DataLayout = dl;
+        }
+
+        private bool TryLoadLayuotFromFile(string FileNameSuffix = "")
         {
             // check if connected to host
             if (
                 ReferenceEquals(base.DataSource, null) || 
-                ReferenceEquals(null, _editorsHost) || 
+                ReferenceEquals(null, _editorsHost) ||
+                LayoutBaseFileName.Length == 0 || 
                 !SPersistenceManager.getInstance().IsAllowed_LoadLayoutFromXml) return false;
 
             
 
-            string filePath = string.Format("{0}/{1}", _editorsHost.LayoutAssetsPath, "search_form.xml");
+            string filePath = string.Format("{0}/{1}{2}.xml", _editorsHost.LayoutAssetsPath, LayoutBaseFileName, FileNameSuffix);
             if (File.Exists(filePath))
             {
-                //_cnt.BeginUpdate();
+               
                 _cnt.RestoreLayoutFromXml(filePath);
-                //_cnt.EndUpdate();
+
+                
                 return true;
             }
 
+            _logger.Warn("Missing layout file: " + filePath);
             return false;
            
         }
@@ -378,10 +456,12 @@ namespace xwcs.core.db.binding
 
                 
 				// now set new source
-				_cnt.DataSource = this;               
+				_cnt.DataSource = this;
+
+                _cnt.RetrieveFields();
 
                 // handle eventual layout loading here
-                TryLoadLayuotFromFile();
+                //TryLoadLayuotFromFile();
 
                 ResumeLayout();
             }			
@@ -516,7 +596,7 @@ namespace xwcs.core.db.binding
 			//List<Control> l1 =
 			IFormSupport fs = _editorsHost.FormSupport;
 			_cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
-				.Where(o => o.Control.DataBindings.Count > 0)
+				.Where(o => o.Control!=null && o.Control.DataBindings.Count > 0)
 				.Select(o => o.Control)
 				.ToList().ForEach(e => {
 					if(bOn) {

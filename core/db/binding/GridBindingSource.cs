@@ -61,7 +61,6 @@ namespace xwcs.core.db.binding
 			{
 				_editorsHost.FormSupport.AddBindingSource(this);
 			}
-            ListChanged += handleListItemChanged;
         }
         
         #region IDisposable Support
@@ -199,12 +198,25 @@ namespace xwcs.core.db.binding
 					t = tmpT;
 				}
 
+                // now when we know type we reset old handler
+                if (!ReferenceEquals(null, _dataType))
+                {
+                    ListChanged -= handleListItemChanged;
+                }
+
                 // make generic Structure watch basing on type of DataSource element
                 _oldPosition = -1;
                 base.DataSource = value;
 				_dataType = t;
 
-				if (!_gridIsConnected) {
+                // now when we know type we set new handler
+                if(!ReferenceEquals(null, _dataType))
+                {
+                    ListChanged += handleListItemChanged;
+                }            
+
+
+                if (!_gridIsConnected) {
                     ConnectGrid();	
 				}
 			}
@@ -409,6 +421,11 @@ namespace xwcs.core.db.binding
             base.OnPositionChanged(e);
             //store current in old
             _oldPosition = Position; // this means first one will not exist!!!
+        }
+
+        public bool ChangeLayout(string LayoutSuffix)
+        {
+            throw new NotImplementedException();
         }
 
         public int LastPosition

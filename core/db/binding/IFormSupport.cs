@@ -30,6 +30,7 @@ namespace xwcs.core.ui.db
     /*
     * Classes for Form support handling
     */
+    
     public interface IFormSupport
     {
         void RegisterAction(DynamicFormAction a);
@@ -38,7 +39,8 @@ namespace xwcs.core.ui.db
         Control FindControlByPropertyName(string name);
         Dictionary<BaseEdit, IStyleController> DefaultStyles { get; }
 		Dictionary<BaseEdit, ControlMeta> ControlsMeta { get; }
-	}
+
+    }
     
 
     public class DynamicFormAction
