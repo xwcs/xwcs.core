@@ -44,6 +44,7 @@ namespace xwcs.core.db.binding
         Control GetControlByModelProperty(string ModelropertyName);
         void SuspendLayout();
         void ResumeLayout();
+        bool ChangeLayout(string LayoutSuffix);
     }	
 
 	public interface IEditorsHostProvider 
@@ -87,4 +88,6 @@ namespace xwcs.core.db.binding
 		public RepositoryItem RepositoryItem { get; set; }
         public DevExpress.XtraGrid.Columns.GridColumn Column { get; set; }
     }
+
+
 }
