@@ -290,7 +290,8 @@ namespace xwcs.core.db.binding
 						if(ri != null) {
 							_grid.RepositoryItems.Add(ri);
 							_repositories[pi.Name] = ri;
-						}
+							if (gc != null) gc.ColumnEdit = ri;
+						}						
 					}
 					if (ac.Count > 0)
 						_attributesCache[pi.Name] = ac;

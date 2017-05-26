@@ -10,41 +10,43 @@ using DevExpress.XtraGrid.Views.Base;
 namespace xwcs.core.db.binding.attributes
 {
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-	public class DbRichTextAttribute : CustomAttribute
+	public class DbMemoAttribute : CustomAttribute
 	{
 
 		// data layout like container
 		public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
 		{
-			e.EditorType = typeof(DevExpress.XtraEditors.RichTextEdit);			
+			e.EditorType = typeof(DevExpress.XtraEditors.MemoEdit);
 		}
 
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
 		{
-			RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
+			rle.WordWrap = true;
 		}
 
 		public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e)
 		{
 			e.RepositoryItem = new RepositoryItemMemoEdit();
 
-			RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
+			rle.WordWrap = true;
 			rle.AutoHeight = true;
 			rle.Appearance.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
 		}
 		public override void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e)
 		{
-			RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
 		}
 		public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e)
 		{
-			RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
 		}
 
 		//filter control
 		public override void applyCustomEditShownFilterControl(IDataBindingSource src, ShowValueEditorEventArgs e)
 		{
-			RepositoryItemRichTextEdit rle = new RepositoryItemRichTextEdit();
+			RepositoryItemMemoEdit rle = new RepositoryItemMemoEdit();
 			e.CustomRepositoryItem = rle;
 		}
 	}

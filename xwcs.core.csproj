@@ -142,6 +142,7 @@
     <Compile Include="core\Core.cs" />
     <Compile Include="core\db\binding\attributes\CustomAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbComboAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\DbMemoAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbRichTextAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbLookupAttribute.cs" />
     <Compile Include="core\db\binding\attributes\ResetSlavesAttribute.cs" />
