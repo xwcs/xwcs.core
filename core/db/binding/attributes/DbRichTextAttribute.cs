@@ -17,17 +17,38 @@ namespace xwcs.core.db.binding.attributes
 		public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
 		{
 			//e.EditorType = typeof(DevExpress.XtraEditors.RichTextEdit);
-			e.EditorType = typeof(DevExpress.XtraEditors.MemoExEdit);
+			e.EditorType = typeof(DevExpress.XtraEditors.MemoEdit);
 		}
 
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
 		{
-			//RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;
-			
-			RepositoryItemMemoExEdit rle = e.RepositoryItem as RepositoryItemMemoExEdit;	
-			//rle.LinesCount = 5;
-			//rle.AutoHeight = false;
-			//rle.WordWrap = true;
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
+			rle.WordWrap = true;
+		}
+
+		public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e)
+		{
+			e.RepositoryItem = new RepositoryItemMemoEdit();
+
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
+			rle.WordWrap = true;
+			rle.AutoHeight = true;
+			rle.Appearance.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
+		}
+		public override void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e)
+		{
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
+		}
+		public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e)
+		{
+			RepositoryItemMemoEdit rle = e.RepositoryItem as RepositoryItemMemoEdit;
+		}
+
+		//filter control
+		public override void applyCustomEditShownFilterControl(IDataBindingSource src, ShowValueEditorEventArgs e)
+		{
+			RepositoryItemMemoEdit rle = new RepositoryItemMemoEdit();
+			e.CustomRepositoryItem = rle;
 		}
 	}
 }
