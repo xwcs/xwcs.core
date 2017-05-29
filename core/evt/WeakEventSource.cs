@@ -44,37 +44,23 @@ namespace xwcs.core.evt
 
         public void Subscribe(EventHandler<TEventArgs> handler)
         {
-            var weakHandlers = handler
-                .GetInvocationList()
-                .Select(d => new WeakDelegate(d))
-                .ToList();
-
-            int cnt = 10;
-            while (cnt-- > 0)
-                if(System.Threading.Monitor.TryEnter(_handlers, 5000))
-                {
-                    try
-                    {
-                        _handlers.AddRange(weakHandlers);
-
-                        return; //done
-                    }
-                    finally
-                    {
-                        System.Threading.Monitor.Exit(_handlers);
-                    }
-                }
-
-            throw new ApplicationException("Cant register handler!");
+            SubscribeCore(handler);
         }
-
-        public void SubscribePropertyChanged(PropertyChangedEventHandler handler)
+        public void Subscribe(EventHandler handler)
         {
-            var weakHandlers = handler
+            SubscribeCore(handler);
+        }
+        public void Subscribe(PropertyChangedEventHandler handler)
+        {
+            SubscribeCore(handler);
+        }
+        protected void SubscribeCore(object handler)
+        {
+            var weakHandlers = (handler as Delegate)
                 .GetInvocationList()
                 .Select(d => new WeakDelegate(d))
                 .ToList();
-            
+
             int cnt = 10;
             while (cnt-- > 0)
                 if (System.Threading.Monitor.TryEnter(_handlers, 5000))
@@ -93,31 +79,22 @@ namespace xwcs.core.evt
 
             throw new ApplicationException("Cant register handler!");
         }
+
+        
 
         public void Unsubscribe(EventHandler<TEventArgs> handler)
         {
-            int cnt = 10;
-            while (cnt-- > 0)
-                if (System.Threading.Monitor.TryEnter(_handlers, 5000))
-                {
-                    try
-                    {
-                        int index = _handlers.FindIndex(h => h.IsMatch(handler));
-                        if (index >= 0)
-                            _handlers.RemoveAt(index);
-
-                        return; // done
-                    }
-                    finally
-                    {
-                        System.Threading.Monitor.Exit(_handlers);
-                    }
-                }
-
-            throw new ApplicationException("Cant unregister handler!");
+            UnsubscribeCore(handler);
         }
-
-        public void UnsubscribePropertyChanged(PropertyChangedEventHandler handler)
+        public void Unsubscribe(EventHandler handler)
+        {
+            UnsubscribeCore(handler);
+        }
+        public void Unsubscribe(PropertyChangedEventHandler handler)
+        {
+            UnsubscribeCore(handler);
+        }
+        protected void UnsubscribeCore(object handler)
         {
             int cnt = 10;
             while (cnt-- > 0)
@@ -128,6 +105,7 @@ namespace xwcs.core.evt
                         int index = _handlers.FindIndex(h => h.IsMatch(handler));
                         if (index >= 0)
                             _handlers.RemoveAt(index);
+
                         return; // done
                     }
                     finally
@@ -135,8 +113,10 @@ namespace xwcs.core.evt
                         System.Threading.Monitor.Exit(_handlers);
                     }
                 }
+
             throw new ApplicationException("Cant unregister handler!");
         }
+
 
         class WeakDelegate
         {
@@ -205,16 +185,10 @@ namespace xwcs.core.evt
                 return true;
             }
 
-            public bool IsMatch(EventHandler<TEventArgs> handler)
+            public bool IsMatch(object handler)
             {
-                return ReferenceEquals(handler.Target, _weakTarget?.Target)
-                    && handler.GetMethodInfo().Equals(_method);
-            }
-
-            public bool IsMatch(PropertyChangedEventHandler handler)
-            {
-                return ReferenceEquals(handler.Target, _weakTarget?.Target)
-                    && handler.GetMethodInfo().Equals(_method);
+                return ReferenceEquals((handler as Delegate).Target, _weakTarget?.Target)
+                    && (handler as Delegate).GetMethodInfo().Equals(_method);
             }
         }
     }

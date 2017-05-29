@@ -704,8 +704,8 @@ namespace xwcs.core.statemachine
         private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
         public event PropertyChangedEventHandler PropertyChanged
         {
-            add{ _wes_PropertyChanged.SubscribePropertyChanged(value); }
-            remove{ _wes_PropertyChanged.UnsubscribePropertyChanged(value); }
+            add{ _wes_PropertyChanged.Subscribe(value); }
+            remove{ _wes_PropertyChanged.Unsubscribe(value); }
         }
     }
 	#endregion

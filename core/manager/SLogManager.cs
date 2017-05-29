@@ -175,7 +175,7 @@ namespace xwcs.core.manager
                             {
                                 case LogKind.D:
                                     _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("[{2}]{0} - {1}", logger.Logger.Name, t.Message, t.Kind.ToString()) }));
-                                    logger.Warn(string.Format("{0}", t.Message));
+                                    logger.Debug(string.Format("{0}", t.Message));
                                     break;
                                 case LogKind.E:
                                     _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("[{3}]{0} - {1} - {2}({4})", logger.Logger.Name, t.Message, t.Method, t.Kind.ToString(), t.Line) }));

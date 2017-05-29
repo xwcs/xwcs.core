@@ -109,6 +109,14 @@ namespace xwcs.core.db.binding
 		}
 		#endregion
 
+
+        public Type DataType
+        {
+            get
+            {
+                return _dataType;
+            }
+        }
 		
 		public IEditorsHost EditorsHost
 		{

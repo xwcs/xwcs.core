@@ -42,11 +42,11 @@ namespace xwcs.core.db.fo
                 {
                     _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
                 }
-                _wes_PropertyChanged.SubscribePropertyChanged(value);
+                _wes_PropertyChanged.Subscribe(value);
             }
             remove
             {
-                _wes_PropertyChanged?.UnsubscribePropertyChanged(value);
+                _wes_PropertyChanged?.Unsubscribe(value);
             }
         }
 
@@ -216,10 +216,10 @@ namespace xwcs.core.db.fo
 				{
 					_wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
 				}
-                _wes_PropertyChanged.SubscribePropertyChanged(value);
+                _wes_PropertyChanged.Subscribe(value);
             }
 			remove {
-                _wes_PropertyChanged?.UnsubscribePropertyChanged(value);
+                _wes_PropertyChanged?.Unsubscribe(value);
             }
 		}
 

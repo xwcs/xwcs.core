@@ -320,8 +320,8 @@ namespace xwcs.core.db.binding
         }
 
         /// <summary>
-        ///  sets datalayout container control
-        ///  datalayout control will be dynamic
+        ///  sets data layout container control
+        ///  data layout control will be dynamic
         /// </summary>
     
         public Control LayoutContainer
@@ -353,10 +353,10 @@ namespace xwcs.core.db.binding
             dl.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
             dl.AutoRetrieveFields = true;
             dl.AllowCustomization = true;
-            dl.OptionsCustomizationForm.EnableUndoManager = true;
+            //dl.OptionsCustomizationForm.EnableUndoManager = true;
             dl.OptionsCustomizationForm.ShowPropertyGrid = true;
-            dl.OptionsCustomizationForm.ShowRedoButton = true;
-            dl.OptionsCustomizationForm.ShowUndoButton = true;
+            //dl.OptionsCustomizationForm.ShowRedoButton = true;
+            //dl.OptionsCustomizationForm.ShowUndoButton = true;
             dl.OptionsItemText.TextAlignMode = DevExpress.XtraLayout.TextAlignMode.CustomSize;
             this.DataLayout = dl;
         }
@@ -374,17 +374,13 @@ namespace xwcs.core.db.binding
 
             string filePath = string.Format("{0}/{1}{2}.xml", _editorsHost.LayoutAssetsPath, LayoutBaseFileName, FileNameSuffix);
             if (File.Exists(filePath))
-            {
-               
+            {  
                 _cnt.RestoreLayoutFromXml(filePath);
-
-                
                 return true;
             }
 
             _logger.Warn("Missing layout file: " + filePath);
-            return false;
-           
+            return false;           
         }
 
         // we will hook model properties changed event
