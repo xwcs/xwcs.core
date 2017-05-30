@@ -214,19 +214,18 @@ namespace xwcs.core.db.binding
 
                 // make generic Structure watch basing on type of DataSource element
                 _oldPosition = -1;
-                base.DataSource = value;
+
+				// _dataType musty be set before DS cause event can come in not correct order!!!!
+				// we use timer on form with force message queue execution
 				_dataType = t;
+				base.DataSource = value;
+				
 
                 // now when we know type we set new handler
                 if(!ReferenceEquals(null, _dataType))
                 {
                     ListChanged += handleListItemChanged;
                 }            
-
-
-                if (!_gridIsConnected) {
-                    ConnectGrid();	
-				}
 			}
 		}
 
@@ -250,13 +249,28 @@ namespace xwcs.core.db.binding
 						gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
 						gv.ShownEditor -= EditorShownHandler;
 						gv.CustomColumnDisplayText -= CustomColumnDisplayText;
+						gv.DataController.ListSourceChanged += DataController_ListSourceChanged;
 					}
 				}
 				_grid = value;
+				if(_grid.MainView is ColumnView){
+					(_grid.MainView as ColumnView).OptionsBehavior.AutoPopulateColumns = true;
+					(_grid.MainView as ColumnView).DataController.ListSourceChanged += DataController_ListSourceChanged;
+				}
 				_grid.DataSourceChanged += GridDataSourceChanged;
 				//connect
 				_grid.DataSource = this;
 			}
+		}
+
+		
+		private void DataController_ListSourceChanged(object sender, EventArgs e)
+		{
+			ConnectGrid();
+		}
+		private void GridDataSourceChanged(object sender, EventArgs e)
+		{
+			ConnectGrid();
 		}
 
 		public void addNewRecord(object rec)
@@ -270,16 +284,19 @@ namespace xwcs.core.db.binding
 			Current.CopyFrom(rec);
 		}
 
-		private void GridDataSourceChanged(object sender, EventArgs e)
-		{
-			_grid.MainView.PopulateColumns();
-			ConnectGrid();
-		}
+		
 
         
 		private void ConnectGrid() {
-			if (_grid != null && !_gridIsConnected && _dataType != null)
+			if (_grid != null && !_gridIsConnected && _dataType != null && _grid.MainView.DataController.IsReady)
 			{
+				// check columns loaded
+				if ((_grid.MainView is ColumnView) && ((_grid.MainView as ColumnView).Columns.Count == 0))
+				{
+					_grid.MainView.PopulateColumns();
+				}
+
+
 				PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 				foreach (PropertyInfo pi in pis) {
 					IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
