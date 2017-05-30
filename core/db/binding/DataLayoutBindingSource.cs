@@ -353,9 +353,9 @@ namespace xwcs.core.db.binding
             dl.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
             dl.AutoRetrieveFields = true;
             dl.AllowCustomization = true;
-            //dl.OptionsCustomizationForm.EnableUndoManager = true;
+            dl.OptionsCustomizationForm.EnableUndoManager = true;
             dl.OptionsCustomizationForm.ShowPropertyGrid = true;
-            //dl.OptionsCustomizationForm.ShowRedoButton = true;
+            dl.OptionsCustomizationForm.ShowRedoButton = true;
             //dl.OptionsCustomizationForm.ShowUndoButton = true;
             dl.OptionsItemText.TextAlignMode = DevExpress.XtraLayout.TextAlignMode.CustomSize;
             this.DataLayout = dl;
