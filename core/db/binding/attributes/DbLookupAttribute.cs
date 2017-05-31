@@ -6,6 +6,7 @@ using DevExpress.XtraGrid.Columns;
 using System.Linq;
 using DevExpress.XtraEditors.Filtering;
 using DevExpress.XtraGrid.Views.Base;
+using System.Drawing;
 
 namespace xwcs.core.db.binding.attributes
 {
@@ -15,8 +16,22 @@ namespace xwcs.core.db.binding.attributes
 		public string DisplayMember { set; get; }
 		public string ValueMember { set; get; }
 
+		private int _popUpWidth = 0;
+		private int _popUpHeight = 0;
 
-		
+		public int PopUpWidth
+		{
+			get { return _popUpWidth; }
+			set { _popUpWidth = value; }
+		}
+
+		public int PopUpHeight
+		{
+			get { return _popUpHeight; }
+			set { _popUpHeight = value; }
+		}
+
+
 		public override bool Equals(object obj)
 		{
 			DbLookupAttribute o = obj as DbLookupAttribute;
@@ -92,6 +107,8 @@ namespace xwcs.core.db.binding.attributes
 			rle.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Near;
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
+			rle.PopupFormMinSize = new Size(_popUpWidth, _popUpHeight);
+									
 			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
 			src.EditorsHost.onGetOptionsList(this, qd);
 			if (qd.Data != null)
