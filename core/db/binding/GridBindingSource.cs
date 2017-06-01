@@ -141,6 +141,7 @@ namespace xwcs.core.db.binding
                     }
 
                     // if grid was not connected , manage remove useless columns
+                    // we remove default columns, or columns present ingrid
                     if (!_gridIsConnected)
                     {
                         if (!ReferenceEquals(null, _grid) && _grid.MainView is ColumnView)
@@ -218,7 +219,8 @@ namespace xwcs.core.db.binding
 				// _dataType musty be set before DS cause event can come in not correct order!!!!
 				// we use timer on form with force message queue execution
 				_dataType = t;
-				base.DataSource = value;
+                ForceInitializeGrid();
+                base.DataSource = value;
 				
 
                 // now when we know type we set new handler
@@ -228,6 +230,14 @@ namespace xwcs.core.db.binding
                 }            
 			}
 		}
+
+        public void ForceInitializeGrid()
+        {
+            if (_grid != null && (_grid.MainView is ColumnView) && !(_grid.MainView as ColumnView).DataController.IsReady)
+            {
+                _grid.ForceInitialize(); // we need grid to initialize (it should be set in invisible component)
+            }
+        }
 
 		public GridControl Grid {
 			get {
@@ -249,11 +259,11 @@ namespace xwcs.core.db.binding
 						gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
 						gv.ShownEditor -= EditorShownHandler;
 						gv.CustomColumnDisplayText -= CustomColumnDisplayText;
-						gv.DataController.ListSourceChanged += DataController_ListSourceChanged;
+						gv.DataController.ListSourceChanged -= DataController_ListSourceChanged;
 					}
 				}
 				_grid = value;
-				if(_grid.MainView is ColumnView){
+                if(_grid.MainView is ColumnView){
 					(_grid.MainView as ColumnView).OptionsBehavior.AutoPopulateColumns = true;
 					(_grid.MainView as ColumnView).DataController.ListSourceChanged += DataController_ListSourceChanged;
 				}

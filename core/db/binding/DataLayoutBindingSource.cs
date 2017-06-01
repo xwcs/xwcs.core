@@ -361,6 +361,7 @@ namespace xwcs.core.db.binding
             this.DataLayout = dl;
         }
 
+
         private bool TryLoadLayuotFromFile(string FileNameSuffix = "")
         {
             // check if connected to host
@@ -614,8 +615,8 @@ namespace xwcs.core.db.binding
         {
 			if (!ReferenceEquals(_cnt, null))
 			{
-				_cnt.BeginUpdate();
-				_cnt.SuspendLayout();
+				//_cnt.BeginUpdate();
+				//_cnt.SuspendLayout();
 			}
 		}
 
@@ -623,8 +624,8 @@ namespace xwcs.core.db.binding
         {
 			if (!ReferenceEquals(_cnt, null))
 			{
-				_cnt.ResumeLayout();
-				_cnt.EndUpdate();
+				//_cnt.ResumeLayout();
+				//_cnt.EndUpdate();
 			}
         }
 
