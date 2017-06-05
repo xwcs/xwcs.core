@@ -223,6 +223,40 @@ namespace xwcs.core.db
 
             return InternalUnlock(ld);            
         }
+        public LockResult TableLock(EntityBase e)
+        {
+            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+
+
+            string ename = e.GetFieldName(); // name of table
+
+            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(0, '{2}');", _adminDb, ename)).FirstOrDefault();
+            if (lr.Cnt == 0)
+            {
+                throw new DBLockException(lr);
+            }
+
+            // save lock internally
+            _locks.Add(new LockData() { id = "0", entity = ename });
+
+            return lr;
+        }
+
+        public LockResult TableUnlock(EntityBase e)
+        {
+            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+
+            string ename = e.GetFieldName(); // name of table
+
+            LockData ld = new LockData() { id = "0", entity = ename };
+
+            if (_locks.Contains(ld))
+            {
+                _locks.Remove(ld);
+            }
+
+            return InternalUnlock(ld);
+        }
 
         private LockResult InternalUnlock(LockData ld)
         {
