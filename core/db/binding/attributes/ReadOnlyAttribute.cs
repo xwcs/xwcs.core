@@ -15,7 +15,7 @@ namespace xwcs.core.db.binding.attributes
         public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e) {
             if (!ReferenceEquals(e.Column, null))
             {
-				e.Column.OptionsColumn.ReadOnly = true;
+				e.Column.ReadOnly = true;
             }           
         }
     }	

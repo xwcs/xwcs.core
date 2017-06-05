@@ -139,7 +139,7 @@ namespace xwcs.core.db.binding.attributes
             {
 				//set column width
 				//FixedWidth must be set for change column's width runtime
-				e.Column.OptionsColumn.FixedWidth = true;
+				e.Column.FixedWidth = true;
 				e.Column.Width = ColumnWidth;
 				e.Column.AppearanceCell.TextOptions.HAlignment = (DevExpress.Utils.HorzAlignment)_halignment;
 			}           

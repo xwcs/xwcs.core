@@ -5,6 +5,7 @@ using DevExpress.XtraGrid.Views.Base;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -86,7 +87,7 @@ namespace xwcs.core.db.binding
 	{
 		public string FieldName { get; set; }
 		public RepositoryItem RepositoryItem { get; set; }
-        public DevExpress.XtraGrid.Columns.GridColumn Column { get; set; }
+        public /* DevExpress.XtraGrid.Columns.GridColumn */ IColumnAdapter Column { get; set; }
     }
 
 

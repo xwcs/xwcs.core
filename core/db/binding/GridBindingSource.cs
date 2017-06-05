@@ -29,8 +29,8 @@ namespace xwcs.core.db.binding
 		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(GridBindingSource));
 
 		private IEditorsHost _editorsHost = null;
-		private GridControl _grid = null; 
-		private Type  _dataType = null;
+        private IGridAdapter _target = null;
+        private Type  _dataType = null;
 		
 
 		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
@@ -72,22 +72,20 @@ namespace xwcs.core.db.binding
 				if (disposing)
 				{
 					//disconnect events in any case
-					if (_grid != null)
+					if (_target != null)
 					{
-						_grid.DataSourceChanged -= GridDataSourceChanged;
-						GridView gv = _grid.MainView as GridView;
-						if (gv != null)
+                        _target.DataSourceChanged -= GridDataSourceChanged;
+						_target.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
+                        _target.ShownEditor -= EditorShownHandler;
+                        _target.CustomColumnDisplayText -= CustomColumnDisplayText; //try remove anyway
+                        _target.ListSourceChanged -= DataController_ListSourceChanged;
+
+                        //remove eventual grid cells editor repositories from grid
+                        foreach (RepositoryItem ri in _repositories.Values)
 						{
-							gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
-							gv.ShownEditor -= EditorShownHandler;
-							gv.CustomColumnDisplayText -= CustomColumnDisplayText; //try remove anyway
+                            _target.RepositoryItems.Remove(ri);
 						}
-						//remove eventual grid cells editor repositories from grid
-						foreach (RepositoryItem ri in _repositories.Values)
-						{
-							_grid.RepositoryItems.Remove(ri);
-						}
-						_grid = null;
+                        _target = null;
 					}
 					if (DataSource != null)
 					{
@@ -144,9 +142,9 @@ namespace xwcs.core.db.binding
                     // we remove default columns, or columns present ingrid
                     if (!_gridIsConnected)
                     {
-                        if (!ReferenceEquals(null, _grid) && _grid.MainView is ColumnView)
+                        if (!ReferenceEquals(null, _target))
                         {
-                            (_grid.MainView as ColumnView).Columns.Clear();
+                            _target.ClearColumns();
                         }
                     }
 
@@ -233,44 +231,34 @@ namespace xwcs.core.db.binding
 
         public void ForceInitializeGrid()
         {
-            if (_grid != null && (_grid.MainView is ColumnView) && !(_grid.MainView as ColumnView).DataController.IsReady)
+            if (_target != null && !_target.IsReady)
             {
-                _grid.ForceInitialize(); // we need grid to initialize (it should be set in invisible component)
+                _target.ForceInitialize(); // we need grid to initialize (it should be set in invisible component)
             }
         }
 
-		public GridControl Grid {
-			get {
-				return _grid;
-			}
-
-			set {
+		public void AttachToGrid(GridControl g) {
+            
+			
 #if DEBUG_TRACE_LOG_ON
-				_logger.Debug("Set-GRID : New");
+			_logger.Debug("Set-GRID : New");
 #endif
-				if (_grid == value) return;
-				//first disconnect eventual old one
-				if (_grid != null)
-				{
-					_grid.DataSourceChanged -= GridDataSourceChanged;
-					GridView gv = _grid.MainView as GridView;
-					if (gv != null)
-					{
-						gv.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
-						gv.ShownEditor -= EditorShownHandler;
-						gv.CustomColumnDisplayText -= CustomColumnDisplayText;
-						gv.DataController.ListSourceChanged -= DataController_ListSourceChanged;
-					}
-				}
-				_grid = value;
-                if(_grid.MainView is ColumnView){
-					(_grid.MainView as ColumnView).OptionsBehavior.AutoPopulateColumns = true;
-					(_grid.MainView as ColumnView).DataController.ListSourceChanged += DataController_ListSourceChanged;
-				}
-				_grid.DataSourceChanged += GridDataSourceChanged;
-				//connect
-				_grid.DataSource = this;
+			//first disconnect eventual old one
+			if (_target != null)
+			{
+                _target.DataSourceChanged -= GridDataSourceChanged;
+				_target.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
+                _target.ShownEditor -= EditorShownHandler;
+                _target.CustomColumnDisplayText -= CustomColumnDisplayText;
+                _target.ListSourceChanged -= DataController_ListSourceChanged;
 			}
+            _target = new GridAdapter(g);
+            _target.AutoPopulateColumns = true;
+            _target.ListSourceChanged += DataController_ListSourceChanged;
+            _target.DataSourceChanged += GridDataSourceChanged;
+			//connect
+			_target.DataSource = this;
+			
 		}
 
 		
@@ -298,12 +286,12 @@ namespace xwcs.core.db.binding
 
         
 		private void ConnectGrid() {
-			if (_grid != null && !_gridIsConnected && _dataType != null && _grid.MainView.DataController.IsReady)
+			if (_target != null && !_gridIsConnected && _dataType != null && _target.IsReady)
 			{
 				// check columns loaded
-				if ((_grid.MainView is ColumnView) && ((_grid.MainView as ColumnView).Columns.Count == 0))
+				if (_target.ColumnsCount() == 0)
 				{
-					_grid.MainView.PopulateColumns();
+					_target.PopulateColumns();
 				}
 
 
@@ -313,17 +301,14 @@ namespace xwcs.core.db.binding
 					IList<CustomAttribute> ac = new List<CustomAttribute>();
 					foreach (CustomAttribute a in attrs)
 					{
-                        DevExpress.XtraGrid.Columns.GridColumn gc = null;
-                        if (_grid.MainView is ColumnView)
-                        {
-                            gc = (_grid.MainView as ColumnView).Columns.ColumnByFieldName(pi.Name);
-                        }
-						GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
+                        IColumnAdapter gc = null;
+                        gc = _target.ColumnByFieldName(pi.Name);
+                        GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
 						a.applyGridColumnPopulation(this, gcp);
 						RepositoryItem ri = gcp.RepositoryItem;
 						ac.Add(a as CustomAttribute);
 						if(ri != null) {
-							_grid.RepositoryItems.Add(ri);
+							_target.RepositoryItems.Add(ri);
 							_repositories[pi.Name] = ri;
 							if (gc != null) gc.ColumnEdit = ri;
 						}						
@@ -333,14 +318,11 @@ namespace xwcs.core.db.binding
 
 				}
 				//attach CustomRowCellEditForEditing event too
-				GridView gv = _grid.MainView as GridView;
-				if(gv!=null) {
-					gv.CustomRowCellEditForEditing += CustomRowCellEditForEditingHandler;
-					gv.ShownEditor += EditorShownHandler;
-					if (HandleCustomColumnDisplayText)
-						gv.CustomColumnDisplayText += CustomColumnDisplayText;
-				}
-
+				_target.CustomRowCellEditForEditing += CustomRowCellEditForEditingHandler;
+                _target.ShownEditor += EditorShownHandler;
+				if (HandleCustomColumnDisplayText)
+                    _target.CustomColumnDisplayText += CustomColumnDisplayText;
+				
 				_gridIsConnected = true;
 			}
 		}
