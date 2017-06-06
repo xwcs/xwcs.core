@@ -144,6 +144,7 @@
     <Compile Include="core\controls\IVisualControl.cs" />
     <Compile Include="core\controls\WidgetDescriptor.cs" />
     <Compile Include="core\Core.cs" />
+    <Compile Include="core\EnumerableToDataTable.cs" />
     <Compile Include="core\db\binding\attributes\CustomAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbComboAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbMemoAttribute.cs" />
