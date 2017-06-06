@@ -15,7 +15,7 @@ namespace xwcs.core.db
     using System.Linq.Expressions;
     using System.Reflection;
     using System.Runtime.CompilerServices;
-
+    public enum LockState { Mine = 1, NotMine = -1, Free = 0 };
     public class DBLockException : ApplicationException
     {
         public DBLockException(LockResult lr)
@@ -24,7 +24,7 @@ namespace xwcs.core.db
         }
         public LockResult LockResult;
     }
-
+    
     public class LockResult
     {
         public int Cnt { get; set; }
@@ -185,7 +185,29 @@ namespace xwcs.core.db
             return en.CurrentValue;
         }
 
-        
+        public LockState EntityLockState(EntityBase e)
+        {
+            //waiting for the correct procedure on mysql i implement this function with a lock test
+            LockResult LockR = this.EntityLock(e);
+            if (LockR.Cnt == 0)
+            {
+                if (LockR.Owner == this.CurrentConnectedUser)
+                {
+                    return LockState.Mine;
+                }
+                else
+                {
+                    return LockState.NotMine;
+                }
+            }
+            else
+            {
+                LockR = this.EntityUnlock(e);
+                return LockState.Free;
+            }
+
+        }
+
 
         public LockResult EntityLock(EntityBase e)
         {
@@ -223,6 +245,30 @@ namespace xwcs.core.db
 
             return InternalUnlock(ld);            
         }
+
+        public LockState TableLockState (EntityBase e)
+        {
+            //waiting for the correct procedure on mysql i implement this function with a lock test
+            LockResult LockR = this.TableLock(e);
+            if (LockR.Cnt == 0)
+            {
+                if (LockR.Owner == this.CurrentConnectedUser)
+                {
+                    return LockState.Mine;
+                }
+                else
+                {
+                    return LockState.NotMine;
+                }
+            }
+            else
+            {
+                LockR = this.TableUnlock(e);
+                return LockState.Free;
+            }
+
+        }
+
         public LockResult TableLock(EntityBase e)
         {
             if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
@@ -230,7 +276,7 @@ namespace xwcs.core.db
 
             string ename = e.GetFieldName(); // name of table
 
-            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(0, '{2}');", _adminDb, ename)).FirstOrDefault();
+            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(0, '{1}');", _adminDb, ename)).FirstOrDefault();
             if (lr.Cnt == 0)
             {
                 throw new DBLockException(lr);
