@@ -62,6 +62,7 @@ namespace xwcs.core.db
 
             _adminDb = _cfg.getCfgParam("Admin/DatabaseName", "admin");
             _entityLockDisabled = _cfg.getCfgParam("Admin/EntityLockDisabled", "No") == "Yes";
+
             Database.Connection.StateChange += Connection_StateChange;
 
             // some fixed HC things
@@ -187,25 +188,7 @@ namespace xwcs.core.db
 
         public LockState EntityLockState(EntityBase e)
         {
-            //waiting for the correct procedure on mysql i implement this function with a lock test
-            LockResult LockR = this.EntityLock(e);
-            if (LockR.Cnt == 0)
-            {
-                if (LockR.Owner == this.CurrentConnectedUser)
-                {
-                    return LockState.Mine;
-                }
-                else
-                {
-                    return LockState.NotMine;
-                }
-            }
-            else
-            {
-                LockR = this.EntityUnlock(e);
-                return LockState.Free;
-            }
-
+            return InternalLockState(new LockData() { id = e.GetLockId().ToString(), entity = e.GetFieldName() });
         }
 
 
@@ -248,27 +231,44 @@ namespace xwcs.core.db
 
         public LockState TableLockState (EntityBase e)
         {
-            //waiting for the correct procedure on mysql i implement this function with a lock test
-            LockResult LockR = this.TableLock(e);
-            if (LockR.Cnt == 0)
-            {
-                if (LockR.Owner == this.CurrentConnectedUser)
-                {
-                    return LockState.Mine;
-                }
-                else
-                {
-                    return LockState.NotMine;
-                }
-            }
-            else
-            {
-                LockR = this.TableUnlock(e);
-                return LockState.Free;
-            }
-
+            return InternalLockState (new LockData() { id = "-1", entity = e.GetFieldName() });
         }
-
+        private LockState InternalLockState(LockData ld)
+        {
+            //waiting for the correct procedure on mysql i implement this function with a lock test
+            string strSql;
+            strSql = @"
+                    select (case 
+                        when num_lock = 0 then 0
+                        -- not a single lock retrieved
+                        when num_lock > 1 then -2
+                        -- not a lock on my id
+                        when max_id_lock != {1} then -3
+                        -- not a lock for current user
+                        when owner != {0}.get_current_egaf_user() then -4
+                        -- single lock on my id (on whole table) for current user (redundant but fully secure)
+                        when num_lock = 1 and max_id_lock = {1} and owner = {0}.get_current_egaf_user() then 1
+                        -- default (is not necessary, only for security)
+                        else -5 end) as lock_state
+                    from (
+                        select count(*) num_Lock, max(id_lock) as max_id_lock, max(owner) as owner 
+                        from {0}.table_locks 
+                        where entity = '{2}' and (id_lock = -1 or id_lock = {1} or {1} = -1)
+                        ) as a
+                    ";
+            int intLockState = Database.SqlQuery<int>(string.Format(strSql, _adminDb, ld.id, ld.entity)).FirstOrDefault();
+            switch (intLockState)
+            {
+                case 0:
+                    return LockState.Free;
+                case 1:
+                    return LockState.Mine;
+                case -1:
+                    return LockState.NotMine;
+                default:
+                    return LockState.NotMine;
+            }
+        }
         public LockResult TableLock(EntityBase e)
         {
             if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
@@ -276,14 +276,14 @@ namespace xwcs.core.db
 
             string ename = e.GetFieldName(); // name of table
 
-            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(0, '{1}');", _adminDb, ename)).FirstOrDefault();
+            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}');", _adminDb, ename)).FirstOrDefault();
             if (lr.Cnt == 0)
             {
                 throw new DBLockException(lr);
             }
 
             // save lock internally
-            _locks.Add(new LockData() { id = "0", entity = ename });
+            _locks.Add(new LockData() { id = "-1", entity = ename });
 
             return lr;
         }
@@ -294,7 +294,7 @@ namespace xwcs.core.db
 
             string ename = e.GetFieldName(); // name of table
 
-            LockData ld = new LockData() { id = "0", entity = ename };
+            LockData ld = new LockData() { id = "-1", entity = ename };
 
             if (_locks.Contains(ld))
             {
