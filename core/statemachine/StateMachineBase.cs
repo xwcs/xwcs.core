@@ -471,6 +471,18 @@ namespace xwcs.core.statemachine
         /// </summary>
         public abstract void Start() ;
 
+
+        /// <summary>
+        /// Create new state and go there
+        /// </summary>
+        /// <param name="newStateType"></param>
+        /// <returns></returns>
+        public bool TransitionToNewState(Type newStateType)
+        {
+            return TransitionToNewState( (StateBase) Activator.CreateInstance(newStateType, new object[] { this }), null, null, null);
+        }
+
+
         /// <summary>
         /// Makes the state machine go into another state.
         /// </summary>
@@ -547,6 +559,8 @@ namespace xwcs.core.statemachine
                 }
             }
 		}
+
+       
 
         /// <summary>
         /// Tells if the State Machine is started or set properly
