@@ -115,6 +115,10 @@
       <HintPath>..\packages\log4net.2.0.7\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -181,6 +185,7 @@
     <Compile Include="core\db\EntityBase.cs" />
     <Compile Include="core\db\model\serialize\XmlWriterExt.cs" />
     <Compile Include="core\CollectionExtender.cs" />
+    <Compile Include="core\json\JsonSubtypes.cs" />
     <Compile Include="core\linq\BoolExpressionHelper.cs" />
     <Compile Include="core\linq\WhereExpressions.cs" />
     <Compile Include="core\ObjectExtender.cs" />
