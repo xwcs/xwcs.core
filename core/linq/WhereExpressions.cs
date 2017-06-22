@@ -292,9 +292,25 @@ namespace xwcs.core.linq
                 return _current.Exp;
             }else
             {
-                Expression operand = this.Visit(u.Operand);
-                if (operand != u.Operand)
+				PushStatus();
+				Expression operand = this.Visit(u.Operand);
+				CurentStatus currStatus = _current;
+				PopStatus();
+				if (operand != u.Operand)
                 {
+					if(operand is ConstantExpression && u.NodeType == ExpressionType.Not) {
+						// we have   Not ( < constant > ) so => !<constant> 
+
+						_current.Clean = true;
+						_current.Exp = u;
+						_current.CurrentType = currStatus.CurrentType;
+
+						string name = string.Format("!LU_{0}_{1}", (operand as ConstantExpression).Value, _literalSqnr++);
+						_allLiterals.Add(name, new QLiteral() { Tag = name, Exp = u, SType = _current.CurrentType });
+						return Expression.Constant(name);
+					}
+					
+					// non trivial unary
                     return Expression.MakeUnary(u.NodeType, operand, u.Type, u.Method);
                 }
                 return u;
