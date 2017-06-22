@@ -59,6 +59,11 @@ namespace xwcs.core.manager
 		void Warn(string msg);
 		void Error(string msg);
 		void Fatal(string msg);
+        void Debug(string fmt, params object[] values);
+        void Info(string fmt, params object[] values);
+        void Warn(string fmt, params object[] values);
+        void Error(string fmt, params object[] values);
+        void Fatal(string fmt, params object[] values);
         void ClearQueue();
 
     }
@@ -230,6 +235,7 @@ namespace xwcs.core.manager
 
 			public void Info(string msg)
 			{
+                if (!logger.IsInfoEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
                     _queue.Enqueue(new LogMessage() { Kind = LogKind.I, Message = msg });
@@ -240,6 +246,7 @@ namespace xwcs.core.manager
 
             public void Warn(string msg)
 			{
+                if (!logger.IsWarnEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
                     _queue.Enqueue(new LogMessage() { Kind = LogKind.W, Message = msg });
@@ -298,6 +305,36 @@ namespace xwcs.core.manager
             public void Dispose()
             {
                 Dispose(true);
+            }
+
+            public void Debug(string fmt, params object[] values)
+            {
+                if (!logger.IsDebugEnabled) return;
+                Debug(string.Format(fmt, values));
+            }
+
+            public void Info(string fmt, params object[] values)
+            {
+                if (!logger.IsInfoEnabled) return;
+                Info(string.Format(fmt, values));
+            }
+
+            public void Warn(string fmt, params object[] values)
+            {
+                if (!logger.IsWarnEnabled) return;
+                Warn(string.Format(fmt, values));
+            }
+
+            public void Error(string fmt, params object[] values)
+            {
+                if (!logger.IsErrorEnabled) return;
+                Error(string.Format(fmt, values));
+            }
+
+            public void Fatal(string fmt, params object[] values)
+            {
+                if (!logger.IsFatalEnabled) return;
+                Fatal(string.Format(fmt, values));
             }
 
             ~SimpleLogger()
@@ -363,6 +400,31 @@ namespace xwcs.core.manager
 		{
 			global.Fatal(msg);
 		}
+        public void Debug(string fmt, params object[] values)
+        {
+            global.Debug(fmt, values);
+        }
+
+        public void Info(string fmt, params object[] values)
+        {
+            global.Info(fmt, values);
+        }
+
+        public void Warn(string fmt, params object[] values)
+        {
+            global.Warn(fmt, values);
+        }
+
+        public void Error(string fmt, params object[] values)
+        {
+            global.Error(fmt, values);
+        }
+
+        public void Fatal(string fmt, params object[] values)
+        {
+            global.Fatal(fmt, values);
+        }
+
         public void ClearQueue()
         {
             global.ClearQueue();
@@ -410,7 +472,9 @@ namespace xwcs.core.manager
             GC.SuppressFinalize(this);
         }
 
-        
+       
+
+
         #endregion
     }
 }
