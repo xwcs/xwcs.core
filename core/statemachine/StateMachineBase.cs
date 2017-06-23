@@ -89,43 +89,7 @@ namespace xwcs.core.statemachine
     }
     #endregion
 
-    /*
-    #region SyncClasses
-    /// <summary>
-    /// Syncronization Class.
-    /// </summary>
-    public class SyncEvents
-    {
-        public SyncEvents()
-        {
-
-            _newTransitionEvent = new AutoResetEvent(false);
-            _exitThreadEvent = new ManualResetEvent(false);
-            _eventArray = new WaitHandle[2];
-            _eventArray[0] = _newTransitionEvent;
-            _eventArray[1] = _exitThreadEvent;
-        }
-
-        public EventWaitHandle ExitThreadEvent
-        {
-            get { return _exitThreadEvent; }
-        }
-        public EventWaitHandle NewTransitionEvent
-        {
-            get { return _newTransitionEvent; }
-        }
-        public WaitHandle[] EventArray
-        {
-            get { return _eventArray; }
-        }
-
-        private EventWaitHandle _newTransitionEvent;
-        private EventWaitHandle _exitThreadEvent;
-        private WaitHandle[] _eventArray;
-    }
-    #endregion
-    */
-
+    
     #region TransitionClasses
     /// <summary>
     /// Transition Event Class.
@@ -149,7 +113,7 @@ namespace xwcs.core.statemachine
         public TriggerBase Why { get; set; }
     }
 
-    public delegate void TransitionEventHandler(object sender, TransitionEventArgs e) ;
+    
 	
     #endregion
 
@@ -192,10 +156,22 @@ namespace xwcs.core.statemachine
 
 		public string Name { get; private set; } = "Trigger";
 
+        private WeakReference _sm = null;
         /// <summary>
         /// The state machine this state belongs to.
         /// </summary>
-        public StateMachine StateMachine { get; private set; }
+        public StateMachine StateMachine {
+            get {
+                if (_sm.IsAlive)
+                {
+                    return (StateMachine)_sm.Target;
+                }
+                return null;        
+            }
+            private set {
+                _sm = new WeakReference(value);
+            }
+        }
 
         /// <summary>
         /// This function will fire trigger on state machine
@@ -221,10 +197,25 @@ namespace xwcs.core.statemachine
             return true;
         }
 
+        private WeakReference _sm = null;
         /// <summary>
         /// The state machine this state belongs to.
         /// </summary>
-        public StateMachine StateMachine { get; private set; }
+        public StateMachine StateMachine
+        {
+            get
+            {
+                if (_sm.IsAlive)
+                {
+                    return (StateMachine)_sm.Target;
+                }
+                return null;
+            }
+            private set
+            {
+                _sm = new WeakReference(value);
+            }
+        }
     }
     public class DefaultGuardBase : GuardBase {
         public DefaultGuardBase(StateMachine machine) : base(machine) { }
@@ -246,10 +237,25 @@ namespace xwcs.core.statemachine
             this.Name = Name;
 			this.Initialize();
 		}
-		/// <summary>
-		/// The state machine this state belongs to.
-		/// </summary>
-		public StateMachine StateMachine { get; private set; }
+        private WeakReference _sm = null;
+        /// <summary>
+        /// The state machine this state belongs to.
+        /// </summary>
+        public StateMachine StateMachine
+        {
+            get
+            {
+                if (_sm.IsAlive)
+                {
+                    return (StateMachine)_sm.Target;
+                }
+                return null;
+            }
+            private set
+            {
+                _sm = new WeakReference(value);
+            }
+        }
         /// <summary>
         /// The state machine this state belongs to.
         /// </summary>
@@ -342,14 +348,6 @@ namespace xwcs.core.statemachine
         /// Creates a new instance of this state with a reference to the state machine.
         /// </summary>
         public ConditionStateBase(StateMachine machine, string Name) : base(machine, Name) { }
-
-        /// <summary>
-        /// Is executed when the state machine enters this state.
-        /// </summary>
-        public override void OnEntry(TriggerBase trigger) {
-            // send all triggers
-            this.StateMachine.ProcessTriggers(Triggers);
-        }
     }
 
     
@@ -372,12 +370,13 @@ namespace xwcs.core.statemachine
 
         
 
-        private IStateMachineHost _host;
+        private WeakReference _host;
         public IStateMachineHost Host
         {
             get
             {
-                return _host;
+                if (_host.IsAlive) return (IStateMachineHost)_host.Target;
+                return null;
             }
         }
 
@@ -388,7 +387,7 @@ namespace xwcs.core.statemachine
         /// </summary>
         public StateMachine(IStateMachineHost host)
 		{
-            _host = host;
+            _host = new WeakReference(host);
             // register for dispose
             StateMachinesDisposer.getInstance().RegisterSM(this);
 
@@ -510,7 +509,8 @@ namespace xwcs.core.statemachine
 				this.CurrentState.OnExit(causedByTrigger);
 
             StateBase previousState = this.CurrentState ;
-			this.CurrentState = newState;
+
+            this.CurrentState = newState;
 			
 			//call effect
 			if(EffectHandler != null)
@@ -521,11 +521,28 @@ namespace xwcs.core.statemachine
             // Process Effect can delete SM itself so handle it
             if (disposedValue) return false; // we are over end of life just exit
                 
-            // enter the new state
-            if (this.CurrentState != null)
-				this.CurrentState.OnEntry(causedByTrigger);
-
-            _wes_EndTransition?.Raise(this, new TransitionEventArgs(previousState, newState, causedByTrigger));
+            //check if new state is DecisionState
+            if(CurrentState is ConditionStateBase)
+            {
+                //take triggers
+                foreach (TriggerBase t in (_CurrentState as ConditionStateBase).Triggers)
+                {
+                    if (ProcessTriggerInternal(t as TriggerBase))
+                    {
+                        // we did all return true, we should be in after decision state
+                        return true;
+                    }
+                }
+                // no one did work so raise error
+                throw new ApplicationException("ConditionState blocked!");
+            }
+            else
+            {
+                if (this.CurrentState != null)
+                    this.CurrentState.OnEntry(causedByTrigger);
+                _wes_EndTransition?.Raise(this, new TransitionEventArgs(previousState, newState, causedByTrigger));
+            }
+            
 
             // we did well so ok send true
             return true;
