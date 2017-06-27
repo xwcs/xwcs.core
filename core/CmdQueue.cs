@@ -34,7 +34,7 @@ namespace xwcs.core
         {
             if (disposedValue)
             { // Silent
-                throw new InvalidOperationException("State Machine Disposed");
+                throw new InvalidOperationException("ExecuteLater Disposed");
             }
             _executeLaterQueue.Enqueue(d);
             _executeLaterTimer.Start();
@@ -47,7 +47,13 @@ namespace xwcs.core
             if (_executeLaterQueue.Count > 0)
             {
                 VoidNoParamDelegate tt = _executeLaterQueue.Dequeue();
-                tt();
+                try
+                {
+                    tt();
+                }catch(Exception e)
+                {
+                    core.manager.SLogManager.getInstance().getClassLogger(typeof(CmdQueue)).Error(e.Message);
+                }                
             }
             if (_executeLaterQueue.Count > 0)
             {
