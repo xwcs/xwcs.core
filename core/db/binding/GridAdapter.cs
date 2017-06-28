@@ -1,5 +1,6 @@
 ﻿using DevExpress.Data;
 using DevExpress.Utils;
+using DevExpress.XtraEditors.Controls;
 using DevExpress.XtraEditors.Repository;
 using DevExpress.XtraGrid;
 using DevExpress.XtraGrid.Columns;
@@ -39,12 +40,17 @@ namespace xwcs.core.db.binding
         int ColumnsCount();
         void ClearColumns();
 
+		void PostChanges();
+
         event EventHandler DataSourceChanged;
         event CustomRowCellEditEventHandler CustomRowCellEditForEditing;
         event EventHandler ShownEditor;
         event CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
         event EventHandler ListSourceChanged;
-    }
+		event BaseContainerValidateEditorEventHandler ValidatingEditor;
+		event CellValueChangedEventHandler CellChanged;
+
+	}
 
     public class GridColumnAdapter : IColumnAdapter
     {
@@ -193,9 +199,8 @@ namespace xwcs.core.db.binding
         private GridControl _grid;
         private GridView _view;
 
-        
 
-        public GridAdapter(GridControl g)
+		public GridAdapter(GridControl g)
         {
             _grid = g;
             if (!(_grid.MainView is GridView))
@@ -277,7 +282,31 @@ namespace xwcs.core.db.binding
             }
         }
 
-        public event CustomRowCellEditEventHandler CustomRowCellEditForEditing
+		public event BaseContainerValidateEditorEventHandler ValidatingEditor
+		{
+            add
+            {
+                _view.ValidatingEditor += value;
+            }
+			remove
+            {
+                _view.ValidatingEditor -= value;
+            }
+        }
+
+		public event CellValueChangedEventHandler CellChanged
+		{
+			add
+			{
+				_view.CellValueChanged  += value;
+			}
+			remove
+			{
+				_view.CellValueChanged -= value;
+			}
+		}
+
+		public event CustomRowCellEditEventHandler CustomRowCellEditForEditing
         {
             add
             {
@@ -348,7 +377,14 @@ namespace xwcs.core.db.binding
         {
             _view.Columns.Clear();
         }
-    }
+		
+		public void PostChanges()
+		{
+			_view.PostEditor();
+			_view.UpdateCurrentRow();
+		}
+		
+	}
 
 
     /*

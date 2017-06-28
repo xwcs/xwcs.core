@@ -65,7 +65,7 @@ namespace xwcs.core.db.binding.attributes
 		uint _backGrndColorDisabled;
 		uint _backGrndColorFocused;
 		uint _backGrndColorReadOnly;
-		int _columnWidth;
+		int _columnWidth = -1;
 		uint _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
 
 
