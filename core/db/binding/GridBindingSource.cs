@@ -37,6 +37,9 @@ namespace xwcs.core.db.binding
 		private Dictionary<string, RepositoryItem> _repositories = new Dictionary<string, RepositoryItem>();
 		private bool _gridIsConnected = false;
 
+		//For type DataTable;
+		private bool _isTypeDataTable = false;
+
         // hold last position before position changed occurs
         private int _oldPosition = -1;
 
@@ -114,6 +117,10 @@ namespace xwcs.core.db.binding
             {
                 return _dataType;
             }
+			set
+			{
+				_dataType = value;
+			}
         }
 		
 		public IEditorsHost EditorsHost
@@ -182,6 +189,11 @@ namespace xwcs.core.db.binding
 						//try to obtain element type
 						t = (tmpDs as IEnumerable).GetType().GetGenericArguments()[0];
 					}
+					else if (tmpDs is DataTable)
+					{
+						//Do nothing because type is set by _datatype setter						
+						_isTypeDataTable = true;
+					}
 					else if (tmpDs is IListSource)
 					{
 						//try to obtain element type
@@ -216,7 +228,10 @@ namespace xwcs.core.db.binding
 
 				// _dataType musty be set before DS cause event can come in not correct order!!!!
 				// we use timer on form with force message queue execution
-				_dataType = t;
+				if (!ReferenceEquals(null, t))
+				{
+					_dataType = t;
+				}
                 ForceInitializeGrid();
                 base.DataSource = value;
 				
@@ -285,7 +300,8 @@ namespace xwcs.core.db.binding
 		
 
         
-		private void ConnectGrid() {
+		private void ConnectGrid() 
+		{
 			if (_target != null && !_gridIsConnected && _dataType != null && _target.IsReady)
 			{
 				// check columns loaded
@@ -294,40 +310,84 @@ namespace xwcs.core.db.binding
 					_target.PopulateColumns();
 				}
 
-
-				PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
-				foreach (PropertyInfo pi in pis) {
-					IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
-					IList<CustomAttribute> ac = new List<CustomAttribute>();
-					foreach (CustomAttribute a in attrs)
+				if (!_isTypeDataTable)
+				{
+					PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+					foreach (PropertyInfo pi in pis)
 					{
-                        IColumnAdapter gc = null;
-                        gc = _target.ColumnByFieldName(pi.Name);
-                        GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
-						a.applyGridColumnPopulation(this, gcp);
-						RepositoryItem ri = gcp.RepositoryItem;
-						ac.Add(a as CustomAttribute);
-						if(ri != null) {
-							_target.RepositoryItems.Add(ri);
-							_repositories[pi.Name] = ri;
-							if (gc != null) gc.ColumnEdit = ri;
-						}						
-					}
-					if (ac.Count > 0)
-						_attributesCache[pi.Name] = ac;
+						IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
+						IList<CustomAttribute> ac = new List<CustomAttribute>();
+						foreach (CustomAttribute a in attrs)
+						{
+							IColumnAdapter gc = null;
+							gc = _target.ColumnByFieldName(pi.Name);
+							GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
+							a.applyGridColumnPopulation(this, gcp);
+							RepositoryItem ri = gcp.RepositoryItem;
+							ac.Add(a as CustomAttribute);
+							if (ri != null)
+							{
+								_target.RepositoryItems.Add(ri);
+								_repositories[pi.Name] = ri;
+								if (gc != null) gc.ColumnEdit = ri;
+							}
+						}
+						if (ac.Count > 0)
+							_attributesCache[pi.Name] = ac;
 
+					}
+				}
+				else 
+				{
+					DataTable dt = base.DataSource as DataTable;
+					if (dt != null)
+					{
+						PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+						foreach (PropertyInfo pi in pis)
+						{
+							if (dt.Columns[pi.Name]	!= null)
+							{
+								IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
+								IList<CustomAttribute> ac = new List<CustomAttribute>();
+								foreach (CustomAttribute a in attrs)
+								{
+									IColumnAdapter gc = null;
+									gc = _target.ColumnByFieldName(pi.Name);
+									GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
+									a.applyGridColumnPopulation(this, gcp);
+									RepositoryItem ri = gcp.RepositoryItem;
+									ac.Add(a as CustomAttribute);
+									if (ri != null)
+									{
+										_target.RepositoryItems.Add(ri);
+										_repositories[pi.Name] = ri;
+										if (gc != null) gc.ColumnEdit = ri;
+									}
+								}
+								if (ac.Count > 0)
+									_attributesCache[pi.Name] = ac;
+							}
+						}
+					}
 				}
 				//attach CustomRowCellEditForEditing event too
 				_target.CustomRowCellEditForEditing += CustomRowCellEditForEditingHandler;
                 _target.ShownEditor += EditorShownHandler;
+				//_target.ValidatingEditor += _target_ValidatingEditor;
+				_target.CellChanged += _target_CellChanged;
+				
 				if (HandleCustomColumnDisplayText)
                     _target.CustomColumnDisplayText += CustomColumnDisplayText;
 				
 				_gridIsConnected = true;
-			}
+			}	
 		}
 
-        
+		private void _target_CellChanged(object sender, CellValueChangedEventArgs e)
+		{
+			_target.PostChanges();
+		}
+
 		protected virtual void GetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs e) {
 			//just to be overloaded if necessary	
 		}
