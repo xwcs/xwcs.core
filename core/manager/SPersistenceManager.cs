@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 
 namespace xwcs.core.manager
 {
@@ -14,7 +15,8 @@ namespace xwcs.core.manager
 		public enum AssetKind{
 			Image,
 			Layout,
-			Print
+			Print,
+            Any
 		}
 
         private static SPersistenceManager instance;
@@ -152,16 +154,55 @@ namespace xwcs.core.manager
 
 		private string AssetsPath(AssetKind k) {
 			switch(k) {
-				case AssetKind.Image: return "img";
-				case AssetKind.Layout: return "layout";
-				case AssetKind.Print: return "print";
-			}
-			return "";
+				case AssetKind.Image: return Path.DirectorySeparatorChar + "img";
+				case AssetKind.Layout: return Path.DirectorySeparatorChar + "layout";
+				case AssetKind.Print: return Path.DirectorySeparatorChar + "print";
+                case AssetKind.Any: 
+                default: return "";
+            }
 		}
 
 		//file system support
 		public string GetDefaultAssetsPath(Type t, AssetKind kind) {
-			return AppDomain.CurrentDomain.BaseDirectory + "assets" + "\\" + t.Namespace + "\\" + AssetsPath(kind);
+			return GetDefaultAssetsPath() + Path.DirectorySeparatorChar + t.Namespace + AssetsPath(kind);
 		}
-	}
+
+        public string GetDefaultAssetsPath()
+        {
+            return AppDomain.CurrentDomain.BaseDirectory + "assets";
+        }
+
+
+        private static string _pattern = @"(?:{(\w[^}^\s]+)})";
+        
+        /// <summary>
+        /// This will handle eventual place holders in path
+        /// place holders
+        /// {temp}          - %temp%
+        /// {user}          - %appdata%
+        /// {run}           - path of executable
+        /// {assets}        - assets root
+        /// {assets_img}    - assets img
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public string TemplatizePath(string path)
+        {
+            return Regex.Replace(path, _pattern, new MatchEvaluator(Includer));
+        }
+        private string Includer(Match match)
+        {
+            string fName = match.Groups[1].Value;
+
+            switch (fName)
+            {
+                case "temp": return "%TEMP%";
+                case "user": return "%APPDATA%";
+                case "run": return AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+                case "assets": return GetDefaultAssetsPath();
+                default: return fName;
+            }            
+        }
+    }
 }
+
