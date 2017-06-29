@@ -276,7 +276,32 @@ namespace xwcs.core.db.binding
 			
 		}
 
-		
+		public void AttachToTree(DevExpress.XtraTreeList.TreeList tree)
+		{
+
+
+#if DEBUG_TRACE_LOG_ON
+			_logger.Debug("Set-GRID : New");
+#endif
+			//first disconnect eventual old one
+			if (_target != null)
+			{
+				_target.DataSourceChanged -= GridDataSourceChanged;
+				_target.CustomRowCellEditForEditing -= CustomRowCellEditForEditingHandler;
+				_target.ShownEditor -= EditorShownHandler;
+				_target.CustomColumnDisplayText -= CustomColumnDisplayText;
+				_target.ListSourceChanged -= DataController_ListSourceChanged;
+			}
+			_target = new TreeListAdapter(tree);
+			_target.AutoPopulateColumns = true;
+			_target.ListSourceChanged += DataController_ListSourceChanged;
+			_target.DataSourceChanged += GridDataSourceChanged;
+			//connect
+			_target.DataSource = this;
+
+		}
+
+
 		private void DataController_ListSourceChanged(object sender, EventArgs e)
 		{
 			ConnectGrid();
@@ -298,7 +323,28 @@ namespace xwcs.core.db.binding
 		}
 
 		
-
+		private void applyAttributes(PropertyInfo pi)
+		{
+			IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
+			IList<CustomAttribute> ac = new List<CustomAttribute>();
+			foreach (CustomAttribute a in attrs)
+			{
+				IColumnAdapter gc = null;
+				gc = _target.ColumnByFieldName(pi.Name);
+				GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
+				a.applyGridColumnPopulation(this, gcp);
+				RepositoryItem ri = gcp.RepositoryItem;
+				ac.Add(a as CustomAttribute);
+				if (ri != null)
+				{
+					_target.RepositoryItems.Add(ri);
+					_repositories[pi.Name] = ri;
+					if (gc != null) gc.ColumnEdit = ri;
+				}
+			}
+			if (ac.Count > 0)
+				_attributesCache[pi.Name] = ac;
+		}
         
 		private void ConnectGrid() 
 		{
@@ -315,26 +361,7 @@ namespace xwcs.core.db.binding
 					PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 					foreach (PropertyInfo pi in pis)
 					{
-						IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
-						IList<CustomAttribute> ac = new List<CustomAttribute>();
-						foreach (CustomAttribute a in attrs)
-						{
-							IColumnAdapter gc = null;
-							gc = _target.ColumnByFieldName(pi.Name);
-							GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
-							a.applyGridColumnPopulation(this, gcp);
-							RepositoryItem ri = gcp.RepositoryItem;
-							ac.Add(a as CustomAttribute);
-							if (ri != null)
-							{
-								_target.RepositoryItems.Add(ri);
-								_repositories[pi.Name] = ri;
-								if (gc != null) gc.ColumnEdit = ri;
-							}
-						}
-						if (ac.Count > 0)
-							_attributesCache[pi.Name] = ac;
-
+						applyAttributes(pi);
 					}
 				}
 				else 
@@ -347,25 +374,7 @@ namespace xwcs.core.db.binding
 						{
 							if (dt.Columns[pi.Name]	!= null)
 							{
-								IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
-								IList<CustomAttribute> ac = new List<CustomAttribute>();
-								foreach (CustomAttribute a in attrs)
-								{
-									IColumnAdapter gc = null;
-									gc = _target.ColumnByFieldName(pi.Name);
-									GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
-									a.applyGridColumnPopulation(this, gcp);
-									RepositoryItem ri = gcp.RepositoryItem;
-									ac.Add(a as CustomAttribute);
-									if (ri != null)
-									{
-										_target.RepositoryItems.Add(ri);
-										_repositories[pi.Name] = ri;
-										if (gc != null) gc.ColumnEdit = ri;
-									}
-								}
-								if (ac.Count > 0)
-									_attributesCache[pi.Name] = ac;
+								applyAttributes(pi);
 							}
 						}
 					}
@@ -373,9 +382,11 @@ namespace xwcs.core.db.binding
 				//attach CustomRowCellEditForEditing event too
 				_target.CustomRowCellEditForEditing += CustomRowCellEditForEditingHandler;
                 _target.ShownEditor += EditorShownHandler;
-				//_target.ValidatingEditor += _target_ValidatingEditor;
-				_target.CellChanged += _target_CellChanged;
 				
+
+				_target.CellValueChanged += _target_CellValueChanged;
+				
+
 				if (HandleCustomColumnDisplayText)
                     _target.CustomColumnDisplayText += CustomColumnDisplayText;
 				
@@ -383,7 +394,7 @@ namespace xwcs.core.db.binding
 			}	
 		}
 
-		private void _target_CellChanged(object sender, CellValueChangedEventArgs e)
+		private void _target_CellValueChanged(object sender, CellValueChangedEventArgs e)
 		{
 			_target.PostChanges();
 		}
@@ -407,23 +418,50 @@ namespace xwcs.core.db.binding
             GetFieldDisplayText(sender, e);
         }
 
-		private void EditorShownHandler(object sender, EventArgs e) {
-			ColumnView view = (ColumnView)sender;
-			Control editor = view.ActiveEditor;
-			RepositoryItem be = ((BaseEdit)editor).Properties;
-			ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs
-			{
-				Control = editor,
-				View = view,
-				FieldName = view.FocusedColumn.FieldName,
-				RepositoryItem = be
-			};
+		private void EditorShownHandler(object sender, EventArgs e) 
+		{
+			ColumnView view;
+			DevExpress.XtraTreeList.TreeList treeList;
 
-			if (_attributesCache.ContainsKey(vsea.FieldName))
+			if ((view = sender as ColumnView) != null)
 			{
-				foreach (CustomAttribute a in _attributesCache[vsea.FieldName])
+				Control editor = view.ActiveEditor;
+				RepositoryItem be = ((BaseEdit)editor).Properties;
+				ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs
 				{
-					a.applyCustomEditShown(this, vsea);
+					Control = editor,
+					View = view,
+					FieldName = view.FocusedColumn.FieldName,
+					RepositoryItem = be
+				};
+
+				if (_attributesCache.ContainsKey(vsea.FieldName))
+				{
+					foreach (CustomAttribute a in _attributesCache[vsea.FieldName])
+					{
+						a.applyCustomEditShown(this, vsea);
+					}
+				}			
+			}
+			else	
+			if ((treeList = sender as DevExpress.XtraTreeList.TreeList) != null)
+			{
+				Control editor = treeList.ActiveEditor;
+				RepositoryItem be = ((BaseEdit)editor).Properties;
+				ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs
+				{
+					Control = editor,
+					TreeList = treeList,
+					FieldName = treeList.FocusedColumn.FieldName,
+					RepositoryItem = be
+				};
+
+				if (_attributesCache.ContainsKey(vsea.FieldName))
+				{
+					foreach (CustomAttribute a in _attributesCache[vsea.FieldName])
+					{
+						a.applyCustomEditShown(this, vsea);
+					}
 				}
 			}
 		}
