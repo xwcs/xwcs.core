@@ -80,6 +80,9 @@ namespace xwcs.core.db.binding
 		public Control Control { get; set; }
 		public string FieldName { get; set; }
 		public ColumnView View { get; set; }
+
+		public DevExpress.XtraTreeList.TreeList TreeList { get; set;  }
+
 		public RepositoryItem RepositoryItem { get; set; }
 	}
 

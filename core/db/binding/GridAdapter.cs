@@ -6,7 +6,6 @@ using DevExpress.XtraGrid;
 using DevExpress.XtraGrid.Columns;
 using DevExpress.XtraGrid.Views.Base;
 using DevExpress.XtraGrid.Views.Grid;
-//using DevExpress.XtraTreeList;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -26,11 +25,35 @@ namespace xwcs.core.db.binding
         AppearanceObjectEx AppearanceCell { get;}
     }
 
-    public interface IGridAdapter
-    {
-        // BaseGridController DataController { get; }
-        bool IsReady { get; }
-        //ColumnViewOptionsBehavior OptionsBehavior { get; }
+	/*
+		Events merging
+	*/
+	public class CellValueChangedEventArgs : DevExpress.XtraGrid.Views.Base.CellValueChangedEventArgs
+	{
+		public bool GridLike { get; private set; }
+		// grid
+		public CellValueChangedEventArgs(DevExpress.XtraGrid.Views.Base.CellValueChangedEventArgs orig) : base(orig.RowHandle, orig.Column, orig.Value) {
+			GridLike = true;
+		}
+
+		// tree
+		public DevExpress.XtraTreeList.Columns.TreeListColumn TreeColumn { get; }
+		public DevExpress.XtraTreeList.Nodes.TreeListNode Node { get; }
+
+		public CellValueChangedEventArgs(DevExpress.XtraTreeList.CellValueChangedEventArgs orig) : base(-1, null, orig.Value)
+		{
+			TreeColumn = orig.Column;
+			Node = orig.Node;
+			GridLike = false;
+		}
+	}
+	public delegate void CellValueChangedEventHandler(object sender, xwcs.core.db.binding.CellValueChangedEventArgs e);
+
+
+
+public interface IGridAdapter
+    {        
+        bool IsReady { get; }        
         bool AutoPopulateColumns { get; set; }
         RepositoryItemCollection RepositoryItems { get; }
         void ForceInitialize();
@@ -43,12 +66,18 @@ namespace xwcs.core.db.binding
 		void PostChanges();
 
         event EventHandler DataSourceChanged;
-        event CustomRowCellEditEventHandler CustomRowCellEditForEditing;
+        
+		//For Grid
+		event CustomRowCellEditEventHandler CustomRowCellEditForEditing;
         event EventHandler ShownEditor;
         event CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
         event EventHandler ListSourceChanged;
 		event BaseContainerValidateEditorEventHandler ValidatingEditor;
-		event CellValueChangedEventHandler CellChanged;
+		event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
+
+		//For Tree		
+		//event DevExpress.XtraTreeList.CellValueChangedEventHandler TreeCellChanged;
+		//event DevExpress.XtraTreeList.CustomColumnDisplayTextEventHandler TreeCustomColumnDisplayText;
 
 	}
 
@@ -196,9 +225,10 @@ namespace xwcs.core.db.binding
 
     public class GridAdapter : IGridAdapter
     {
-        private GridControl _grid;
+		private GridControl _grid;
         private GridView _view;
 
+		
 
 		public GridAdapter(GridControl g)
         {
@@ -206,19 +236,18 @@ namespace xwcs.core.db.binding
             if (!(_grid.MainView is GridView))
                 throw new ApplicationException("Main view of grid must be e GridView");
             _view = _grid.MainView as GridView;
+
+			//forward events
+			_view.CellValueChanged += _view_CellValueChanged;
+
         }
 
-        /*
-        public BaseGridController DataController
-        {
-            get
-            {
-                return _view.DataController;
-            }
-        }
-        */
+		private void _view_CellValueChanged(object sender, DevExpress.XtraGrid.Views.Base.CellValueChangedEventArgs e)
+		{
+			CellValueChanged.Invoke(sender, new CellValueChangedEventArgs(e));
+		}
 
-        public event EventHandler ListSourceChanged
+		public event EventHandler ListSourceChanged
         {
             add
             {
@@ -229,16 +258,6 @@ namespace xwcs.core.db.binding
                 _view.DataController.ListSourceChanged -= value;
             }
         }
-
-        /*
-    public ColumnViewOptionsBehavior OptionsBehavior
-    {
-        get
-        {
-            return _view.OptionsBehavior;
-        }
-    }
-    */
 
         public RepositoryItemCollection RepositoryItems
         {
@@ -294,17 +313,7 @@ namespace xwcs.core.db.binding
             }
         }
 
-		public event CellValueChangedEventHandler CellChanged
-		{
-			add
-			{
-				_view.CellValueChanged  += value;
-			}
-			remove
-			{
-				_view.CellValueChanged -= value;
-			}
-		}
+		public event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
 
 		public event CustomRowCellEditEventHandler CustomRowCellEditForEditing
         {
@@ -386,31 +395,62 @@ namespace xwcs.core.db.binding
 		
 	}
 
-
-    /*
+/******************************/
+/*
+/*		TreeListAdapter
+/*
+/******************************/
+    
 
     public class TreeListAdapter : IGridAdapter
     {
-        private TreeList _tree;
-        
+		
 
-        public TreeListAdapter(TreeList tl)
+
+
+		private DevExpress.XtraTreeList.TreeList _tree;
+
+		public event BaseContainerValidateEditorEventHandler ValidatingEditor
+		{
+			add
+			{
+				_tree.ValidatingEditor += value;
+			}
+			remove
+			{
+				_tree.ValidatingEditor -= value;
+			}
+		}
+
+		public event EventHandler ListSourceChanged
+		{
+			add
+			{
+				//TODO : missing DataController
+				//_tree.DataController.ListSourceChanged += value;
+			}
+			remove
+			{
+				//_tree.DataController.ListSourceChanged -= value;
+			}
+		}
+
+
+		public event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
+
+		public TreeListAdapter(DevExpress.XtraTreeList.TreeList tl)
         {
             _tree = tl;
-        }      
 
-        
-        /*
-        public ColumnViewOptionsBehavior OptionsBehavior
-        {
-            get
-            {
-                return _tree.OptionsBehavior;
-            }
+			_tree.CellValueChanged += _tree_CellValueChanged;
         }
-        * /
 
-        public RepositoryItemCollection RepositoryItems
+		private void _tree_CellValueChanged(object sender, DevExpress.XtraTreeList.CellValueChangedEventArgs e)
+		{
+			CellValueChanged.Invoke(sender, new CellValueChangedEventArgs(e));
+		}
+
+		public RepositoryItemCollection RepositoryItems
         {
             get
             {
@@ -439,15 +479,29 @@ namespace xwcs.core.db.binding
             }
         }
 
-        public event CustomRowCellEditEventHandler CustomRowCellEditForEditing
+		public bool AutoPopulateColumns
+		{
+			get
+			{
+				return _tree.OptionsBehavior.AutoPopulateColumns;
+			}
+
+			set
+			{
+				_tree.OptionsBehavior.AutoPopulateColumns = value;
+			}
+		}
+
+		public event CustomRowCellEditEventHandler CustomRowCellEditForEditing
         {
             add
             {
-                _tree.CustomRowCellEditForEditing += value;
-            }
-            remove
+				//TODO : missing CustomRowCellEditForEditing
+				//_tree.CustomRowCellEditForEditing += value;
+			}
+			remove
             {
-                _tree.CustomRowCellEditForEditing -= value;
+                //_tree.CustomRowCellEditForEditing -= value;
             }
         }
         public event EventHandler DataSourceChanged
@@ -477,12 +531,12 @@ namespace xwcs.core.db.binding
         public event CustomColumnDisplayTextEventHandler CustomColumnDisplayText
         {
             add
+            {			
+				//_tree.CustomColumnDisplayText += value;
+			}
+			remove
             {
-                _tree.CustomColumnDisplayText += value;
-            }
-            remove
-            {
-                _tree.CustomColumnDisplayText -= value;
+                //_tree.CustomColumnDisplayText -= value;
             }
         }
 
@@ -515,6 +569,13 @@ namespace xwcs.core.db.binding
         {
             _tree.Columns.Clear();
         }
-    }
-*/
+
+		public void PostChanges()
+		{
+			_tree.PostEditor();
+
+			//TODO : UpdateCurrentRow
+			_tree.Update();
+		}
+	}
 }
