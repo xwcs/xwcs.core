@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>xwcs.core</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>...</authors>
+    <!--owners>...</owners>
+                    <licenseUrl>...</licenseUrl>
+                    <projectUrl>...</projectUrl>
+                    <iconUrl>...</iconUrl-->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>xwcs.core</description>
+    <releaseNotes>First release</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>xwcs.core</tags>
+  </metadata>
+  <files>
+    <file src="xwcs.core.targets" target="Build\xwcs.core.targets" />
+  </files>
+</package>

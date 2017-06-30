@@ -59,7 +59,7 @@ namespace xwcs.core.evt
             var weakHandlers = (handler as Delegate)
                 .GetInvocationList()
                 .Select(d => new WeakDelegate(d))
-                .Where(wd => !_handlers.Any(h => h != wd))
+                //.Where(wd => !_handlers.Any(h => h != wd))
                 .ToList();
 
             if (weakHandlers.Count == 0) return; // no new handlers found
