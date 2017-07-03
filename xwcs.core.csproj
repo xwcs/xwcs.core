@@ -132,16 +132,8 @@
       <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Es.Logging, Version=1.1.0.0, Culture=neutral, PublicKeyToken=776b289507df5578, processorArchitecture=MSIL">
-      <HintPath>..\packages\Es.Logging.1.1.0\lib\net45\Es.Logging.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Es.Logging.Log4, Version=1.1.0.0, Culture=neutral, PublicKeyToken=776b289507df5578, processorArchitecture=MSIL">
-      <HintPath>..\packages\Es.Logging.Log4.1.1.0\lib\net45\Es.Logging.Log4.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="log4net, Version=2.0.7.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\packages\log4net.2.0.7\lib\net45-full\log4net.dll</HintPath>
+    <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -269,6 +261,8 @@
     <Compile Include="LinqKit\Linq.cs" />
     <Compile Include="LinqKit\PredicateBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <None Include="xwcs.core.nuspec" />
+    <None Include="xwcs.core.targets" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="core\statemachine\test\TestFormBase.resx">
@@ -293,13 +287,17 @@
 if $(ConfigurationName) == Deploy $(SolutionDir)deploy\NugetJob.bat - - $(ConfigurationName)
 popd</PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\packages\xwcs.native.1.0.6390.25150\build\xwcs.native.targets" Condition="Exists('..\packages\xwcs.native.1.0.6390.25150\build\xwcs.native.targets')" />
+  <Import Project="..\packages\xwcs.native.1.0.0-alpha\build\xwcs.native.targets" Condition="Exists('..\packages\xwcs.native.1.0.0-alpha\build\xwcs.native.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\xwcs.native.1.0.6390.25150\build\xwcs.native.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xwcs.native.1.0.6390.25150\build\xwcs.native.targets'))" />
+    <Error Condition="!Exists('..\packages\xwcs.native.1.0.0-alpha\build\xwcs.native.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xwcs.native.1.0.0-alpha\build\xwcs.native.targets'))" />
+    <Error Condition="!Exists('..\packages\xwcs.core.0.0.1-devel\build\xwcs.core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xwcs.core.0.0.1-devel\build\xwcs.core.targets'))" />
+    <Error Condition="!Exists('..\packages\xwcs.indesign.0.0.1-devel\build\xwcs.indesign.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xwcs.indesign.0.0.1-devel\build\xwcs.indesign.targets'))" />
   </Target>
+  <Import Project="..\packages\xwcs.core.0.0.1-devel\build\xwcs.core.targets" Condition="Exists('..\packages\xwcs.core.0.0.1-devel\build\xwcs.core.targets')" />
+  <Import Project="..\packages\xwcs.indesign.0.0.1-devel\build\xwcs.indesign.targets" Condition="Exists('..\packages\xwcs.indesign.0.0.1-devel\build\xwcs.indesign.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
