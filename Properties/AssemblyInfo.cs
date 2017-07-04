@@ -7,9 +7,9 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("xwcs.core")]
-[assembly: AssemblyDescription("eXtraWay c# core components")]
+[assembly: AssemblyDescription("c# core components")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("3D Informatica s.r.l")]
+[assembly: AssemblyCompany("0ics srls")]
 [assembly: AssemblyProduct("xwcs.core")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
@@ -33,7 +33,8 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("0.0.2.*")]
+[assembly: AssemblyFileVersion("0.0.2")]
+[assembly: AssemblyInformationalVersion("0.0.2-devel")]
 [assembly: NeutralResourcesLanguage("")]
 
