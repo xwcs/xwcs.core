@@ -1,12 +1,4 @@
-﻿using DevExpress.Data;
-using DevExpress.Utils;
-using DevExpress.XtraEditors.Controls;
-using DevExpress.XtraEditors.Repository;
-using DevExpress.XtraGrid;
-using DevExpress.XtraGrid.Columns;
-using DevExpress.XtraGrid.Views.Base;
-using DevExpress.XtraGrid.Views.Grid;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -17,12 +9,12 @@ namespace xwcs.core.db.binding
 {
     public interface IColumnAdapter
     {
-        RepositoryItem ColumnEdit { get; set; }
+		DevExpress.XtraEditors.Repository.RepositoryItem ColumnEdit { get; set; }
         bool ReadOnly { get; set; }
         bool FixedWidth { get; set; }
         int Width { get; set; }
 
-        AppearanceObjectEx AppearanceCell { get;}
+		DevExpress.Utils.AppearanceObjectEx AppearanceCell { get;}
     }
 
 	/*
@@ -42,20 +34,62 @@ namespace xwcs.core.db.binding
 
 		public CellValueChangedEventArgs(DevExpress.XtraTreeList.CellValueChangedEventArgs orig) : base(-1, null, orig.Value)
 		{
-			TreeColumn = orig.Column;
+			TreeColumn = orig.Column;			
 			Node = orig.Node;
 			GridLike = false;
 		}
 	}
 	public delegate void CellValueChangedEventHandler(object sender, xwcs.core.db.binding.CellValueChangedEventArgs e);
 
+	public  class CustomColumnDisplayTextEventArgs : DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs
+	{
+		public bool GridLike { get; private set; }
+		// grid
+		public CustomColumnDisplayTextEventArgs(DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs orig) : base(orig.GroupRowHandle, orig.Column, orig.Value) 
+		{
+			GridLike = true;
+		}
+		//tree
+		public DevExpress.XtraTreeList.Columns.TreeListColumn TreeColumn { get; }
+		public DevExpress.XtraTreeList.Nodes.TreeListNode Node { get; }		
+
+		public CustomColumnDisplayTextEventArgs(DevExpress.XtraTreeList.CustomColumnDisplayTextEventArgs orig) : base(-1, null, orig.Value)
+		{
+			TreeColumn = orig.Column;
+			Node = orig.Node;
+			GridLike = false;
+		}
+	}
+	public delegate void CustomColumnDisplayTextEventHandler(object sender, xwcs.core.db.binding.CustomColumnDisplayTextEventArgs e);
+
+	public class CustomRowCellEditEventArgs : DevExpress.XtraGrid.Views.Grid.CustomRowCellEditEventArgs
+	{
+		public bool GridLike { get; private set; }
+		//tree
+		public CustomRowCellEditEventArgs(DevExpress.XtraGrid.Views.Grid.CustomRowCellEditEventArgs orig) : base(orig.RowHandle, orig.Column, orig.RepositoryItem) 
+		{
+			GridLike = true;
+		}
+		//tree		
+		public DevExpress.XtraTreeList.Columns.TreeListColumn TreeColumn { get; }
+		public DevExpress.XtraTreeList.Nodes.TreeListNode Node { get; }
+
+		public CustomRowCellEditEventArgs(DevExpress.XtraTreeList.GetCustomNodeCellEditEventArgs orig) : base(-1, null)
+		{
+			TreeColumn = orig.Column;
+			Node = orig.Node;
+			RepositoryItem = orig.RepositoryItem;
+			GridLike = false;
+		}
+	}
+	public delegate void CustomRowCellEditEventHandler(object sender, xwcs.core.db.binding.CustomRowCellEditEventArgs e);
 
 
-public interface IGridAdapter
+	public interface IGridAdapter
     {        
         bool IsReady { get; }        
         bool AutoPopulateColumns { get; set; }
-        RepositoryItemCollection RepositoryItems { get; }
+		DevExpress.XtraEditors.Repository.RepositoryItemCollection RepositoryItems { get; }
         void ForceInitialize();
         object DataSource { get; set; }
         void PopulateColumns();
@@ -65,32 +99,26 @@ public interface IGridAdapter
 
 		void PostChanges();
 
-        event EventHandler DataSourceChanged;
-        
-		//For Grid
-		event CustomRowCellEditEventHandler CustomRowCellEditForEditing;
-        event EventHandler ShownEditor;
-        event CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
+        event EventHandler DataSourceChanged;      
+        event EventHandler ShownEditor;        
         event EventHandler ListSourceChanged;
-		event BaseContainerValidateEditorEventHandler ValidatingEditor;
+		event DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler ValidatingEditor;		
 		event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
-
-		//For Tree		
-		//event DevExpress.XtraTreeList.CellValueChangedEventHandler TreeCellChanged;
-		//event DevExpress.XtraTreeList.CustomColumnDisplayTextEventHandler TreeCustomColumnDisplayText;
+		event xwcs.core.db.binding.CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
+		event xwcs.core.db.binding.CustomRowCellEditEventHandler CustomRowCellEditForEditing;
 
 	}
 
-    public class GridColumnAdapter : IColumnAdapter
+	public class GridColumnAdapter : IColumnAdapter
     {
-        private GridColumn _c;
+        private DevExpress.XtraGrid.Columns.GridColumn _c;
 
-        public GridColumnAdapter(GridColumn c)
+        public GridColumnAdapter(DevExpress.XtraGrid.Columns.GridColumn c)
         {
             _c = c;
         }
 
-        public AppearanceObjectEx AppearanceCell
+        public DevExpress.Utils.AppearanceObjectEx AppearanceCell
         {
             get
             {
@@ -98,7 +126,7 @@ public interface IGridAdapter
             }
         }
 
-        public RepositoryItem ColumnEdit
+		public DevExpress.XtraEditors.Repository.RepositoryItem ColumnEdit
         {
             get
             {
@@ -160,7 +188,7 @@ public interface IGridAdapter
             _c = c;
         }
 
-        public AppearanceObjectEx AppearanceCell
+        public DevExpress.Utils.AppearanceObjectEx AppearanceCell
         {
             get
             {
@@ -168,7 +196,7 @@ public interface IGridAdapter
             }
         }
 
-        public RepositoryItem ColumnEdit
+        public DevExpress.XtraEditors.Repository.RepositoryItem ColumnEdit
         {
             get
             {
@@ -225,26 +253,43 @@ public interface IGridAdapter
 
     public class GridAdapter : IGridAdapter
     {
-		private GridControl _grid;
-        private GridView _view;
+		private DevExpress.XtraGrid.GridControl _grid;
+        private DevExpress.XtraGrid.Views.Grid.GridView _view;
 
 		
 
-		public GridAdapter(GridControl g)
+		public GridAdapter(DevExpress.XtraGrid.GridControl g)
         {
             _grid = g;
-            if (!(_grid.MainView is GridView))
+            if (!(_grid.MainView is DevExpress.XtraGrid.Views.Grid.GridView))
                 throw new ApplicationException("Main view of grid must be e GridView");
-            _view = _grid.MainView as GridView;
+            _view = _grid.MainView as DevExpress.XtraGrid.Views.Grid.GridView;
 
 			//forward events
 			_view.CellValueChanged += _view_CellValueChanged;
-
+			_view.CustomColumnDisplayText += _view_CustomColumnDisplayText;
+			_view.CustomRowCellEdit += _view_CustomRowCellEditForEditing;		
         }
 
+		public event xwcs.core.db.binding.CustomRowCellEditEventHandler CustomRowCellEditForEditing;
+		private void _view_CustomRowCellEditForEditing(object sender, DevExpress.XtraGrid.Views.Grid.CustomRowCellEditEventArgs e)
+		{
+			if (!ReferenceEquals(CustomRowCellEditForEditing, null))
+				CustomRowCellEditForEditing.Invoke(sender, new CustomRowCellEditEventArgs(e));
+		}
+
+		public event xwcs.core.db.binding.CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
+		private void _view_CustomColumnDisplayText(object sender, DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs e)
+		{
+			if (!ReferenceEquals(CustomColumnDisplayText, null))
+				CustomColumnDisplayText.Invoke(sender, new CustomColumnDisplayTextEventArgs(e));
+		}
+
+		public event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
 		private void _view_CellValueChanged(object sender, DevExpress.XtraGrid.Views.Base.CellValueChangedEventArgs e)
 		{
-			CellValueChanged.Invoke(sender, new CellValueChangedEventArgs(e));
+			if (!ReferenceEquals(CellValueChanged, null))
+				CellValueChanged.Invoke(sender, new CellValueChangedEventArgs(e));
 		}
 
 		public event EventHandler ListSourceChanged
@@ -259,7 +304,7 @@ public interface IGridAdapter
             }
         }
 
-        public RepositoryItemCollection RepositoryItems
+        public DevExpress.XtraEditors.Repository.RepositoryItemCollection RepositoryItems
         {
             get
             {
@@ -301,7 +346,7 @@ public interface IGridAdapter
             }
         }
 
-		public event BaseContainerValidateEditorEventHandler ValidatingEditor
+		public event DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler ValidatingEditor
 		{
             add
             {
@@ -313,19 +358,6 @@ public interface IGridAdapter
             }
         }
 
-		public event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
-
-		public event CustomRowCellEditEventHandler CustomRowCellEditForEditing
-        {
-            add
-            {
-                _view.CustomRowCellEditForEditing += value;
-            }
-            remove
-            {
-                _view.CustomRowCellEditForEditing -= value;
-            }
-        }
         public event EventHandler DataSourceChanged
         {
             add
@@ -347,18 +379,6 @@ public interface IGridAdapter
             remove
             {
                 _view.ShownEditor -= value;
-            }
-        }
-
-        public event CustomColumnDisplayTextEventHandler CustomColumnDisplayText
-        {
-            add
-            {
-                _view.CustomColumnDisplayText += value;
-            }
-            remove
-            {
-                _view.CustomColumnDisplayText -= value;
             }
         }
 
@@ -404,13 +424,38 @@ public interface IGridAdapter
 
     public class TreeListAdapter : IGridAdapter
     {
-		
-
-
-
 		private DevExpress.XtraTreeList.TreeList _tree;
 
-		public event BaseContainerValidateEditorEventHandler ValidatingEditor
+		public TreeListAdapter(DevExpress.XtraTreeList.TreeList tl)
+		{
+			_tree = tl;
+			_tree.CellValueChanged += _tree_CellValueChanged;
+			_tree.CustomColumnDisplayText += _tree_CustomColumnDisplayText;
+			_tree.CustomNodeCellEditForEditing += _tree_CustomNodeCellEditForEditing;
+		}
+
+		public event xwcs.core.db.binding.CustomRowCellEditEventHandler CustomRowCellEditForEditing;
+		private void _tree_CustomNodeCellEditForEditing(object sender, DevExpress.XtraTreeList.GetCustomNodeCellEditEventArgs e)
+		{
+			if (!ReferenceEquals(CustomRowCellEditForEditing, null))
+				CustomRowCellEditForEditing.Invoke(sender, new CustomRowCellEditEventArgs(e));
+		}
+
+		public event xwcs.core.db.binding.CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
+		private void _tree_CustomColumnDisplayText(object sender, DevExpress.XtraTreeList.CustomColumnDisplayTextEventArgs e)
+		{
+			if (!ReferenceEquals(CustomColumnDisplayText, null))
+				CustomColumnDisplayText.Invoke(sender, new CustomColumnDisplayTextEventArgs(e));
+		}
+
+		public event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
+		private void _tree_CellValueChanged(object sender, DevExpress.XtraTreeList.CellValueChangedEventArgs e)
+		{
+			if (!ReferenceEquals(CellValueChanged, null))
+				CellValueChanged.Invoke(sender, new CellValueChangedEventArgs(e));
+		}
+
+		public event DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler ValidatingEditor
 		{
 			add
 			{
@@ -435,22 +480,7 @@ public interface IGridAdapter
 			}
 		}
 
-
-		public event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
-
-		public TreeListAdapter(DevExpress.XtraTreeList.TreeList tl)
-        {
-            _tree = tl;
-
-			_tree.CellValueChanged += _tree_CellValueChanged;
-        }
-
-		private void _tree_CellValueChanged(object sender, DevExpress.XtraTreeList.CellValueChangedEventArgs e)
-		{
-			CellValueChanged.Invoke(sender, new CellValueChangedEventArgs(e));
-		}
-
-		public RepositoryItemCollection RepositoryItems
+		public DevExpress.XtraEditors.Repository.RepositoryItemCollection RepositoryItems
         {
             get
             {
@@ -492,18 +522,6 @@ public interface IGridAdapter
 			}
 		}
 
-		public event CustomRowCellEditEventHandler CustomRowCellEditForEditing
-        {
-            add
-            {
-				//TODO : missing CustomRowCellEditForEditing
-				//_tree.CustomRowCellEditForEditing += value;
-			}
-			remove
-            {
-                //_tree.CustomRowCellEditForEditing -= value;
-            }
-        }
         public event EventHandler DataSourceChanged
         {
             add
@@ -528,17 +546,6 @@ public interface IGridAdapter
             }
         }
 
-        public event CustomColumnDisplayTextEventHandler CustomColumnDisplayText
-        {
-            add
-            {			
-				//_tree.CustomColumnDisplayText += value;
-			}
-			remove
-            {
-                //_tree.CustomColumnDisplayText -= value;
-            }
-        }
 
         public void ForceInitialize()
         {
@@ -573,9 +580,7 @@ public interface IGridAdapter
 		public void PostChanges()
 		{
 			_tree.PostEditor();
-
-			//TODO : UpdateCurrentRow
-			_tree.Update();
+			_tree.EndCurrentEdit();
 		}
 	}
 }

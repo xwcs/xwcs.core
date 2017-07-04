@@ -406,9 +406,9 @@ namespace xwcs.core.db.binding
 
 		private void CustomColumnDisplayText(object sender, CustomColumnDisplayTextEventArgs e){
 
-            if (_attributesCache.ContainsKey(e.Column.FieldName))
+            if (_attributesCache.ContainsKey((e.GridLike ? e.Column.FieldName : e.TreeColumn.FieldName)))
             {
-                foreach (CustomAttribute a in _attributesCache[e.Column.FieldName])
+                foreach (CustomAttribute a in _attributesCache[(e.GridLike ? e.Column.FieldName : e.TreeColumn.FieldName)])
                 {
                     a.applyGetFieldDisplayText(this, e);
                 }
@@ -466,14 +466,15 @@ namespace xwcs.core.db.binding
 			}
 		}
 
-		private void CustomRowCellEditForEditingHandler(object sender, CustomRowCellEditEventArgs e) {
-			if (_repositories.ContainsKey(e.Column.FieldName))
+		private void CustomRowCellEditForEditingHandler(object sender, CustomRowCellEditEventArgs e) 
+		{
+			if (_repositories.ContainsKey((e.GridLike?e.Column.FieldName:e.TreeColumn.FieldName)))
 			{
-				e.RepositoryItem = _repositories[e.Column.FieldName];
+				e.RepositoryItem = _repositories[(e.GridLike ? e.Column.FieldName : e.TreeColumn.FieldName)];
 			}
-			if (_attributesCache.ContainsKey(e.Column.FieldName))
+			if (_attributesCache.ContainsKey((e.GridLike ? e.Column.FieldName : e.TreeColumn.FieldName)))
 			{
-				foreach (CustomAttribute a in _attributesCache[e.Column.FieldName])
+				foreach (CustomAttribute a in _attributesCache[(e.GridLike ? e.Column.FieldName : e.TreeColumn.FieldName)])
 				{
 					a.applyCustomRowCellEdit(this, e);
 				}
