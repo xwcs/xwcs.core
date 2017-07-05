@@ -82,6 +82,7 @@ namespace xwcs.core.db.binding
                         _target.ShownEditor -= EditorShownHandler;
                         _target.CustomColumnDisplayText -= CustomColumnDisplayText; //try remove anyway
                         _target.ListSourceChanged -= DataController_ListSourceChanged;
+                        _target.CellValueChanged -= _target_CellValueChanged;
 
                         //remove eventual grid cells editor repositories from grid
                         foreach (RepositoryItem ri in _repositories.Values)
@@ -266,7 +267,8 @@ namespace xwcs.core.db.binding
                 _target.ShownEditor -= EditorShownHandler;
                 _target.CustomColumnDisplayText -= CustomColumnDisplayText;
                 _target.ListSourceChanged -= DataController_ListSourceChanged;
-			}
+                _target.CellValueChanged -= _target_CellValueChanged;
+            }
             _target = new GridAdapter(g);
             _target.AutoPopulateColumns = true;
             _target.ListSourceChanged += DataController_ListSourceChanged;
@@ -291,7 +293,8 @@ namespace xwcs.core.db.binding
 				_target.ShownEditor -= EditorShownHandler;
 				_target.CustomColumnDisplayText -= CustomColumnDisplayText;
 				_target.ListSourceChanged -= DataController_ListSourceChanged;
-			}
+                _target.CellValueChanged -= _target_CellValueChanged;
+            }
 			_target = new TreeListAdapter(tree);
 			_target.AutoPopulateColumns = true;
 			_target.ListSourceChanged += DataController_ListSourceChanged;
