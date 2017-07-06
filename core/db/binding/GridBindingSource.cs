@@ -241,6 +241,8 @@ namespace xwcs.core.db.binding
                 {
                     ListChanged += handleListItemChanged;
                 }            
+
+				//TODO : check type -> expception
 			}
 		}
 
@@ -273,7 +275,6 @@ namespace xwcs.core.db.binding
             _target.DataSourceChanged += GridDataSourceChanged;
 			//connect
 			_target.DataSource = this;
-			
 		}
 
 		public void AttachToTree(DevExpress.XtraTreeList.TreeList tree)
