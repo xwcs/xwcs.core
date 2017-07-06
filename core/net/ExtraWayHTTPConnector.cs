@@ -3,7 +3,7 @@ using System.Net;
 using System.Text;
 using xwcs.core.cfg;
 using System.Collections.Specialized;
-
+using System.Windows.Forms;
 
 namespace xwcs.core.net
 {
@@ -43,14 +43,14 @@ namespace xwcs.core.net
 						_cfg.getCfgParam(CFG_DATABASENAME_PATH, _databaseName);
 
 				//Upload file
-				_logger.Info("Trying upload file, address : " + addr + ", file name : " + localFileName);
+				_logger.Debug("Trying upload file, address : " + addr + ", file name : " + localFileName);
 				var responseBytes = _client.UploadFile(addr, null, localFileName);
-				_logger.Info("File uploaded, address : " + addr + ", file name : " + localFileName);
+				_logger.Debug("File uploaded, address : " + addr + ", file name : " + localFileName);
 				return Encoding.ASCII.GetString(responseBytes);
 			}
 			catch (Exception ex)
 			{
-				_logger.Info("Upload file failed! Address : " + addr + ",  Error : " + ex.Message);
+				_logger.Debug("Upload file failed! Address : " + addr + ",  Error : " + ex.Message);
 			}
 			return "";
 		}
@@ -67,15 +67,22 @@ namespace xwcs.core.net
 						"&fileName=" +
 						databaseFileName;
 
-				//Download file
-				_logger.Info("Trying download file, address : " + addr + ", file name : " + localFileName);
+                Application.UseWaitCursor = true;
+                Application.DoEvents();
+
+                //Download file
+                _logger.Debug("Trying download file, address : " + addr + ", file name : " + localFileName);
 				_client.DownloadFile(addr, localFileName);
-				_logger.Info("File downloaded, address : " + addr + ", file name : " + localFileName);
-				return true;
+				_logger.Debug("File downloaded, address : " + addr + ", file name : " + localFileName);
+
+                Application.UseWaitCursor = false;
+                Application.DoEvents();
+
+                return true;
 			}
 			catch (Exception ex)
 			{
-				_logger.Info("Download attachment failed! Address : " + addr + ",  Error : " + ex.Message);
+				_logger.Debug("Download attachment failed! Address : " + addr + ",  Error : " + ex.Message);
 			}
 			return false;
 		}

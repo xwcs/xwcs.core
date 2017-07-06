@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 namespace xwcs.core.db
 {
     using cfg;
+    using evt;
     using System.Data.Entity;
     using System.Data.Entity.Core.Objects;
     using System.Data.Entity.Infrastructure;
@@ -161,29 +162,47 @@ namespace xwcs.core.db
 
         public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
         {
-            DbEntityEntry<EntityBase> et = MyEntry(e); 
-
-            DbReferenceEntry en = et.Reference(PropertyName);
-
-            if (!en.IsLoaded)
+            try
             {
-                en.Load();
-            }
+                SEventProxy.BlockModelEvents();
 
-            return en.CurrentValue;
+                DbEntityEntry<EntityBase> et = MyEntry(e);
+
+                DbReferenceEntry en = et.Reference(PropertyName);
+
+                if (!en.IsLoaded)
+                {
+                    en.Load();
+                }
+
+                return en.CurrentValue;
+            }
+            finally
+            {
+                SEventProxy.AllowModelEvents();
+            }
+            
         }
         public object LazyLoadOrDefaultCollection(EntityBase e, string PropertyName)
         {
-            DbEntityEntry<EntityBase> et = MyEntry(e);
-
-            DbCollectionEntry en = et.Collection(PropertyName);
-
-            if (!en.IsLoaded)
+            try
             {
-                en.Load();
-            }
+                SEventProxy.BlockModelEvents();
+                DbEntityEntry<EntityBase> et = MyEntry(e);
 
-            return en.CurrentValue;
+                DbCollectionEntry en = et.Collection(PropertyName);
+
+                if (!en.IsLoaded)
+                {
+                    en.Load();
+                }
+
+                return en.CurrentValue;
+            }
+            finally
+            {
+                SEventProxy.AllowModelEvents();
+            }
         }
 
         public LockState EntityLockState(EntityBase e)
