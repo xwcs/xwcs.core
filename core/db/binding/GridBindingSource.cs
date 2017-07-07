@@ -234,7 +234,9 @@ namespace xwcs.core.db.binding
 					_dataType = t;
 				}
                 ForceInitializeGrid();
-                base.DataSource = value;
+				_logger.Debug("{0} [{1}]", "Before datasource set", DataType?.Name);
+				base.DataSource = value;
+				_logger.Debug("{0} [{1}]", "After datasource set", DataType?.Name);
 				
 
                 // now when we know type we set new handler
@@ -251,13 +253,15 @@ namespace xwcs.core.db.binding
         {
             if (_target != null && !_target.IsReady)
             {
-                _target.ForceInitialize(); // we need grid to initialize (it should be set in invisible component)
-            }
+				_logger.Debug("{0} [{1}]", "Before _target.ForceInitialize()", DataType?.Name);
+				_target.ForceInitialize(); // we need grid to initialize (it should be set in invisible component)
+				_logger.Debug("{0} [{1}]", "After _target.ForceInitialize()", DataType?.Name);
+			}
         }
 
 		public void AttachToGrid(GridControl g) {
-            
-			
+
+			_logger.Debug("{0} [{1}]", "AttachToGrid", DataType?.Name);
 #if DEBUG_TRACE_LOG_ON
 			_logger.Debug("Set-GRID : New");
 #endif
@@ -335,6 +339,11 @@ namespace xwcs.core.db.binding
 			{
 				IColumnAdapter gc = null;
 				gc = _target.ColumnByFieldName(pi.Name);
+				if (gc.ColumnEdit == null)
+				{
+					_logger.Debug("{0} [{1}]", "ColumnEdit is null", DataType?.Name);
+				}
+
 				GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
 				a.applyGridColumnPopulation(this, gcp);
 				RepositoryItem ri = gcp.RepositoryItem;
@@ -352,12 +361,15 @@ namespace xwcs.core.db.binding
         
 		private void ConnectGrid() 
 		{
+			_logger.Debug("{0} [{1}]", "Enter ConnectGrid", DataType?.Name);
 			if (_target != null && !_gridIsConnected && _dataType != null && _target.IsReady)
 			{
+				_logger.Debug("{0} [{1}]", "Working ConnectGrid", DataType?.Name);
 				// check columns loaded
 				if (_target.ColumnsCount() == 0)
 				{
 					_target.PopulateColumns();
+
 				}
 
 				if (!_isTypeDataTable)
