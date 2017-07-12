@@ -398,7 +398,7 @@ namespace xwcs.core.db
         }
     }
 
-
+    
 	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
 	public abstract class EntityBase : INotifyPropertyChanged, INotifyModelPropertyChanged, IModelEntity
     {
@@ -666,4 +666,70 @@ namespace xwcs.core.db
 		public abstract void DeserializeFields();
 		public abstract void SerializeFields();
 	}
+
+
+    [TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
+    public abstract class BindableObjectBase : INotifyPropertyChanged
+    {
+        protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(EntityBase));
+
+        private bool _changed = false;
+        public bool IsChanged()
+        {
+            return _changed;
+        }
+
+        public BindableObjectBase()
+        {
+        }
+
+        private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
+        public event PropertyChangedEventHandler PropertyChanged
+        {
+            add
+            {
+                if (_wes_PropertyChanged == null)
+                {
+                    _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
+                }
+                _wes_PropertyChanged.Subscribe(value);
+            }
+            remove
+            {
+                _wes_PropertyChanged?.Unsubscribe(value);
+            }
+        }
+
+        /// <summary>
+        /// Direct value field
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="storage"></param>
+        /// <param name="value"></param>
+        /// <param name="propertyName"></param>
+        protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        {
+            // skip if not changed
+            if (Equals(storage, value)) return;
+
+#if DEBUG_TRACE_LOG_ON
+            MethodBase info = new StackFrame(3).GetMethod();
+            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
+#endif
+            storage = value;
+            OnPropertyChanged(propertyName, storage);
+        }
+
+
+        protected void OnPropertyChanged(string propertyName = null, object value = null)
+        {
+
+            _changed = true; // false positive it will do true even if object was empty
+
+#if DEBUG_TRACE_LOG_ON
+            _logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
+#endif
+            _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
 }

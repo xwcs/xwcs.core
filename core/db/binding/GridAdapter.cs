@@ -13,13 +13,16 @@ namespace xwcs.core.db.binding
         bool ReadOnly { get; set; }
         bool FixedWidth { get; set; }
         int Width { get; set; }
+        string FieldName { get; set; }
 
-		DevExpress.Utils.AppearanceObjectEx AppearanceCell { get;}
+        DevExpress.Utils.AppearanceObjectEx AppearanceCell { get;}
     }
 
 	/*
 		Events merging
 	*/
+
+    // NOTE: this event is one direction info (RO), no data chenge will be considered back in sender
 	public class CellValueChangedEventArgs : DevExpress.XtraGrid.Views.Base.CellValueChangedEventArgs
 	{
 		public bool GridLike { get; private set; }
@@ -41,28 +44,71 @@ namespace xwcs.core.db.binding
 	}
 	public delegate void CellValueChangedEventHandler(object sender, xwcs.core.db.binding.CellValueChangedEventArgs e);
 
-	public  class CustomColumnDisplayTextEventArgs : DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs
+
+    // NOTE: this event is bidirectional => sender will use values changed in Display text property (RW), so we have to guarantie return to original event args
+    public class CustomColumnDisplayTextEventArgs : EventArgs
 	{
 		public bool GridLike { get; private set; }
-		// grid
-		public CustomColumnDisplayTextEventArgs(DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs orig) : base(orig.GroupRowHandle, orig.Column, orig.Value) 
+        // grid
+        private DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs _gridArgs;
+        public DevExpress.XtraGrid.Columns.GridColumn GridColumn { get { return _gridArgs.Column;  } }
+        public int GroupRowHandle { get { return _gridArgs.GroupRowHandle; } }
+        public bool IsForGroupRow { get { return _gridArgs.IsForGroupRow; } }
+        public int ListSourceRowIndex { get { return _gridArgs.ListSourceRowIndex; } }
+        
+        public CustomColumnDisplayTextEventArgs(DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs orig) 
 		{
 			GridLike = true;
+            _gridArgs = orig;
+            _ca = new GridColumnAdapter(orig.Column);
 		}
-		//tree
-		public DevExpress.XtraTreeList.Columns.TreeListColumn TreeColumn { get; }
-		public DevExpress.XtraTreeList.Nodes.TreeListNode Node { get; }		
+        //tree specific
+        private DevExpress.XtraTreeList.CustomColumnDisplayTextEventArgs _treeArgs;
+        public DevExpress.XtraTreeList.Columns.TreeListColumn TreeColumn { get { return _treeArgs.Column; } }
+		public DevExpress.XtraTreeList.Nodes.TreeListNode Node { get { return _treeArgs.Node; } }		
 
-		public CustomColumnDisplayTextEventArgs(DevExpress.XtraTreeList.CustomColumnDisplayTextEventArgs orig) : base(-1, null, orig.Value)
+		public CustomColumnDisplayTextEventArgs(DevExpress.XtraTreeList.CustomColumnDisplayTextEventArgs orig) 
 		{
-			TreeColumn = orig.Column;
-			Node = orig.Node;
+            _treeArgs = orig;
 			GridLike = false;
-		}
-	}
-	public delegate void CustomColumnDisplayTextEventHandler(object sender, xwcs.core.db.binding.CustomColumnDisplayTextEventArgs e);
+            _ca = new TreeColumnAdapter(orig.Column);
+        }
 
-	public class CustomRowCellEditEventArgs : DevExpress.XtraGrid.Views.Grid.CustomRowCellEditEventArgs
+        //mixed
+        private IColumnAdapter _ca;
+        public IColumnAdapter Column
+        {
+            get {
+                return _ca;
+            }
+        }
+        public string DisplayText {
+            get {
+                return GridLike ? _gridArgs.DisplayText : _treeArgs.DisplayText;
+            }
+            set {
+                if (GridLike)
+                {
+                    _gridArgs.DisplayText = value;
+                }else
+                {
+                    _treeArgs.DisplayText = value;
+                }
+            }
+        }
+        public object Value {
+            get
+            {
+                return GridLike ? _gridArgs.Value : _treeArgs.Value;
+            }
+        }
+    }
+    public delegate void CustomColumnDisplayTextEventHandler(object sender, xwcs.core.db.binding.CustomColumnDisplayTextEventArgs e);
+
+
+    // NOTE: this event is bidirectional => sender will use values changed in Display text property (RW), so we have to guarantie return to original event args
+    // but what is RW it is passed by reference so we can do it without any other wrapping, just override one and add other
+    public class CustomRowCellEditEventArgs : DevExpress.XtraGrid.Views.Grid.CustomRowCellEditEventArgs
 	{
 		public bool GridLike { get; private set; }
 		//tree
@@ -136,6 +182,19 @@ namespace xwcs.core.db.binding
             set
             {
                 _c.ColumnEdit = value;
+            }
+        }
+
+        public string FieldName
+        {
+            get
+            {
+                return _c.FieldName;
+            }
+
+            set
+            {
+                _c.FieldName = value;
             }
         }
 
@@ -245,6 +304,19 @@ namespace xwcs.core.db.binding
             set
             {
                 _c.Width = value;
+            }
+        }
+
+        public string FieldName
+        {
+            get
+            {
+                return _c.FieldName;
+            }
+
+            set
+            {
+                _c.FieldName = value;
             }
         }
     }
