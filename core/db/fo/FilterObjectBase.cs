@@ -336,7 +336,12 @@ namespace xwcs.core.db.fo
             {
                 mi.Invoke(this, null);
             }
-        }      
+        }
+        
+        protected virtual CriteriaOperator GetMixedCriteria()
+        {
+            return _isAdvanced ? _advancedCriteria : GetCriteriaOperator();
+        }     
 
         public Expression GetLinqExpression<T>()
         {
@@ -344,7 +349,7 @@ namespace xwcs.core.db.fo
             {
                 _converter = new CriteriaToEFExpressionConverter();
             }
-            return  _converter.Convert(Expression.Parameter(typeof(T), "el"), _isAdvanced ? _advancedCriteria : GetCriteriaOperator());
+            return  _converter.Convert(Expression.Parameter(typeof(T), "el"), GetMixedCriteria());
         }
 
         // return fake filter object
@@ -563,7 +568,7 @@ namespace xwcs.core.db.fo
 			return obj;
 		}
 
-        private CriteriaOperator GetCriteriaOperator()
+        protected virtual CriteriaOperator GetCriteriaOperator()
         {
             //build condition
             return CriteriaOperator.And(
