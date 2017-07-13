@@ -35,6 +35,7 @@ namespace xwcs.core.db.binding
 
 		private Dictionary<string, IList<CustomAttribute>> _attributesCache = new Dictionary<string, IList<CustomAttribute>>();
 		private Dictionary<string, RepositoryItem> _repositories = new Dictionary<string, RepositoryItem>();
+        private HashSet<string> _validableFields = null;
 		private bool _gridIsConnected = false;
 
 		//For type DataTable;
@@ -232,7 +233,11 @@ namespace xwcs.core.db.binding
 				if (!ReferenceEquals(null, t))
 				{
 					_dataType = t;
-				}
+
+                    // here we inspect type for obtain columns with validation
+                    _validableFields = BindableObjectBase.GetPropertyNamesWithAttribute(_dataType, typeof(attributes.CheckValidAttribute));
+
+                }
                 ForceInitializeGrid();
 				base.DataSource = value;
 				
@@ -243,7 +248,11 @@ namespace xwcs.core.db.binding
                     ListChanged += handleListItemChanged;
                 }            
 
-				//TODO : check type -> expception
+				//teree missing datacontroler so 
+                if(_target is TreeListAdapter)
+                {
+                    ConnectGrid();
+                }
 			}
 		}
 
@@ -269,16 +278,19 @@ namespace xwcs.core.db.binding
                 _target.CustomColumnDisplayText -= CustomColumnDisplayText;
                 _target.ListSourceChanged -= DataController_ListSourceChanged;
                 _target.CellValueChanged -= _target_CellValueChanged;
+                _target.ValidatingEditor -= _target_ValidatingEditor;
             }
             _target = new GridAdapter(g);
             _target.AutoPopulateColumns = true;
             _target.ListSourceChanged += DataController_ListSourceChanged;
             _target.DataSourceChanged += GridDataSourceChanged;
+            _target.ValidatingEditor += _target_ValidatingEditor;
 			//connect
 			_target.DataSource = this;
 		}
 
-		public void AttachToTree(DevExpress.XtraTreeList.TreeList tree)
+        
+        public void AttachToTree(DevExpress.XtraTreeList.TreeList tree)
 		{
 
 
@@ -294,13 +306,15 @@ namespace xwcs.core.db.binding
 				_target.CustomColumnDisplayText -= CustomColumnDisplayText;
 				_target.ListSourceChanged -= DataController_ListSourceChanged;
                 _target.CellValueChanged -= _target_CellValueChanged;
+                _target.ValidatingEditor -= _target_ValidatingEditor;
             }
 			_target = new TreeListAdapter(tree);
 			_target.AutoPopulateColumns = true;
 			_target.ListSourceChanged += DataController_ListSourceChanged;
 			_target.DataSourceChanged += GridDataSourceChanged;
-			//connect
-			_target.DataSource = this;
+            _target.ValidatingEditor += _target_ValidatingEditor;
+            //connect
+            _target.DataSource = this;
 
 		}
 
@@ -407,9 +421,34 @@ namespace xwcs.core.db.binding
 		protected virtual void GetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs e) {
 			//just to be overloaded if necessary	
 		}
-        
 
-		private void CustomColumnDisplayText(object sender, CustomColumnDisplayTextEventArgs e){
+
+        // value validation
+        private void _target_ValidatingEditor(object sender, DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventArgs e)
+        {
+            if (ReferenceEquals(null, _validableFields) || _validableFields.Count == 0) return;
+
+            string cn = "";
+            if (sender is GridView && Current is IValidableEntity)
+            {
+                cn = (sender as GridView).FocusedColumn.FieldName;
+            }else if(sender is DevExpress.XtraTreeList.TreeList && Current is IValidableEntity)
+            {
+                cn = (sender as DevExpress.XtraTreeList.TreeList).FocusedColumn.FieldName;
+            }
+
+            if (cn != "" && _validableFields.Contains(cn))
+            {
+                Problem pr = (Current as IValidableEntity).ValidateProperty(cn, e.Value);
+                if (pr.Kind != ProblemKind.None)
+                {
+                    e.Valid = false;
+                    e.ErrorText = pr.ErrorMessage;
+                }
+            }
+        }
+
+        private void CustomColumnDisplayText(object sender, CustomColumnDisplayTextEventArgs e){
 
             if (_attributesCache.ContainsKey(e.Column.FieldName))
             {
@@ -427,49 +466,38 @@ namespace xwcs.core.db.binding
 		{
 			ColumnView view;
 			DevExpress.XtraTreeList.TreeList treeList;
+            ViewEditorShownEventArgs vsea = null;
 
-			if ((view = sender as ColumnView) != null)
+            if ((view = sender as ColumnView) != null)
 			{
-				Control editor = view.ActiveEditor;
-				RepositoryItem be = ((BaseEdit)editor).Properties;
-				ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs
+				vsea = new ViewEditorShownEventArgs
 				{
-					Control = editor,
+					Control = view.ActiveEditor,
 					View = view,
 					FieldName = view.FocusedColumn.FieldName,
-					RepositoryItem = be
-				};
-
-				if (_attributesCache.ContainsKey(vsea.FieldName))
-				{
-					foreach (CustomAttribute a in _attributesCache[vsea.FieldName])
-					{
-						a.applyCustomEditShown(this, vsea);
-					}
-				}			
+					RepositoryItem = ((BaseEdit)view.ActiveEditor).Properties
+                 };						
 			}
 			else	
 			if ((treeList = sender as DevExpress.XtraTreeList.TreeList) != null)
 			{
-				Control editor = treeList.ActiveEditor;
-				RepositoryItem be = ((BaseEdit)editor).Properties;
-				ViewEditorShownEventArgs vsea = new ViewEditorShownEventArgs
+				vsea = new ViewEditorShownEventArgs
 				{
-					Control = editor,
+					Control = treeList.ActiveEditor,
 					TreeList = treeList,
 					FieldName = treeList.FocusedColumn.FieldName,
-					RepositoryItem = be
-				};
-
-				if (_attributesCache.ContainsKey(vsea.FieldName))
-				{
-					foreach (CustomAttribute a in _attributesCache[vsea.FieldName])
-					{
-						a.applyCustomEditShown(this, vsea);
-					}
-				}
+					RepositoryItem = ((BaseEdit)treeList.ActiveEditor).Properties
+                };
 			}
-		}
+
+            if (vsea != null && _attributesCache.ContainsKey(vsea.FieldName))
+            {
+                foreach (CustomAttribute a in _attributesCache[vsea.FieldName])
+                {
+                    a.applyCustomEditShown(this, vsea);
+                }
+            }
+        }
 
 		private void CustomRowCellEditForEditingHandler(object sender, CustomRowCellEditEventArgs e) 
 		{

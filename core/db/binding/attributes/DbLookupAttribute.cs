@@ -76,7 +76,6 @@ namespace xwcs.core.db.binding.attributes
 		}
 		public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e) {
             RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
-           // rle.EditValueChanged += Rle_EditValueChanged;
             setupRle(src, rle, e.FieldName);
 		}
 
@@ -86,21 +85,6 @@ namespace xwcs.core.db.binding.attributes
 			e.CustomRepositoryItem = rle;
             setupRle(src, rle, e.CurrentNode.FirstOperand.PropertyName);
 		}
-
-        private void Rle_EditValueChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                DevExpress.XtraEditors.LookUpEdit le = (sender as DevExpress.XtraEditors.LookUpEdit);
-                if(le != null)
-                {
-                    ((DevExpress.XtraGrid.GridControl)le.Parent)?.FocusedView?.PostEditor();
-                }
-            }
-            catch (Exception)
-            {
-            }
-        }
 
         private void setupRle(IDataBindingSource src, RepositoryItemGridLookUpEdit rle, string fn) 
 		{

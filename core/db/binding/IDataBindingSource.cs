@@ -37,7 +37,7 @@ namespace xwcs.core.db.binding
 		public IDataBindingSource DataBindingSource { get; set; }
 	}
 
-	public interface IDataBindingSource
+    public interface IDataBindingSource
 	{
 		object Current { get; }
 		IEditorsHost EditorsHost { get;  }

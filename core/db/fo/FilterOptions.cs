@@ -1,14 +1,16 @@
 ﻿using DevExpress.XtraEditors.DXErrorProvider;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace xwcs.core.db.fo
 {
-    public class FilterOptions : BindableObjectBase, IDXDataErrorInfo
+    public class FilterOptions : BindableObjectBase
     {
         #region ctors and defaults
         public FilterOptions()
@@ -49,31 +51,31 @@ namespace xwcs.core.db.fo
 
         private int _var1;
         [Display(Name = "Prefisso")]
+        [binding.attributes.CheckValid]
         public int var1
         {
             get { return _var1; }
             set {
-               // if (value < 0) throw new ArgumentException("Valore non puo essere negativo!");
                 SetProperty(ref _var1, value);
             }
         }
         private int _var2;
         [Display(Name = "")]
+        [binding.attributes.CheckValid]
         public int var2
         {
             get { return _var2; }
             set {
-                //if (value < 1 || value >= _var3) throw new ArgumentException("Numero di errori deve essere maggiore di 0 e minore di numero caratteri!");
                 SetProperty(ref _var2, value);
             }
         }
         private int _var3;
         [Display(Name = "")]
+        [binding.attributes.CheckValid]
         public int var3
         {
             get { return _var3; }
             set {
-                //if (_var2 >= value) throw new ArgumentException("Numero di errori deve essere minore di numero caratteri!");
                 SetProperty(ref _var3, value);
             }
         }
@@ -90,6 +92,9 @@ namespace xwcs.core.db.fo
         }
 
         #endregion
+
+
+        
 
         public override string ToString()
         {
@@ -113,51 +118,35 @@ namespace xwcs.core.db.fo
             );
         }
 
-        public void GetPropertyError(string propertyName, ErrorInfo info)
+        public override Problem ValidateProperty(string pName, object newValue = null)
         {
-            info.ErrorText = "";
-            info.ErrorType = ErrorType.None;
-
-            switch (propertyName)
+            switch (pName)
             {
-                
                 case "var1":
+                    if ((newValue != null ? int.Parse(newValue.ToString()) : _var1) < 0)
                     {
-                        if (_var1 < 0)
-                        {
-                            info.ErrorText = "Valore deve esssere maggiore di 0!";
-                            info.ErrorType = ErrorType.Critical;
-                        }
-
-                        break;
-
+                        return new Error("Valore non puo essere negativo!");
                     }
+                    break;
                 case "var2":
+                    if ((newValue != null ? int.Parse(newValue.ToString()) : _var2) < 1)
                     {
-                        if (_var2 >= _var3 || _var2 < 1)
-                        {
-                            info.ErrorText = "Numero di errori minore di 0 o maggiore di numero caratteri!";
-                            info.ErrorType = ErrorType.Critical;
-                        }
-                        break;
-
+                        return new Error("Numero di errori deve essere maggiore di 0");
                     }
+                    if ((newValue != null ? int.Parse(newValue.ToString()) : _var2) >= _var3)
+                    {
+                        return new Error("Numero di errori deve essere minore di numero caratteri!");
+                    }
+                    break;
                 case "var3":
+                    if (_var2 >= (newValue != null ? int.Parse(newValue.ToString()) : _var3))
                     {
-                        if (_var2 >= _var3 )
-                        {
-                            info.ErrorText = "Numero di errori maggiore di numero caratteri!";
-                            info.ErrorType = ErrorType.Critical;
-                        }
-                        break;
-
+                        return new Error("Numero di errori deve essere minore di numero caratteri!");
                     }
+                    break;
             }
-        }
 
-        public void GetError(ErrorInfo info)
-        {
-            
+            return Problem.Success;
         }
     }
 }

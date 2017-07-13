@@ -543,7 +543,7 @@ namespace xwcs.core.db.binding
 		{
 			add
 			{
-				//TODO : missing DataController
+                //TODO : missing DataController
 				//_tree.DataController.ListSourceChanged += value;
 			}
 			remove

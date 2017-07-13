@@ -9,6 +9,7 @@ namespace xwcs.core.db
     using model;
     using model.attributes;
     using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
 #if DEBUG_TRACE_LOG_ON
     using System.Diagnostics;
 #endif
@@ -34,7 +35,8 @@ namespace xwcs.core.db
      * 2. is more complicated cause we have container in the middle, so we have handle eventual attach/detach from 
      *    ModelPropertyChanged event
      */
-    public class ModelPropertyChangedEventArgs : EventArgs {
+    public class ModelPropertyChangedEventArgs : EventArgs
+    {
         public class PropertyChangedChainEntry
         {
             public object Container = null;
@@ -55,7 +57,7 @@ namespace xwcs.core.db
                 return ReferenceEquals(Container, other.Container);
             }
         }
-        
+
         public List<PropertyChangedChainEntry> PropertyChain = new List<PropertyChangedChainEntry>();
         public List<string> PropertyNamesChian = new List<string>();
         private ModelPropertyChangedEventKind _changeKind = ModelPropertyChangedEventKind.Default;
@@ -84,7 +86,7 @@ namespace xwcs.core.db
             // caused by cycles in model graph
             // we have check if there not exists the same container
             // in chain already
-            foreach(PropertyChangedChainEntry e in PropertyChain)
+            foreach (PropertyChangedChainEntry e in PropertyChain)
             {
                 if (e.Cmp(Prop)) return false; // we skip add so we found cycle
             }
@@ -190,7 +192,8 @@ namespace xwcs.core.db
             _ctx = c;
         }
 
-        public string GetFieldName() {
+        public string GetFieldName()
+        {
             return typeof(T).Name;
         }
 
@@ -211,11 +214,13 @@ namespace xwcs.core.db
             }
         }
 
-        public EntityList() : base()  {
+        public EntityList() : base()
+        {
             _indexOfLastChangedItem = -1;
             this.ListChanged += internal_data_ListChanged;
         }
-        public EntityList(IList<T> list) : base(list) {
+        public EntityList(IList<T> list) : base(list)
+        {
             _indexOfLastChangedItem = -1;
             this.ListChanged += internal_data_ListChanged;
         }
@@ -290,7 +295,7 @@ namespace xwcs.core.db
                     Container = this[index],
                     Collection = this
                 }
-                
+
             );
             earg.AddInChain(
                 index.ToString(),
@@ -310,7 +315,7 @@ namespace xwcs.core.db
         }
         protected override void ClearItems()
         {
-            foreach(EntityBase e in this)
+            foreach (EntityBase e in this)
             {
                 (e as INotifyModelPropertyChanged).ModelPropertyChanged -= OnNestedPropertyChanged;
             }
@@ -329,9 +334,9 @@ namespace xwcs.core.db
             ));
         }
 
-		
 
-		private void internal_data_ListChanged(object sender, ListChangedEventArgs e)
+
+        private void internal_data_ListChanged(object sender, ListChangedEventArgs e)
         {
             if (e.ListChangedType == ListChangedType.ItemChanged)
             {
@@ -342,16 +347,16 @@ namespace xwcs.core.db
             }
         }
 
-		private void OnNestedPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
-		{
-			INotifyModelPropertyChanged s = sender as INotifyModelPropertyChanged;
+        private void OnNestedPropertyChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            INotifyModelPropertyChanged s = sender as INotifyModelPropertyChanged;
 
-			// if not recognized return
-			if (s == null) return;
+            // if not recognized return
+            if (s == null) return;
 
-			// add root type name to nested property changed event
+            // add root type name to nested property changed event
             // but only if we are not in cycle
-			if(e.AddInChain(_indexOfLastChangedItem.ToString(),
+            if (e.AddInChain(_indexOfLastChangedItem.ToString(),
                 new ModelPropertyChangedEventArgs.PropertyChangedChainEntry()
                 {
                     PropertyName = _indexOfLastChangedItem.ToString(),
@@ -366,8 +371,8 @@ namespace xwcs.core.db
 
                 // notify
                 _wes_ModelPropertyChanged?.Raise(this, e);
-            }			
-		}
+            }
+        }
 
         public object GetModelPropertyValueByName(string PropName)
         {
@@ -381,7 +386,7 @@ namespace xwcs.core.db
             }
 
             int idx;
-            if(int.TryParse(name, out idx))
+            if (int.TryParse(name, out idx))
             {
                 object obj = this[idx];
                 if (suffix != "" && obj is IModelEntity)
@@ -398,17 +403,11 @@ namespace xwcs.core.db
         }
     }
 
-    
-	[TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
-	public abstract class EntityBase : INotifyPropertyChanged, INotifyModelPropertyChanged, IModelEntity
-    {
-        protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(EntityBase));
 
-        private bool _changed = false;
-        public bool IsChanged()
-        {
-            return _changed;
-        }
+    [TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
+    public abstract class EntityBase : BindableObjectBase, INotifyModelPropertyChanged, IModelEntity
+    {
+
 
         private DBContextBase _ctx = null;
         public DBContextBase GetCtx()
@@ -418,7 +417,7 @@ namespace xwcs.core.db
         public void SetCtx(DBContextBase c)
         {
             _ctx = c;
-        } 
+        }
 
         /// <summary>
         ///  this is convetion, we dont have name settings generated in model
@@ -446,23 +445,6 @@ namespace xwcs.core.db
             return ReferenceEquals(idFiled, null) ? -1 : (int)idFiled;
         }
 
-        private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
-        public event PropertyChangedEventHandler PropertyChanged
-        {
-            add
-            {
-                if (_wes_PropertyChanged == null)
-                {
-                    _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
-                }
-                _wes_PropertyChanged.Subscribe(value);
-            }
-            remove
-            {
-                _wes_PropertyChanged?.Unsubscribe(value);
-            }
-        }
-
         private WeakEventSource<ModelPropertyChangedEventArgs> _wes_ModelPropertyChanged = null;
         public event EventHandler<ModelPropertyChangedEventArgs> ModelPropertyChanged
         {
@@ -480,28 +462,7 @@ namespace xwcs.core.db
             }
         }
 
-        /// <summary>
-        /// Direct value field
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="storage"></param>
-        /// <param name="value"></param>
-        /// <param name="propertyName"></param>
-        protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
-        {
-            // skip if not changed
-            if (Equals(storage, value)) return;
 
-#if DEBUG_TRACE_LOG_ON
-            MethodBase info = new StackFrame(3).GetMethod();
-            _logger.Debug(string.Format("{0}.{1} -> {2}", info.DeclaringType?.Name, info.Name, propertyName));
-#endif
-
-            storage = value;
-            OnPropertyChanged(propertyName, storage);
-        }
-
-        
         protected void SetNavigProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null) where T : INotifyModelPropertyChanged
         {
             // skip if not changed
@@ -526,7 +487,7 @@ namespace xwcs.core.db
         }
 
 
-        protected void OnPropertyChanged(string propertyName = null, object value = null)
+        protected override void OnPropertyChanged(string propertyName = null, object value = null)
         {
 
             _changed = true; // false positive it will do true even if object was empty
@@ -599,7 +560,7 @@ namespace xwcs.core.db
             return obj;
         }
 
-        
+
         protected void BindToNesteds()
         {
             // fields   
@@ -619,61 +580,61 @@ namespace xwcs.core.db
         }
     }
 
-	public abstract class SerializedEntityBase : EntityBase
-	{
-		
-		//public event PropertyDeserializedEventHandler OnPropertyDeserialized;
-		private readonly WeakEventSource<PropertyDeserialized> _wes_OnPropertyDeserialized = new WeakEventSource<PropertyDeserialized>();
-		public event EventHandler<PropertyDeserialized> OnPropertyDeserialized
-		{
-			add { _wes_OnPropertyDeserialized.Subscribe(value); }
-			remove { _wes_OnPropertyDeserialized.Unsubscribe(value); }
-		}
+    public abstract class SerializedEntityBase : EntityBase
+    {
+
+        //public event PropertyDeserializedEventHandler OnPropertyDeserialized;
+        private readonly WeakEventSource<PropertyDeserialized> _wes_OnPropertyDeserialized = new WeakEventSource<PropertyDeserialized>();
+        public event EventHandler<PropertyDeserialized> OnPropertyDeserialized
+        {
+            add { _wes_OnPropertyDeserialized.Subscribe(value); }
+            remove { _wes_OnPropertyDeserialized.Unsubscribe(value); }
+        }
 
 
-		public abstract void GetMutablePropertiesType(Dictionary<string, Type> dest);
+        public abstract void GetMutablePropertiesType(Dictionary<string, Type> dest);
 
-		// return string : we will dump object to string, but we will do it only if source is not NULL
-		// we cant reset value using object, this can be reset just setting empty string in dump property
-		protected string SerializeAndGet(object source, ref string storage, [CallerMemberName] string propertyName = null)
-		{
-			if (storage is string && source != null)
-			{
-				storage = source.TypedSerialize(propertyName, SerializeKind.XmlSerialization);
-			}
-			return storage;
-		}
+        // return string : we will dump object to string, but we will do it only if source is not NULL
+        // we cant reset value using object, this can be reset just setting empty string in dump property
+        protected string SerializeAndGet(object source, ref string storage, [CallerMemberName] string propertyName = null)
+        {
+            if (storage is string && source != null)
+            {
+                storage = source.TypedSerialize(propertyName, SerializeKind.XmlSerialization);
+            }
+            return storage;
+        }
 
-		// return object : we will de-serialize string into object but only if there is not de-serialized other one
-		// cause we use lazy de-serializing, we do this just first time called
-		protected object GetOrDeserialize(string source, string sourcePropertyName, ref object storage, [CallerMemberName] string propertyName = null)
-		{
-			if (storage == null && source != null && source.Length > 0)
-			{
-				storage = source.TypedDeserialize(sourcePropertyName, SerializeKind.XmlSerialization);
-			}
-			else
-			if (storage == null && (source == null || source.Length == 0))
-			{
-				storage = null;
-			}
+        // return object : we will de-serialize string into object but only if there is not de-serialized other one
+        // cause we use lazy de-serializing, we do this just first time called
+        protected object GetOrDeserialize(string source, string sourcePropertyName, ref object storage, [CallerMemberName] string propertyName = null)
+        {
+            if (storage == null && source != null && source.Length > 0)
+            {
+                storage = source.TypedDeserialize(sourcePropertyName, SerializeKind.XmlSerialization);
+            }
+            else
+            if (storage == null && (source == null || source.Length == 0))
+            {
+                storage = null;
+            }
 
-			_wes_OnPropertyDeserialized.Raise(this, new PropertyDeserialized(storage, propertyName));
+            _wes_OnPropertyDeserialized.Raise(this, new PropertyDeserialized(storage, propertyName));
 
-			return storage;
-		}
+            return storage;
+        }
 
-		public abstract void DeserializeFields();
-		public abstract void SerializeFields();
-	}
+        public abstract void DeserializeFields();
+        public abstract void SerializeFields();
+    }
 
 
     [TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
-    public abstract class BindableObjectBase : INotifyPropertyChanged
+    public abstract class BindableObjectBase : INotifyPropertyChanged, IValidableEntity
     {
         protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(EntityBase));
 
-        private bool _changed = false;
+        protected bool _changed = false;
         public bool IsChanged()
         {
             return _changed;
@@ -683,7 +644,7 @@ namespace xwcs.core.db
         {
         }
 
-        private WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
+        protected WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
         public event PropertyChangedEventHandler PropertyChanged
         {
             add
@@ -721,7 +682,7 @@ namespace xwcs.core.db
         }
 
 
-        protected void OnPropertyChanged(string propertyName = null, object value = null)
+        protected virtual void OnPropertyChanged(string propertyName = null, object value = null)
         {
 
             _changed = true; // false positive it will do true even if object was empty
@@ -731,5 +692,48 @@ namespace xwcs.core.db
 #endif
             _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        public static IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type what, Type at)
+        {
+            return what.GetProperties().Where(prop => Attribute.IsDefined(prop, at));
+        }
+        public IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type at)
+        {
+            return GetPropertiesWithAttribute(GetType(), at);
+        }
+
+        public static HashSet<string> GetPropertyNamesWithAttribute(Type what, Type at)
+        {
+            return new HashSet<string>(what.GetProperties().Where(prop => Attribute.IsDefined(prop, at)).Select(p=>p.Name).ToList());
+        }
+        public HashSet<string> GetPropertyNamesWithAttribute(Type at)
+        {
+            return GetPropertyNamesWithAttribute(GetType(), at);
+        }
+
+
+        #region IValidableEntity
+        public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            foreach (var pi in GetPropertiesWithAttribute(typeof(binding.attributes.CheckValidAttribute)))
+            {
+                yield return ValidateProperty(pi.Name);
+            }
+        }
+        public virtual Problem ValidateProperty(string pName, object newValue = null)
+        {
+            return Problem.Success;
+        }
+        
+        public bool IsValid()
+        {
+            foreach (var vr in Validate(new ValidationContext(this)).Cast<Problem>())
+            {
+                if (vr.Kind != ProblemKind.None) return false;
+            }
+
+            return true;
+        }
+        #endregion
     }
 }
