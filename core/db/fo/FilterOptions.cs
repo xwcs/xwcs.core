@@ -13,6 +13,11 @@ namespace xwcs.core.db.fo
     public class FilterOptions : BindableObjectBase
     {
         #region ctors and defaults
+        static FilterOptions()
+        {
+            InitReflectionChache(typeof(FilterOptions));
+        }
+
         public FilterOptions()
         {
             // defaults
@@ -118,28 +123,28 @@ namespace xwcs.core.db.fo
             );
         }
 
-        public override Problem ValidateProperty(string pName, object newValue = null)
+        protected override Problem ValidatePropertyInternal(string pName, object newValue)
         {
             switch (pName)
             {
                 case "var1":
-                    if ((newValue != null ? int.Parse(newValue.ToString()) : _var1) < 0)
+                    if ((int)newValue < 0)
                     {
                         return new Error("Valore non puo essere negativo!");
                     }
                     break;
                 case "var2":
-                    if ((newValue != null ? int.Parse(newValue.ToString()) : _var2) < 1)
+                    if ((int)newValue < 1)
                     {
                         return new Error("Numero di errori deve essere maggiore di 0");
                     }
-                    if ((newValue != null ? int.Parse(newValue.ToString()) : _var2) >= _var3)
+                    if ((int)newValue >= _var3)
                     {
                         return new Error("Numero di errori deve essere minore di numero caratteri!");
                     }
                     break;
                 case "var3":
-                    if (_var2 >= (newValue != null ? int.Parse(newValue.ToString()) : _var3))
+                    if (_var2 >= (int)newValue)
                     {
                         return new Error("Numero di errori deve essere minore di numero caratteri!");
                     }

@@ -235,7 +235,7 @@ namespace xwcs.core.db.binding
 					_dataType = t;
 
                     // here we inspect type for obtain columns with validation
-                    _validableFields = BindableObjectBase.GetPropertyNamesWithAttribute(_dataType, typeof(attributes.CheckValidAttribute));
+                    _validableFields = _dataType.GetPropertyNamesWithAttribute(typeof(attributes.CheckValidAttribute));
 
                 }
                 ForceInitializeGrid();

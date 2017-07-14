@@ -10,6 +10,7 @@ namespace xwcs.core.db
     using model.attributes;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
+    using System.Linq.Expressions;
 #if DEBUG_TRACE_LOG_ON
     using System.Diagnostics;
 #endif
@@ -633,6 +634,7 @@ namespace xwcs.core.db
     public abstract class BindableObjectBase : INotifyPropertyChanged, IValidableEntity
     {
         protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(EntityBase));
+        protected TypeCacheData _tcd;
 
         protected bool _changed = false;
         public bool IsChanged()
@@ -642,6 +644,7 @@ namespace xwcs.core.db
 
         public BindableObjectBase()
         {
+            _tcd = TypeCache.GetTypeCacheData(GetType());
         }
 
         protected WeakEventSource<PropertyChangedEventArgs> _wes_PropertyChanged = null;
@@ -693,23 +696,46 @@ namespace xwcs.core.db
             _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public static IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type what, Type at)
+
+        #region reflection
+
+        /*
+         * Lets say we need access all property getters with array[name] notation
+         */
+       
+        protected static void InitReflectionChache(Type who)
         {
-            return what.GetProperties().Where(prop => Attribute.IsDefined(prop, at));
-        }
-        public IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type at)
-        {
-            return GetPropertiesWithAttribute(GetType(), at);
+            TypeCacheData tcd = TypeCache.GetTypeCacheData(who);
+            foreach (PropertyInfo pi in who.GetProperties())
+            {
+               tcd.Getters.Add(pi.Name, pi.GetGetMethod());
+               tcd.Properties.Add(pi.Name, pi);
+            }
         }
 
-        public static HashSet<string> GetPropertyNamesWithAttribute(Type what, Type at)
+        public object GetPropertyValue(string pName)
         {
-            return new HashSet<string>(what.GetProperties().Where(prop => Attribute.IsDefined(prop, at)).Select(p=>p.Name).ToList());
+            MethodInfo d;
+            if (_tcd.Getters.TryGetValue(pName, out d))
+            {
+                return d.Invoke(this, null);
+            }
+
+            return null;
         }
-        public HashSet<string> GetPropertyNamesWithAttribute(Type at)
+
+        private IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type at)
         {
-            return GetPropertyNamesWithAttribute(GetType(), at);
+            IEnumerable<PropertyInfo> pps;
+            if (!TypeCache.GetTypeCacheData(GetType()).PropertiesForAttribCache.TryGetValue(typeof(binding.attributes.CheckValidAttribute), out pps))
+            {
+                pps = _tcd.Properties.Values.Where(prop => Attribute.IsDefined(prop, typeof(binding.attributes.CheckValidAttribute)));
+                _tcd.PropertiesForAttribCache.Add(typeof(binding.attributes.CheckValidAttribute), pps);
+            }
+
+            return pps;
         }
+        #endregion
 
 
         #region IValidableEntity
@@ -720,11 +746,24 @@ namespace xwcs.core.db
                 yield return ValidateProperty(pi.Name);
             }
         }
-        public virtual Problem ValidateProperty(string pName, object newValue = null)
+        public virtual Problem ValidateProperty(string pName, object newValue)
+        {
+            // convert new value to correct type
+            PropertyInfo pi = _tcd.Properties[pName];
+            if (newValue is string || newValue.GetType() != pi.PropertyType) {
+                newValue = TConvert.ChangeType(newValue, pi.PropertyType);
+            }
+            return ValidatePropertyInternal(pName, newValue);
+        }
+        protected virtual Problem ValidatePropertyInternal(string pName, object newValue)
         {
             return Problem.Success;
         }
-        
+        public virtual Problem ValidateProperty(string pName)
+        {
+            return ValidateProperty(pName, GetPropertyValue(pName));
+        }
+
         public bool IsValid()
         {
             foreach (var vr in Validate(new ValidationContext(this)).Cast<Problem>())
@@ -735,5 +774,54 @@ namespace xwcs.core.db
             return true;
         }
         #endregion
+    }
+
+    public class TypeCacheData
+    {
+        public Dictionary<string, MethodInfo> Getters = new Dictionary<string, MethodInfo>();
+        public Dictionary<string, PropertyInfo> Properties = new Dictionary<string, PropertyInfo>();
+        public Dictionary<Type, IEnumerable<PropertyInfo>> PropertiesForAttribCache = new Dictionary<Type, IEnumerable<PropertyInfo>>();
+    }
+
+    public static class TypeCache{
+        public static Dictionary<Type, TypeCacheData> _cache = new Dictionary<Type, TypeCacheData>();
+
+        public static TypeCacheData GetTypeCacheData(Type t)
+        {
+            TypeCacheData ret;
+            if(!_cache.TryGetValue(t, out ret))
+            {
+                ret = new TypeCacheData();
+                _cache.Add(t, ret);
+            }
+
+            return ret;
+        }
+    }
+
+    internal static class TConvert
+    {
+        public static T ChangeType<T>(object value)
+        {
+            return (T)ChangeType(value, typeof(T));
+        }
+        public static object ChangeType(object value, Type t)
+        {
+            try
+            {
+                TypeConverter tc = TypeDescriptor.GetConverter(t);
+                return tc.ConvertFrom(value);
+            }catch(Exception)
+            {
+                // here we should log maby
+                throw;
+            }            
+        }
+        /*
+        public static void RegisterTypeConverter<T, TC>() where TC : TypeConverter
+        {
+            TypeDescriptor.AddAttributes(typeof(T), new TypeConverterAttribute(typeof(TC)));
+        }
+        */
     }
 }

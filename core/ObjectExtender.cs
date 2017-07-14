@@ -13,6 +13,17 @@ namespace xwcs.core
 {
     public static class ObjectExtender
     {
+        public static IEnumerable<PropertyInfo> GetPropertiesWithAttribute(this Type what, Type at)
+        {
+            return what.GetProperties().Where(prop => Attribute.IsDefined(prop, at));
+        }
+        
+        public static HashSet<string> GetPropertyNamesWithAttribute(this Type what, Type at)
+        {
+            return new HashSet<string>(what.GetProperties().Where(prop => Attribute.IsDefined(prop, at)).Select(p => p.Name).ToList());
+        }
+        
+
         public static bool TryGetInterfaceGenericParameters(this Type type, Type @interface, out Type[] typeParameters)
         {
             typeParameters = null;

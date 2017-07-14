@@ -16,7 +16,8 @@ namespace xwcs.core.db
 
     public interface IValidableEntity : IValidatableObject
     {
-        Problem ValidateProperty(string pName, object newValue = null);
+        Problem ValidateProperty(string pName, object newValue);
+        Problem ValidateProperty(string pName);
         bool IsValid();
     }
 
