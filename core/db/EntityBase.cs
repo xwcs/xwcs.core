@@ -750,7 +750,8 @@ namespace xwcs.core.db
         {
             // convert new value to correct type
             PropertyInfo pi = _tcd.Properties[pName];
-            if (newValue is string || newValue.GetType() != pi.PropertyType) {
+            // handle null also
+            if (newValue != null && (newValue is string || newValue.GetType() != pi.PropertyType)) {
                 newValue = TConvert.ChangeType(newValue, pi.PropertyType);
             }
             return ValidatePropertyInternal(pName, newValue);

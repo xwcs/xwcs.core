@@ -85,6 +85,68 @@ namespace xwcs.core.db.fo
             }
         }
 
+
+        /* TEST */
+        private int? _var4;
+        [Display(Name = "Test4iN")]
+        [binding.attributes.CheckValid]
+        public int? var4
+        {
+            get { return _var4; }
+            set
+            {
+                SetProperty(ref _var4, value);
+            }
+        }
+
+        private string _var5;
+        [Display(Name = "Test5str")]
+        [binding.attributes.CheckValid]
+        public string var5
+        {
+            get { return _var5; }
+            set
+            {
+                SetProperty(ref _var5, value);
+            }
+        }
+
+        private DateTime? _var6;
+        [Display(Name = "Test6dtN")]
+        [binding.attributes.CheckValid]
+        public DateTime? var6
+        {
+            get { return _var6; }
+            set
+            {
+                SetProperty(ref _var6, value);
+            }
+        }
+
+        private double? _var7;
+        [Display(Name = "Test7doN")]
+        [binding.attributes.CheckValid]
+        public double? var7
+        {
+            get { return _var7; }
+            set
+            {
+                SetProperty(ref _var7, value);
+            }
+        }
+
+        private double _var8;
+        [Display(Name = "Test7do")]
+        [binding.attributes.CheckValid]
+        public double var8
+        {
+            get { return _var8; }
+            set
+            {
+                SetProperty(ref _var8, value);
+            }
+        }
+
         #endregion
 
 
@@ -125,6 +187,8 @@ namespace xwcs.core.db.fo
 
         protected override Problem ValidatePropertyInternal(string pName, object newValue)
         {
+            if (newValue == null) return Problem.Success;
+
             switch (pName)
             {
                 case "var1":
