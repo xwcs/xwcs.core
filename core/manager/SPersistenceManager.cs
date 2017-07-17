@@ -6,6 +6,7 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using System.Drawing;
 
 namespace xwcs.core.manager
 {
@@ -16,11 +17,12 @@ namespace xwcs.core.manager
 			Image,
 			Layout,
 			Print,
+            JavaScript,
             Any
 		}
 
         private static SPersistenceManager instance;
-
+        
         //singleton need private ctor
         private SPersistenceManager()
         {
@@ -152,22 +154,22 @@ namespace xwcs.core.manager
 			return false;
 		}
 
-		private string AssetsPath(AssetKind k) {
+		private static string AssetsPath(AssetKind k) {
 			switch(k) {
 				case AssetKind.Image: return Path.DirectorySeparatorChar + "img";
 				case AssetKind.Layout: return Path.DirectorySeparatorChar + "layout";
 				case AssetKind.Print: return Path.DirectorySeparatorChar + "print";
+                case AssetKind.JavaScript: return Path.DirectorySeparatorChar + "js";
                 case AssetKind.Any: 
                 default: return "";
             }
 		}
 
 		//file system support
-		public string GetDefaultAssetsPath(Type t, AssetKind kind) {
-			return GetDefaultAssetsPath() + Path.DirectorySeparatorChar + t.Namespace + AssetsPath(kind);
+		public static string GetDefaultAssetsPath(AssetKind kind, Type t = null) {
+            return GetDefaultAssetsPath() + AssetsPath(kind) + (t != null ? (Path.DirectorySeparatorChar + t.Namespace) : "");
 		}
-
-        public string GetDefaultAssetsPath()
+        public static string GetDefaultAssetsPath()
         {
             return AppDomain.CurrentDomain.BaseDirectory + "assets";
         }
@@ -202,6 +204,37 @@ namespace xwcs.core.manager
                 case "assets": return GetDefaultAssetsPath();
                 default: return fName;
             }            
+        }
+
+
+        public static Bitmap GetBitmapFromFile(string fileName, Type host = null)
+        {
+            Bitmap bitmap = null;
+            try
+            {
+                bitmap = (Bitmap)Image.FromFile(GetDefaultAssetsPath(AssetKind.Image, host) + Path.DirectorySeparatorChar + fileName, true);
+            }
+            catch (Exception e)
+            {
+                SLogManager.getInstance().Error(e.Message);
+                return null;
+            }
+            return bitmap;
+        }
+
+        public static Icon GetIconFromFile(string fileName, Type host = null)
+        {
+            Icon bitmap = null;
+            try
+            {
+                bitmap = Icon.ExtractAssociatedIcon(GetDefaultAssetsPath(AssetKind.Image, host) + Path.DirectorySeparatorChar + fileName);
+            }
+            catch (Exception e)
+            {
+                SLogManager.getInstance().Error(e.Message);
+                return null;
+            }
+            return bitmap;
         }
     }
 }

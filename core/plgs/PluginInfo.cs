@@ -4,25 +4,25 @@ using System.Collections.Generic;
 
 namespace xwcs.core.plgs
 {
-    public enum pluginType { PLGT_undef = 0, PLGT_nonvisual, PLGT_visual };
-    public enum pluginAbility { PLGABLT_undef = 0, PLGABLT_submenu, PLGABLT_mainmenu, PLGABLT_toolbar, PLGABLT_usercontrol };
+    public enum PluginKind { PLGT_undef = 0, PLGT_nonvisual, PLGT_visual };
+    public enum PluginAbility { PLGABLT_undef = 0, PLGABLT_submenu, PLGABLT_mainmenu, PLGABLT_toolbar, PLGABLT_usercontrol };
 
    
 
     public class PluginInfo 
     {
         //Private
-        private string _name;
+        private Type _pluginType;
         private string _version;
-        private pluginType _type;
-        private Dictionary<pluginAbility, bool> _abilities = null;
+        private PluginKind _kind;
+        private Dictionary<PluginAbility, bool> _abilities = null;
         private Dictionary<Guid, xwcs.core.controls.VisualControlInfo> _controls = null;
         private Dictionary<Guid, xwcs.core.controls.WidgetDescriptor> _widgets = null;
 
         //Public getters, setters
         public string Name
         {
-            get { return _name; }
+            get { return _pluginType.FullName; }
         }
 
         public string Version
@@ -30,12 +30,12 @@ namespace xwcs.core.plgs
             get { return _version; }
         }
 
-        public pluginType Type
+        public PluginKind Kind
         {
-            get { return _type; }
+            get { return _kind; }
         }
 
-        public Dictionary<pluginAbility, bool> Abilities
+        public Dictionary<PluginAbility, bool> Abilities
         {
             get { return _abilities; }
         }
@@ -51,16 +51,16 @@ namespace xwcs.core.plgs
         }
 
         //Constructors
-        public PluginInfo(string name, string version, pluginType type)
+        public PluginInfo(Type pt, string version, PluginKind kind)
         {
-            _name = name;
+            _pluginType = pt;
             _version = version;
-            _type = type;
+            _kind = kind;
         }
         
 		public string Namespace {
 			get {
-				return _name.Substring(0, _name.LastIndexOf('.'));	
+                return _pluginType.Namespace;
 			}
 		}
         
@@ -68,9 +68,9 @@ namespace xwcs.core.plgs
 
         //Public functions
         
-        public void addAbility(pluginAbility ability)
+        public void addAbility(PluginAbility ability)
         {
-            if (_abilities == null) _abilities = new Dictionary<pluginAbility, bool>();
+            if (_abilities == null) _abilities = new Dictionary<PluginAbility, bool>();
             _abilities.Add(ability, true);
         }
 

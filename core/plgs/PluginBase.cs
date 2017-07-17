@@ -66,9 +66,9 @@ namespace xwcs.core.plgs
 		}
 
 
-		public void createPluginInfo(string name, string version, pluginType type)
+		public void createPluginInfo(Type pt, string version, PluginKind kind)
         {
-            _pluginInfo = new PluginInfo(name, version, type);
+            _pluginInfo = new PluginInfo(pt, version, kind);
         }
 
         public PluginInfo Info
@@ -82,9 +82,7 @@ namespace xwcs.core.plgs
             {
                 return _eventProxy;
             }
-        }
-
-		
+        }		
 
 		protected void setup()
         {
@@ -92,43 +90,16 @@ namespace xwcs.core.plgs
             _eventProxy = SEventProxy.getInstance();		
 		}
 
-        abstract public void init();
+        abstract public void init();       
 
-
-
-        private string getAssestsDirectory(bool global = false)
+        public Bitmap getBitmapFromFile(string fileName)
         {
-            return AppDomain.CurrentDomain.BaseDirectory + "assets" + (!global ? "\\" + _pluginInfo.Namespace : "\\");
+            return SPersistenceManager.GetBitmapFromFile(fileName, GetType());
         }
 
-        public Bitmap getBitmapFromFile(string fileName, bool global = false)
+        public Icon getIconFromFile(string fileName)
         {
-            Bitmap bitmap = null;
-            try
-            {
-                bitmap = (Bitmap)Image.FromFile(getAssestsDirectory() + "\\img\\" + fileName, true);
-            }
-            catch(Exception e)
-            {
-                SLogManager.getInstance().Error(e.Message);
-                return null;
-            }
-            return bitmap;
-        }
-
-        public Icon getIconFromFile(string fileName, bool global = false)
-        {
-            Icon bitmap = null;
-            try
-            {
-                bitmap = Icon.ExtractAssociatedIcon(getAssestsDirectory() + "\\img\\" + fileName);
-            }
-            catch (Exception e)
-            {
-                SLogManager.getInstance().Error(e.Message);
-                return null;
-            }
-            return bitmap;
+            return SPersistenceManager.GetIconFromFile(fileName, GetType());
         }
 
         public void setImageToButtonItem(DevExpress.XtraBars.BarButtonItem buttonItem, string fileName, bool global = false)
