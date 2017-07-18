@@ -141,7 +141,7 @@ namespace xwcs.core.db
         public void ReplaceEntity<T,P>(T e, P KeyValue, string KeyName) where T : EntityBase
         {
             // First resolve the used table according to given type
-            DbSet<T> table = this.GetPropertyByName("tipologie") as DbSet<T>;
+            DbSet<T> table = this.GetPropertyByName(KeyName) as DbSet<T>;
 
             // Get the property according to given column
             PropertyInfo property = typeof(T).GetTypeInfo().GetDeclaredProperty(KeyName);

@@ -671,7 +671,7 @@ namespace xwcs.core.db
         /// <param name="storage"></param>
         /// <param name="value"></param>
         /// <param name="propertyName"></param>
-        protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        protected virtual void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
         {
             // skip if not changed
             if (Equals(storage, value)) return;

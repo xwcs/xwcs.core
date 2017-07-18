@@ -8,7 +8,7 @@ namespace xwcs.core.io
 {
     public class FileCache
     {
-        private string _path = "c:\\tmp\\FileCache";
+        //private string _path = "c:\\tmp\\FileCache";
 
     }
 }
