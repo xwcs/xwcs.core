@@ -259,6 +259,7 @@
     <Compile Include="core\user\SecurityContext.cs" />
     <Compile Include="core\user\User.cs" />
     <Compile Include="core\WaitCursor.cs" />
+    <Compile Include="core\WidgetViewExtender.cs" />
     <Compile Include="LinqKit\ExpandableQuery.cs" />
     <Compile Include="LinqKit\ExpressionExpander.cs" />
     <Compile Include="LinqKit\ExpressionVisitor.cs" />
