@@ -219,7 +219,7 @@ namespace xwcs.core.db
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
 
-            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}');", _adminDb, eid, ename)).FirstOrDefault();
+            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}', {3});", _adminDb, eid, ename, (persistent ? '1' : '0'))).FirstOrDefault();
             if (lr.Cnt == 0)
             {
                 throw new DBLockException(lr);
