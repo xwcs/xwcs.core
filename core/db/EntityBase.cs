@@ -800,9 +800,17 @@ namespace xwcs.core.db
     {
 
         protected System.Data.Entity.DbSet<TEntity> _srcList = null;
-        protected TEntity _destination = null;
+        private TEntity _destination = null;
         protected bool _attachedToDb = false;
         protected string _RootEntityPropertyName = "";
+
+        public TEntity Entity
+        {
+            get
+            {
+                return _destination;
+            }
+        }
 
         public override void SetCtx(DBContextBase ctx)
         {
