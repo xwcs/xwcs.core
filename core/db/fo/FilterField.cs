@@ -29,6 +29,7 @@ namespace xwcs.core.db.fo
         string ToString();
     }
 
+    
 	
 
 	[DataContract(IsReference=true)]
@@ -53,10 +54,16 @@ namespace xwcs.core.db.fo
 		private string _fieldName;
 		[DataMember(Order = 4)]
 		private string _fieldFullName;
-		#endregion
 
-		#region ICriteriaTreeNode
-		public CriteriaOperator GetCondition() { return Condition; }
+        [DataMember(Order = 5)]
+        public BinaryOperatorType BinOperatorType { get; set; } = BinaryOperatorType.Equal;
+        [DataMember(Order = 6)]
+        public string OperationType { get; set; } = typeof(BinaryOperator).Name;
+
+        #endregion
+
+        #region ICriteriaTreeNode
+        public CriteriaOperator GetCondition() { return Condition; }
 		public string GetFullFieldName() {
 			return _fieldFullName; 
 		}
@@ -76,8 +83,12 @@ namespace xwcs.core.db.fo
 		}
         #endregion
 
+       
+
         //private need for de-serialize
-        private FilterField() : this("", "") { }		
+        private FilterField() : this("", "") {
+          
+        }		
 		public FilterField(string pn, string fn) {
 
 			if (typeof(T).IsValueType)
@@ -122,16 +133,23 @@ namespace xwcs.core.db.fo
         {
             return _field != null ? _field.ToString() : "";
         }
-
+        
         public CriteriaOperator Condition {
 			get {
 				if(_hasCriteria) {
 					return _condition;
 				}else {
-					//make one from value
-					return _field != null ? new BinaryOperator(GetFullFieldName(), _field, BinaryOperatorType.Equal) : null;
-				}
-				
+                    switch (OperationType)
+                    {
+                        case "BinaryOperator":
+                            //make one from value
+                            return _field != null ? new BinaryOperator(GetFullFieldName(), _field, BinOperatorType) : null;
+                        case "InOperator":
+                            return _field != null ? new InOperator(GetFullFieldName(), _field.ToString().Split(',').ToList().Select(e=>e.Trim())) : null;
+                    }
+
+                    return null;
+				}				
 			}
 
 			set {

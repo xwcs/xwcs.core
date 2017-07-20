@@ -640,7 +640,10 @@ namespace xwcs.core.db.fo
             return ntb.CreateType();
         }
 
-       
+        protected virtual void AfterBindToNesteds()
+        {
+            // can be overriden
+        }
 
         protected void BindToNesteds()
         {
@@ -658,6 +661,8 @@ namespace xwcs.core.db.fo
                     c.ModelPropertyChanged += OnNestedPropertyChanged;
                 }
             });
+
+            AfterBindToNesteds();
         }
 
 
