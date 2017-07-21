@@ -10,12 +10,13 @@ namespace xwcs.core.db
     using model.attributes;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
+    using System.Diagnostics;
     using System.Linq.Expressions;
 #if DEBUG_TRACE_LOG_ON
     using System.Diagnostics;
 #endif
     using System.Reflection;
-
+    using System.Text;
 
     public enum ModelPropertyChangedEventKind
     {
@@ -162,6 +163,12 @@ namespace xwcs.core.db
         DBContextBase GetCtx();
         void SetCtx(DBContextBase c);
     }
+
+    public interface IProxyable
+    {
+        int id { get; }
+    }
+
 
     public class EntityList<T> : BindingList<T>, INotifyModelPropertyChanged, IModelEntity where T : EntityBase
     {
@@ -408,16 +415,14 @@ namespace xwcs.core.db
     [TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
     public abstract class EntityBase : BindableObjectBase, INotifyModelPropertyChanged, IModelEntity
     {
-
-
-        private DBContextBase _ctx = null;
+        private WeakReference _ctx = null;
         public DBContextBase GetCtx()
         {
-            return _ctx;
+            return _ctx != null &&_ctx.IsAlive ? (DBContextBase)_ctx.Target : null;
         }
-        public void SetCtx(DBContextBase c)
+        public virtual void SetCtx(DBContextBase c)
         {
-            _ctx = c;
+            _ctx = new WeakReference(c);
         }
 
         /// <summary>
@@ -671,7 +676,7 @@ namespace xwcs.core.db
         /// <param name="storage"></param>
         /// <param name="value"></param>
         /// <param name="propertyName"></param>
-        protected void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        protected virtual void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
         {
             // skip if not changed
             if (Equals(storage, value)) return;
@@ -709,7 +714,8 @@ namespace xwcs.core.db
             foreach (PropertyInfo pi in who.GetProperties())
             {
                tcd.Getters.Add(pi.Name, pi.GetGetMethod());
-               tcd.Properties.Add(pi.Name, pi);
+                tcd.Setters.Add(pi.Name, pi.GetSetMethod());
+                tcd.Properties.Add(pi.Name, pi);
             }
         }
 
@@ -724,6 +730,15 @@ namespace xwcs.core.db
             return null;
         }
 
+        public void SetPropertyValue(string pName, object value)
+        {
+            MethodInfo d;
+            if (_tcd.Setters.TryGetValue(pName, out d))
+            {
+                d.Invoke(this, new object [] { value });
+            }
+        }
+
         private IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type at)
         {
             IEnumerable<PropertyInfo> pps;
@@ -735,6 +750,7 @@ namespace xwcs.core.db
 
             return pps;
         }
+        
         #endregion
 
 
@@ -778,9 +794,143 @@ namespace xwcs.core.db
         #endregion
     }
 
+
+    
+
+    public class EntityProxy<TEntity> : EntityBase, IProxyable where TEntity : class, IProxyable
+    {
+
+        protected System.Data.Entity.DbSet<TEntity> _srcList = null;
+        private TEntity _destination = null;
+        protected bool _attachedToDb = false;
+        protected string _RootEntityPropertyName = "";
+
+        public TEntity Entity
+        {
+            get
+            {
+                return _destination;
+            }
+        }
+
+        public override void SetCtx(DBContextBase ctx)
+        {
+            base.SetCtx(ctx);
+            _srcList = ctx.GetPropertyByName(_RootEntityPropertyName) as System.Data.Entity.DbSet<TEntity>;
+            _attachedToDb = true;
+        }
+
+        public virtual int id { get; set; }
+
+        /// <summary>
+        /// This method can be use for locking
+        /// it is called in setter so it can throw and set will be refused
+        /// </summary>
+        /// <returns></returns>
+        protected virtual void AttachEntity()
+        {
+            // load entity from db
+            _destination = _srcList.Where(e => e.id == this.id).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// this method can be use for unlock
+        /// must be called from outside
+        /// </summary>
+        public virtual void DetachEntity()
+        {
+            _destination = null;
+        }
+
+
+
+
+        /// <summary>
+        /// Direct value field
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="storage"></param>
+        /// <param name="value"></param>
+        /// <param name="propertyName"></param>
+        protected T GetProperty<T>(ref T storage, [CallerMemberName] string propertyName = null)
+        {
+
+#if DEBUG_TRACE_LOG_ON
+            _logger.Debug(string.Format("{0} -> {1}",  xwcs.core.manager.SLogManager.DumpCallStack(1, 2), propertyName));
+#endif
+            if (_attachedToDb && !ReferenceEquals(_destination, null))
+            {
+                return (T)(_destination as EntityBase).GetPropertyValue(propertyName);
+            }
+            else
+            {
+                return storage;
+            }
+        }
+
+        /// <summary>
+        /// Direct value field
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="storage"></param>
+        /// <param name="value"></param>
+        /// <param name="propertyName"></param>
+        protected override void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        {
+            // skip if not changed
+            if (Equals(storage, value)) return;
+
+#if DEBUG_TRACE_LOG_ON
+            _logger.Debug(string.Format("{0} -> {1}", xwcs.core.manager.SLogManager.DumpCallStack(1, 2), propertyName));
+#endif
+            // now here i need load real object
+            if (_attachedToDb)
+            {
+                // if not attached attach it
+                if (ReferenceEquals(_destination, null))
+                {
+                    AttachEntity();
+                    if (ReferenceEquals(_destination, null))
+                    {
+                        // missing record after we load view
+                        throw new KeyNotFoundException("Record deleted");
+                    }
+                }
+                (_destination as EntityBase).SetPropertyValue(propertyName, value);
+            }
+            else
+            {
+                storage = value;
+            }
+            OnPropertyChanged(propertyName, storage);
+        }
+
+
+        protected override Problem ValidatePropertyInternal(string pName, object newValue)
+        {
+            if (_attachedToDb)
+            {
+                // if not attached attach it
+                if (ReferenceEquals(_destination, null))
+                {
+                    AttachEntity();
+                    if (ReferenceEquals(_destination, null))
+                    {
+                        // missing record after we load view
+                        throw new KeyNotFoundException("Record deleted");
+                    }
+                }
+                return (_destination as EntityBase).ValidateProperty(pName, newValue);
+            }
+
+            return Problem.Success;
+        }
+    }
+
     public class TypeCacheData
     {
         public Dictionary<string, MethodInfo> Getters = new Dictionary<string, MethodInfo>();
+        public Dictionary<string, MethodInfo> Setters = new Dictionary<string, MethodInfo>();
         public Dictionary<string, PropertyInfo> Properties = new Dictionary<string, PropertyInfo>();
         public Dictionary<Type, IEnumerable<PropertyInfo>> PropertiesForAttribCache = new Dictionary<Type, IEnumerable<PropertyInfo>>();
     }

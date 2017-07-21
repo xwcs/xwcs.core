@@ -96,6 +96,8 @@ namespace xwcs.core.manager
 
         private Dictionary<string, ILogger> _loggers = new Dictionary<string, ILogger>();
 
+
+
         private class SimpleLogger : ILogger
 		{
             
@@ -110,6 +112,8 @@ namespace xwcs.core.manager
 			{
                 
             }
+
+            
 
             public void ClearQueue()
             {
@@ -371,12 +375,27 @@ namespace xwcs.core.manager
 
         }
 
+        // stack trace dump
+        public static string DumpCallStack(int from, int count, string separator = "->")
+        {
+            StringBuilder sb = new StringBuilder();
+            // skip local call
+            ++from;
+            string sep = "";
+            for (int i = from + count - 1; i >= from; --i)
+            {
+                MethodBase info = new StackFrame(i).GetMethod();
+                sb.Append(string.Format("{0}{1}.{2}", sep, info.DeclaringType?.Name, info.Name));
+                sep = separator;
+            }
+            return sb.ToString();
+        }
 
-		/****
+        /****
 
             MAIN methods
         */
-		public void Debug(string msg)
+        public void Debug(string msg)
 		{
 			global.Debug(msg);
 		}

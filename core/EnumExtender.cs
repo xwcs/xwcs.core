@@ -53,8 +53,12 @@ namespace xwcs.core
             {
                 _parser = _parsers[enumType];
             }
+
+            int result = 0;
+            // we can have values in separated string list
+            value.ToString().Split(',').ToList().Select(e => e.Trim()).ToList().ForEach(e=> result += _parser(e.ToLower()) & 0x0000ffff);
             
-            return _parser(value.ToString().ToLower()) & 0x0000ffff; // cut off alias bits
+            return result; // cut off alias bits
         }
     }
 
