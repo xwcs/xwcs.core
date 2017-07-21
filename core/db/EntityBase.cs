@@ -743,7 +743,8 @@ namespace xwcs.core.db
         {
             foreach (var pi in GetPropertiesWithAttribute(typeof(binding.attributes.CheckValidAttribute)))
             {
-                yield return ValidateProperty(pi.Name);
+				Problem pr = ValidateProperty(pi.Name);
+				yield return pr.Kind == ProblemKind.None ? ValidationResult.Success : pr;
             }
         }
         public virtual Problem ValidateProperty(string pName, object newValue)
@@ -766,8 +767,8 @@ namespace xwcs.core.db
         }
 
         public bool IsValid()
-        {
-            foreach (var vr in Validate(new ValidationContext(this)).Cast<Problem>())
+        {			
+			foreach (var vr in Validate(new ValidationContext(this)).Cast<Problem>())
             {
                 if (vr.Kind != ProblemKind.None) return false;
             }
