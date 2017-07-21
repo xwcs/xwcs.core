@@ -9,26 +9,34 @@ namespace xwcs.core.net
 {
 	public class ExtraWayHTTPConnector
 	{
-		private const string MAX_FILE_SIZE = "100000";
-		private const string CFG_ADDRESS_PATH = "HttpServer/Adress";
-		private const string CFG_DATABASENAME_PATH = "HttpServer/DatabaseName";
+		private const string CFG_MAXFILE_PATH = "ExtraWayHTTPConnector/MaxFileSize";
+		private const string CFG_BASEURL_PATH = "ExtraWayHTTPConnector/BaseUrl";
+        private const string CFG_DATABASENAME_PATH = "ExtraWayHTTPConnector/Db";
 
-		private Config _cfg = new Config("MainAppConfig");
+		private static Config _cfg = new Config("MainAppConfig");
 		private static xwcs.core.manager.ILogger _logger = xwcs.core.manager.SLogManager.getInstance().getClassLogger(typeof(ExtraWayHTTPConnector));
 
 		private string _httpAddress;
 		private string _databaseName;
 
-		WebClient _client;
+        public static string GetHttpBaseUrl(string resource, string url = "", string db ="")
+        {
+            return string.Format("{0}{1}?db={2}", 
+                    url.Length > 0 ? url : _cfg.getCfgParam(CFG_BASEURL_PATH, ""),
+                    resource.Length > 0 ? "/" + resource : "", 
+                    db.Length > 0 ? db : _cfg.getCfgParam(CFG_DATABASENAME_PATH, ""));
+        }
+        
+        WebClient _client;
 
-		public ExtraWayHTTPConnector(string httpAddress = "localhost", string databaseName = "niter")
+		public ExtraWayHTTPConnector(string httpAddress = "", string databaseName = "")
 		{
-			_httpAddress = httpAddress;
-			_databaseName = databaseName;
+			_httpAddress = httpAddress.Length > 0 ? httpAddress : _cfg.getCfgParam(CFG_BASEURL_PATH, "");
+			_databaseName = databaseName.Length > 0 ? databaseName : _cfg.getCfgParam(CFG_DATABASENAME_PATH, "");
 
 			_client = new WebClient();
 			NameValueCollection parameters = new NameValueCollection();
-			parameters.Add("MAX_FILE_SIZE", MAX_FILE_SIZE);
+			parameters.Add("MAX_FILE_SIZE", _cfg.getCfgParam(CFG_MAXFILE_PATH, "10000"));
 			_client.QueryString = parameters;
 		}
 
@@ -38,9 +46,7 @@ namespace xwcs.core.net
 			try
 			{
 				//Prepare address
-				addr =	_cfg.getCfgParam(CFG_ADDRESS_PATH, _httpAddress) + 
-						"/attach/put?db=" + 
-						_cfg.getCfgParam(CFG_DATABASENAME_PATH, _databaseName);
+				addr =	GetHttpBaseUrl("attach/put");
 
 				//Upload file
 				_logger.Debug("Trying upload file, address : " + addr + ", file name : " + localFileName);
@@ -61,9 +67,7 @@ namespace xwcs.core.net
 			try
 			{
 				//Prepare address
-				addr =	_cfg.getCfgParam(CFG_ADDRESS_PATH, _httpAddress) + 
-						"/attach/get?db=" + 
-						_cfg.getCfgParam(CFG_DATABASENAME_PATH, _databaseName) + 
+				addr =	GetHttpBaseUrl("attach/get") + 
 						"&fileName=" +
 						databaseFileName;
 

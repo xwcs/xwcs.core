@@ -215,6 +215,7 @@
     <Compile Include="core\linq\BoolExpressionHelper.cs" />
     <Compile Include="core\linq\WhereExpressions.cs" />
     <Compile Include="core\net\ExtraWayHTTPConnector.cs" />
+    <Compile Include="core\net\msg\StatementHelper.cs" />
     <Compile Include="core\ObjectExtender.cs" />
     <Compile Include="core\EnumExtender.cs" />
     <Compile Include="core\evt\VisualControlActionEvent.cs" />
