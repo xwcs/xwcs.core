@@ -42,6 +42,28 @@ namespace xwcs.core.evt
             throw new ApplicationException("Cant raise event!");
         }
 
+        public bool HasHandler(EventHandler<TEventArgs> handler)
+        {
+            return HasHandlerCore(handler);
+        }
+        public bool HasHandler(EventHandler handler)
+        {
+            return HasHandlerCore(handler);
+        }
+        public bool HasHandler(PropertyChangedEventHandler handler)
+        {
+            return HasHandlerCore(handler);
+        }
+        // if handler is present return 0
+        protected bool HasHandlerCore(object handler)
+        {
+            return (handler as Delegate)
+                .GetInvocationList()
+                .Select(d => new WeakDelegate(d))
+                .Where(wd => !_handlers.Any(h => h != wd))
+                .Count() == 0;
+        }
+
         public void Subscribe(EventHandler<TEventArgs> handler)
         {
             SubscribeCore(handler);

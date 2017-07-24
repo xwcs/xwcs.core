@@ -198,7 +198,7 @@ namespace xwcs.core.manager
 
             switch (fName)
             {
-                case "temp": return "%TEMP%";
+                case "temp": return Path.GetTempPath();
                 case "user": return "%APPDATA%";
                 case "run": return AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
                 case "assets": return GetDefaultAssetsPath();
