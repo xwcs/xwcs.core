@@ -10,5 +10,6 @@
         public static readonly object DocumentChangedEvent = new object();
         public static readonly object VisualControlActionEvent = new object();
         public static readonly object WorkSpaceLoadedEvent = new object();
-    }
+		public static readonly object SetTitleEvent = new object();
+	}
 }
