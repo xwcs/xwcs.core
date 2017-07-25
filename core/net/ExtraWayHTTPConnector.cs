@@ -76,7 +76,10 @@ namespace xwcs.core.net
 
                 //Download file
                 _logger.Debug("Trying download file, address : " + addr + ", file name : " + localFileName);
-				_client.DownloadFile(addr, localFileName);
+                // ensure dir exists
+                string path = System.IO.Path.GetDirectoryName(localFileName);
+                System.IO.Directory.CreateDirectory(path);
+                _client.DownloadFile(addr, localFileName);
 				_logger.Debug("File downloaded, address : " + addr + ", file name : " + localFileName);
 
                 Application.UseWaitCursor = false;
