@@ -4,7 +4,7 @@ using System.Resources;
 
 namespace xwcs.core.plgs
 {
-    public interface IPlugin
+    public interface IPlugin : IDisposable
     {
         void createPluginInfo(Type pt, string version, PluginKind kind);
         PluginInfo Info { get; }

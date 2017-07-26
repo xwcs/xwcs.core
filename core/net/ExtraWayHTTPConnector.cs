@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace xwcs.core.net
 {
-	public class ExtraWayHTTPConnector
+    public class ExtraWayHTTPConnector
 	{
 		private const string CFG_MAXFILE_PATH = "ExtraWayHTTPConnector/MaxFileSize";
 		private const string CFG_BASEURL_PATH = "ExtraWayHTTPConnector/BaseUrl";
@@ -18,6 +18,8 @@ namespace xwcs.core.net
 
 		private string _httpAddress;
 		private string _databaseName;
+
+       
 
         public static string GetHttpBaseUrl(string resource, string url = "", string db ="")
         {

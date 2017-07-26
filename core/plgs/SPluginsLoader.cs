@@ -154,5 +154,14 @@ namespace xwcs.core.plgs
             return null;
         }
 
+
+        public void Unload()
+        {
+            foreach(IPlugin p in _plugins.Values)
+            {
+                p.Dispose();
+            }
+        }
+
     }
 }
