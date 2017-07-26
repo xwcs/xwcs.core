@@ -91,6 +91,8 @@ namespace xwcs.core.net
 			}
 			catch (Exception ex)
 			{
+				Application.UseWaitCursor = false;
+				Application.DoEvents();
 				_logger.Debug("Download attachment failed! Address : " + addr + ",  Error : " + ex.Message);
 			}
 			return false;
