@@ -23,11 +23,26 @@ namespace xwcs.core.net
         /// </summary>
         public string Extension { get; private set; }
 
+        private string GetMediaType()
+        {
+            switch (Extension)
+            {
+                case "rtf": return "rtf";
+                case "pdf": return "pdf";
+                default:
+                    switch (Mime.GetUntilOrEmpty("/"))
+                    {
+                        case "image": return "image";
+                        default: return "not_categorized";
+                    }
+            }
+        }
+
         public MimeInfo (string fName)
         {
-            Extension = Path.GetExtension(fName);
+            Extension = Path.GetExtension(fName).Trim('.').ToLower();
             Mime = MimeTypes.MimeTypeMap.GetMimeType(Extension);
-            Type = Mime.GetUntilOrEmpty("/");
+            Type = GetMediaType();
         }
     }
 
