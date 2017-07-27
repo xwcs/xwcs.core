@@ -24,6 +24,14 @@ namespace xwcs.core.db
             LockResult = lr;
         }
         public LockResult LockResult;
+
+        public override string Message
+        {
+            get
+            {
+                return string.Format("Can't finish operation, record is LOCKED by user : {0}", LockResult.Owner);
+            }
+        }
     }
     
     public class LockResult
@@ -160,7 +168,7 @@ namespace xwcs.core.db
             MyEntry(e).Reload();
         }
 
-        public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName)
+        public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName, bool reloadFromDb = false)
         {
             try
             {
@@ -170,7 +178,7 @@ namespace xwcs.core.db
 
                 DbReferenceEntry en = et.Reference(PropertyName);
 
-                if (!en.IsLoaded)
+                if (!en.IsLoaded || reloadFromDb) 
                 {
                     en.Load();
                 }
@@ -183,7 +191,7 @@ namespace xwcs.core.db
             }
             
         }
-        public object LazyLoadOrDefaultCollection(EntityBase e, string PropertyName)
+        public object LazyLoadOrDefaultCollection(EntityBase e, string PropertyName, bool reloadFromDb = false)
         {
             try
             {
@@ -192,7 +200,7 @@ namespace xwcs.core.db
 
                 DbCollectionEntry en = et.Collection(PropertyName);
 
-                if (!en.IsLoaded)
+                if (!en.IsLoaded || reloadFromDb)
                 {
                     en.Load();
                 }
