@@ -36,7 +36,7 @@ namespace xwcs.core.db
     
     public class LockResult
     {
-        public int Cnt { get; set; }
+        public int Id_lock { get; set; }
         public string Owner { get; set; }
     }
 
@@ -221,14 +221,14 @@ namespace xwcs.core.db
 
         public LockResult EntityLock(EntityBase e, bool persistent=false)
         {
-            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
 
 
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
 
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}', {3});", _adminDb, eid, ename, (persistent ? '1' : '0'))).FirstOrDefault();
-            if (lr.Cnt == 0)
+            if (lr.Id_lock == 0)
             {
                 throw new DBLockException(lr);
             }
@@ -241,7 +241,7 @@ namespace xwcs.core.db
 
         public LockResult EntityUnlock(EntityBase e)
         {
-            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
 
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
@@ -279,13 +279,13 @@ namespace xwcs.core.db
         }
         public LockResult TableLock(EntityBase e, bool persistent = false)
         {
-            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
 
 
             string ename = e.GetFieldName(); // name of table
 
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}', {2});", _adminDb, ename, (persistent?'1':'0') )).FirstOrDefault();
-            if (lr.Cnt == 0)
+            if (lr.Id_lock == 0)
             {
                 throw new DBLockException(lr);
             }
@@ -298,7 +298,7 @@ namespace xwcs.core.db
 
         public LockResult TableUnlock(EntityBase e)
         {
-            if (_entityLockDisabled) return new LockResult() { Cnt = 1 };
+            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
 
             string ename = e.GetFieldName(); // name of table
 
