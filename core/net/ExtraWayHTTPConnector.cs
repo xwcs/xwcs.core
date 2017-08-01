@@ -4,9 +4,56 @@ using System.Text;
 using xwcs.core.cfg;
 using System.Collections.Specialized;
 using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Xml.Linq;
+using System.Collections;
 
 namespace xwcs.core.net
 {
+
+    public class StoredProcResult : IEnumerable
+    {
+        public StoredProcResult(string rsp) 
+        {
+            /*
+        * <?xml version="1.0" encoding="UTF-8"?>
+           <rsp ack="1" e="0">
+           <dtl dtype="result" dval="Done!"/></rsp>
+        */
+
+            XDocument xdoc = XDocument.Parse(rsp);
+            ack = xdoc.Root.Attribute("ack").Value.ToString() == "1";
+            e = xdoc.Root.Attribute("e").Value.ToString();
+
+            foreach (var n in xdoc.Descendants("dtl"))
+            {
+                _dtls[n.Attribute("dtype").Value.ToString()] = n.Attribute("dval").Value.ToString();
+            }
+        }
+
+        private Dictionary<string, string> _dtls = new Dictionary<string, string>();
+        public bool ack { get; private set; }
+        public string e { get; private set; }
+        public string this[string key]
+        {
+            get
+            {
+                string ret = "";
+                _dtls.TryGetValue(key, out ret);
+                return ret;
+            }
+            private set
+            {
+                _dtls[key] = value;
+            }
+        }     
+
+        public IEnumerator GetEnumerator()
+        {
+            return _dtls.GetEnumerator();
+        }
+    }
+
     public class ExtraWayHTTPConnector
 	{
 		private const string CFG_MAXFILE_PATH = "ExtraWayHTTPConnector/MaxFileSize";
@@ -28,7 +75,14 @@ namespace xwcs.core.net
                     resource.Length > 0 ? "/" + resource : "", 
                     db.Length > 0 ? db : _cfg.getCfgParam(CFG_DATABASENAME_PATH, ""));
         }
-        
+
+        public static string PostHttpBaseUrl(string resource, string url = "")
+        {
+            return string.Format("{0}{1}",
+                    url.Length > 0 ? url : _cfg.getCfgParam(CFG_BASEURL_PATH, ""),
+                    resource.Length > 0 ? "/" + resource : "");
+        }
+
         WebClient _client;
 
 		public ExtraWayHTTPConnector(string httpAddress = "", string databaseName = "")
@@ -48,7 +102,7 @@ namespace xwcs.core.net
 			try
 			{
 				//Prepare address
-				addr =	GetHttpBaseUrl("attach/put");
+				addr =	GetHttpBaseUrl("attach/put", _databaseName);
 
 				//Upload file
 				_logger.Debug("Trying upload file, address : " + addr + ", file name : " + localFileName);
@@ -69,7 +123,7 @@ namespace xwcs.core.net
 			try
 			{
 				//Prepare address
-				addr =	GetHttpBaseUrl("attach/get") + 
+				addr =	GetHttpBaseUrl("attach/get", _databaseName) + 
 						"&fileName=" +
 						databaseFileName;
 
@@ -97,5 +151,17 @@ namespace xwcs.core.net
 			}
 			return false;
 		}
+
+        
+
+        public StoredProcResult CallStoredProc(string spName, NameValueCollection reqparm)
+        {
+            string addr = PostHttpBaseUrl("stored");
+            reqparm.Add("db", _databaseName);
+            reqparm.Add("stored", spName);
+            byte[] responsebytes = _client.UploadValues(addr, "POST", reqparm);
+
+            return new StoredProcResult(Encoding.UTF8.GetString(responsebytes));            
+        }
 	}
 }
