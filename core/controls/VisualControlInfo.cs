@@ -35,7 +35,14 @@ namespace xwcs.core.controls
 		/// <returns>IVisualControl</returns>
 		public IVisualControl createInstance()
 		{
-			return ((IVisualControl)Activator.CreateInstance(_classType, new object[] { new VisualControlInfo(this) }));
+            try
+            {
+                return ((IVisualControl)Activator.CreateInstance(_classType, new object[] { new VisualControlInfo(this) }));
+            }catch(Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show("Error: " + manager.SLogManager.GetExceptionString(ex));
+            }
+            return null;		
 		}
 
 		/// <summary>
@@ -44,8 +51,16 @@ namespace xwcs.core.controls
 		/// <returns>IVisualControl</returns>
 		public IVisualControl restoreInstance()
 		{
-			return ((IVisualControl)Activator.CreateInstance(_classType, new object[] { this }));
-		}
+            try
+            {
+                return ((IVisualControl)Activator.CreateInstance(_classType, new object[] { this }));
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show("Error: " + manager.SLogManager.GetExceptionString(ex));
+            }
+            return null;
+        }
 
 		/// <summary>
 		/// Serialization constructor
