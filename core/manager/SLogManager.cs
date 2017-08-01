@@ -391,6 +391,13 @@ namespace xwcs.core.manager
             return sb.ToString();
         }
 
+        public static string GetExceptionString(Exception ex)
+        {
+            // unwind exception
+            while (ex.InnerException != null) ex = ex.InnerException;
+            return ex.Message;
+        }
+
         /****
 
             MAIN methods
