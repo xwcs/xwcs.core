@@ -188,11 +188,11 @@ namespace xwcs.core.manager
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public string TemplatizePath(string path)
+        public static string TemplatizePath(string path)
         {
             return Regex.Replace(path, _pattern, new MatchEvaluator(Includer));
         }
-        private string Includer(Match match)
+        private static string Includer(Match match)
         {
             string fName = match.Groups[1].Value;
 
