@@ -102,7 +102,7 @@ namespace xwcs.core.net
 			try
 			{
 				//Prepare address
-				addr =	GetHttpBaseUrl("attach/put", _databaseName);
+				addr =	GetHttpBaseUrl("attach/put", _httpAddress, _databaseName);
 
 				//Upload file
 				_logger.Debug("Trying upload file, address : " + addr + ", file name : " + localFileName);
@@ -123,7 +123,7 @@ namespace xwcs.core.net
 			try
 			{
 				//Prepare address
-				addr =	GetHttpBaseUrl("attach/get", _databaseName) + 
+				addr =	GetHttpBaseUrl("attach/get", _httpAddress, _databaseName) + 
 						"&fileName=" +
 						databaseFileName;
 
