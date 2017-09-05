@@ -742,10 +742,10 @@ namespace xwcs.core.db
         private IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type at)
         {
             IEnumerable<PropertyInfo> pps;
-            if (!TypeCache.GetTypeCacheData(GetType()).PropertiesForAttribCache.TryGetValue(typeof(binding.attributes.CheckValidAttribute), out pps))
+            if (!TypeCache.GetTypeCacheData(GetType()).PropertiesForAttribCache.TryGetValue(at, out pps))
             {
-                pps = _tcd.Properties.Values.Where(prop => Attribute.IsDefined(prop, typeof(binding.attributes.CheckValidAttribute)));
-                _tcd.PropertiesForAttribCache.Add(typeof(binding.attributes.CheckValidAttribute), pps);
+                pps = _tcd.Properties.Values.Where(prop => Attribute.IsDefined(prop, at));
+                _tcd.PropertiesForAttribCache.Add(at, pps);
             }
 
             return pps;

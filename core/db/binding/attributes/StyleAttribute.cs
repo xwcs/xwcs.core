@@ -68,7 +68,7 @@ namespace xwcs.core.db.binding.attributes
 		int _columnWidth = -1;
 		uint _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
 
-
+        string _Caption;
 		// separate styling
 		public int ColumnWidth 
 		{ 
@@ -127,7 +127,20 @@ namespace xwcs.core.db.binding.attributes
 			set { _halignment = value; }
 		}
 
-		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) 
+        public string Caption
+        {
+            get
+            {
+                return _Caption;
+            }
+
+            set
+            {
+                _Caption = value;
+            }
+        }
+
+        public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) 
 		{
             // register default style controller
             src.EditorsHost.FormSupport.DefaultStyles[(e.Control as BaseEdit)] = _styleController;
@@ -142,6 +155,7 @@ namespace xwcs.core.db.binding.attributes
 				e.Column.FixedWidth = true;
 				e.Column.Width = ColumnWidth;
 				e.Column.AppearanceCell.TextOptions.HAlignment = (DevExpress.Utils.HorzAlignment)_halignment;
+                e.Column.Caption = _Caption;
 			}           
         }
     }	

@@ -14,6 +14,7 @@ namespace xwcs.core.db.binding
         bool FixedWidth { get; set; }
         int Width { get; set; }
         string FieldName { get; set; }
+        string Caption { get; set; }
 
         DevExpress.Utils.AppearanceObjectEx AppearanceCell { get;}
     }
@@ -172,7 +173,21 @@ namespace xwcs.core.db.binding
             }
         }
 
-		public DevExpress.XtraEditors.Repository.RepositoryItem ColumnEdit
+        public string Caption
+        {
+            get
+            {
+                return _c.Caption;
+            }
+
+            set
+            {
+                _c.Caption = value;
+            }
+
+        }
+
+        public DevExpress.XtraEditors.Repository.RepositoryItem ColumnEdit
         {
             get
             {
@@ -317,6 +332,19 @@ namespace xwcs.core.db.binding
             set
             {
                 _c.FieldName = value;
+            }
+        }
+
+        public string Caption
+        {
+            get
+            {
+                return _c.Caption;
+            }
+
+            set
+            {
+                _c.Caption = value;
             }
         }
     }
