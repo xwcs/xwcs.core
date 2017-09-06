@@ -174,10 +174,28 @@ namespace xwcs.core.db
     {
         private int _indexOfLastChangedItem;
 
+        /// <summary>
+        /// object will born in this phase, and it will remain until
+        /// FinalizeInitPhase is called
+        /// </summary>
+        private bool _init_phase_done;
+
+        /// <summary>
+        /// this property say if object was modified, it
+        /// starts function when init phase is done!
+        /// </summary>
         private bool _changed = false;
         public bool IsChanged()
         {
             return _changed;
+        }
+        protected void SetChaged()
+        {
+            _changed = _init_phase_done; // this means it will remain false until not initialized
+        }
+        public void FinalizeInitPhase()
+        {
+            _init_phase_done = true;
         }
 
         private int _currentDataVersion;
@@ -190,14 +208,21 @@ namespace xwcs.core.db
             _currentDataVersion = value;
         }
 
-        private DBContextBase _ctx;
+        private WeakReference _ctx = null;
         public DBContextBase GetCtx()
         {
-            return _ctx;
+            return _ctx != null && _ctx.IsAlive ? (DBContextBase)_ctx.Target : null;
         }
         public void SetCtx(DBContextBase c)
         {
-            _ctx = c;
+            // context must be assigned max 1 time
+            if (!ReferenceEquals(null, _ctx))
+            {
+                throw new ApplicationException("Db context can be assigned just one time!");
+            }
+            // this fact means object is initialized
+            FinalizeInitPhase();
+            _ctx = new WeakReference(c);
         }
 
         public string GetFieldName()
@@ -222,13 +247,15 @@ namespace xwcs.core.db
             }
         }
 
-        public EntityList() : base()
+        public EntityList()
         {
+            _init_phase_done = false;
             _indexOfLastChangedItem = -1;
             this.ListChanged += internal_data_ListChanged;
         }
         public EntityList(IList<T> list) : base(list)
         {
+            _init_phase_done = false;
             _indexOfLastChangedItem = -1;
             this.ListChanged += internal_data_ListChanged;
         }
@@ -238,6 +265,8 @@ namespace xwcs.core.db
          */
         protected override void InsertItem(int index, T item)
         {
+            SetChaged();
+
             (item as INotifyModelPropertyChanged).ModelPropertyChanged += OnNestedPropertyChanged;
             base.InsertItem(index, item);
 
@@ -269,6 +298,8 @@ namespace xwcs.core.db
         }
         protected override void RemoveItem(int index)
         {
+            SetChaged();
+
             (this[index] as INotifyModelPropertyChanged).ModelPropertyChanged -= OnNestedPropertyChanged;
             base.RemoveItem(index);
 
@@ -287,6 +318,8 @@ namespace xwcs.core.db
         }
         protected override void SetItem(int index, T item)
         {
+            SetChaged();
+
             // detach
             (this[index] as INotifyModelPropertyChanged).ModelPropertyChanged -= OnNestedPropertyChanged;
             // attach
@@ -323,6 +356,8 @@ namespace xwcs.core.db
         }
         protected override void ClearItems()
         {
+            SetChaged();
+
             foreach (EntityBase e in this)
             {
                 (e as INotifyModelPropertyChanged).ModelPropertyChanged -= OnNestedPropertyChanged;
@@ -375,7 +410,7 @@ namespace xwcs.core.db
             ))
             {
                 // handle changed
-                _changed = true; // false positive it will do true even if object was empty
+                SetChaged();
 
                 // notify
                 _wes_ModelPropertyChanged?.Raise(this, e);
@@ -418,11 +453,69 @@ namespace xwcs.core.db
         private WeakReference _ctx = null;
         public DBContextBase GetCtx()
         {
-            return _ctx != null &&_ctx.IsAlive ? (DBContextBase)_ctx.Target : null;
+            return !ReferenceEquals(null, _ctx) && _ctx.IsAlive ? (DBContextBase)_ctx.Target : null;
         }
         public virtual void SetCtx(DBContextBase c)
         {
+            // context must be assigned max 1 time
+            if(!ReferenceEquals(null, _ctx) && !ReferenceEquals(c, GetCtx()))
+            {
+                throw new ApplicationException("Db context can be assigned just one time!");
+            }
+            // maby done
+            if (ReferenceEquals(c, GetCtx())) return;
+            // this fact means object is initialized
+            FinalizeInitPhase();
             _ctx = new WeakReference(c);
+        }
+
+        public bool GetIsReallyChanged()
+        {
+            if (IsChanged())
+            {
+                if (GetCtx() == null) throw new ApplicationException("GetIsReallyChanged need db context!");
+
+                System.Data.Entity.Infrastructure.DbEntityEntry<EntityBase> _Entry;
+                _Entry = GetCtx().Entry(this as EntityBase);
+                if (_Entry != null)
+                {
+#if DEBUG_TRACE_LOG_ON
+                    _logger.Debug("IsReallyChanged _Entry.State={0}", _Entry.State.ToString());
+#endif
+                    if (_Entry.State == System.Data.Entity.EntityState.Unchanged) return false;
+                    if (_Entry.State == System.Data.Entity.EntityState.Detached) return true;
+                    if (_Entry.State == System.Data.Entity.EntityState.Deleted) return true;
+                    if (_Entry.State == System.Data.Entity.EntityState.Added) return true;
+                    if (_Entry.State == System.Data.Entity.EntityState.Modified)
+                    {
+                        foreach (string en in _Entry.CurrentValues.PropertyNames)
+                        {
+                            if (!Equals(_Entry.OriginalValues[en], _Entry.CurrentValues[en]))
+                            {
+#if DEBUG_TRACE_LOG_ON
+                                _logger.Debug("IsReallyChanged {0} {1}!={2}", en, _Entry.OriginalValues[en], _Entry.CurrentValues[en]);
+#endif
+                                return true;
+                            }
+                        }
+                    }
+#if DEBUG_TRACE_LOG_ON
+                    _logger.Debug("IsReallyChanged False");
+#endif
+                    //really reload entity from db (for reset state)
+                    _Entry.State = System.Data.Entity.EntityState.Unchanged;
+
+                    return false;
+                }
+                else
+                {
+                    throw new ApplicationException("GetIsReallyChanged need cant identify entity in db contet!");
+                }
+            }
+            else
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -435,7 +528,7 @@ namespace xwcs.core.db
             return GetType().Name;
         }
 
-        public EntityBase()
+        public EntityBase() 
         {
             //call eventual init in partial
             MethodInfo mi = GetType().GetMethod("InitPartial");
@@ -496,7 +589,7 @@ namespace xwcs.core.db
         protected override void OnPropertyChanged(string propertyName = null, object value = null)
         {
 
-            _changed = true; // false positive it will do true even if object was empty
+            SetChaged();
 
 #if DEBUG_TRACE_LOG_ON
             _logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
@@ -534,7 +627,7 @@ namespace xwcs.core.db
             ))
             {
                 // handle changed
-                _changed = true; // false positive it will do true even if object was empty
+                SetChaged();
                 _wes_ModelPropertyChanged?.Raise(this, e);
             }
         }
@@ -641,14 +734,33 @@ namespace xwcs.core.db
         protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(EntityBase));
         protected TypeCacheData _tcd;
 
-        protected bool _changed = false;
+        /// <summary>
+        /// object will born in this phase, and it will remain until
+        /// FinalizeInitPhase is called
+        /// </summary>
+        private bool _init_phase_done;
+
+        /// <summary>
+        /// this property say if object was modified, it
+        /// starts function when init phase is done!
+        /// </summary>
+        private bool _changed = false;
         public bool IsChanged()
         {
             return _changed;
         }
+        protected void SetChaged()
+        {
+            _changed = _init_phase_done; // this means it will remain false until not initialized
+        }
+        public void FinalizeInitPhase()
+        {
+            _init_phase_done = true;
+        }
 
         public BindableObjectBase()
         {
+            _init_phase_done = false;
             _tcd = TypeCache.GetTypeCacheData(GetType());
         }
 
@@ -693,7 +805,7 @@ namespace xwcs.core.db
         protected virtual void OnPropertyChanged(string propertyName = null, object value = null)
         {
 
-            _changed = true; // false positive it will do true even if object was empty
+            SetChaged();
 
 #if DEBUG_TRACE_LOG_ON
             _logger.Debug(string.Format("Property changed {0} from  {1}", propertyName, GetType().Name));
@@ -710,13 +822,7 @@ namespace xwcs.core.db
        
         protected static void InitReflectionChache(Type who)
         {
-            TypeCacheData tcd = TypeCache.GetTypeCacheData(who);
-            foreach (PropertyInfo pi in who.GetProperties())
-            {
-               tcd.Getters.Add(pi.Name, pi.GetGetMethod());
-                tcd.Setters.Add(pi.Name, pi.GetSetMethod());
-                tcd.Properties.Add(pi.Name, pi);
-            }
+            TypeCache.GetTypeCacheData(who);
         }
 
         public object GetPropertyValue(string pName)
@@ -739,17 +845,6 @@ namespace xwcs.core.db
             }
         }
 
-        private IEnumerable<PropertyInfo> GetPropertiesWithAttribute(Type at)
-        {
-            IEnumerable<PropertyInfo> pps;
-            if (!TypeCache.GetTypeCacheData(GetType()).PropertiesForAttribCache.TryGetValue(at, out pps))
-            {
-                pps = _tcd.Properties.Values.Where(prop => Attribute.IsDefined(prop, at));
-                _tcd.PropertiesForAttribCache.Add(at, pps);
-            }
-
-            return pps;
-        }
         
         #endregion
 
@@ -757,7 +852,7 @@ namespace xwcs.core.db
         #region IValidableEntity
         public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            foreach (var pi in GetPropertiesWithAttribute(typeof(binding.attributes.CheckValidAttribute)))
+            foreach (var pi in _tcd.GetPropertiesWithAttributeType(typeof(binding.attributes.CheckValidAttribute)))
             {
 				Problem pr = ValidateProperty(pi.Name);
 				yield return pr.Kind == ProblemKind.None ? ValidationResult.Success : pr;
