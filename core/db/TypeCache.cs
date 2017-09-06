@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -9,10 +11,67 @@ namespace xwcs.core.db
 {
     public class TypeCacheData
     {
+        private Type _type;
+
         public Dictionary<string, MethodInfo> Getters = new Dictionary<string, MethodInfo>();
         public Dictionary<string, MethodInfo> Setters = new Dictionary<string, MethodInfo>();
         public Dictionary<string, PropertyInfo> Properties = new Dictionary<string, PropertyInfo>();
         public Dictionary<Type, IEnumerable<PropertyInfo>> PropertiesForAttribCache = new Dictionary<Type, IEnumerable<PropertyInfo>>();
+        public Dictionary<string, IEnumerable<Attribute>> AttributesByPropertyName = new Dictionary<string, IEnumerable<Attribute>>();
+        
+
+        public TypeCacheData(Type t)
+        {
+            _type = t;
+            foreach (PropertyInfo pi in t.GetProperties())
+            {
+                Getters.Add(pi.Name, pi.GetGetMethod());
+                Setters.Add(pi.Name, pi.GetSetMethod());
+                Properties.Add(pi.Name, pi);
+            }
+        }
+
+        public IEnumerable<PropertyInfo> GetPropertiesWithAttributeType(Type AttrType)
+        {
+            IEnumerable<PropertyInfo> pps;
+
+            lock (AttrType)
+            {
+                if (!PropertiesForAttribCache.TryGetValue(AttrType, out pps))
+                {
+                    pps = Properties.Values.Where(
+                        prop => GetCustomAttributesForProperty(prop.Name).Any(a => a.GetType().IsSubclassOf(AttrType)) 
+                    );
+                    PropertiesForAttribCache.Add(AttrType, pps);
+                }
+            }           
+
+            return pps;
+        }
+
+        public IEnumerable<Attribute> GetCustomAttributesForProperty(string propertyName)
+        {
+            IEnumerable<Attribute> ret;
+            if(!AttributesByPropertyName.TryGetValue(propertyName, out ret))
+            {
+                // capture them 
+                ret = Properties[propertyName].GetCustomAttributes().Cast<Attribute>();
+                // merge with meta class
+                MetadataTypeAttribute l = TypeDescriptor.GetAttributes(_type).OfType<MetadataTypeAttribute>().FirstOrDefault();
+                if (!ReferenceEquals(null, l))
+                {
+                    PropertyInfo pi = l.MetadataClassType.GetProperty(propertyName);
+                    if (pi != null)
+                    {
+                        ret.Union(pi.GetCustomAttributes().Cast<Attribute>());
+                    }
+                }
+                AttributesByPropertyName.Add(propertyName, ret);
+            }
+
+            return ret;
+        }
+
     }
 
     public static class TypeCache
@@ -21,14 +80,17 @@ namespace xwcs.core.db
 
         public static TypeCacheData GetTypeCacheData(Type t)
         {
-            TypeCacheData ret;
-            if (!_cache.TryGetValue(t, out ret))
+            lock (t)
             {
-                ret = new TypeCacheData();
-                _cache.Add(t, ret);
-            }
+                TypeCacheData ret;
+                if (!_cache.TryGetValue(t, out ret))
+                {
+                    ret = new TypeCacheData(t);                    
 
-            return ret;
+                    _cache.Add(t, ret);
+                }
+                return ret;
+            }
         }
     }
 }
