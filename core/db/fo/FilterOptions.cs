@@ -10,6 +10,55 @@ using System.Threading.Tasks;
 
 namespace xwcs.core.db.fo
 {
+    public class FilterOptions_meta
+    {
+        #region properties
+
+        //[?mfsp]
+        [Display(Name = "Attiva")]
+        public bool mfsp { get; set; }
+
+        //[?var:1:1:4]
+        [Display(Name = "Attiva")]
+        public bool var { get; set; }
+
+        [Display(Name = "Prefisso")]
+        [binding.attributes.CheckValid]
+        public int var1 { get; set; }
+
+        [Display(Name = "")]
+        [binding.attributes.CheckValid]
+        public int var2 { get; set; }
+
+        [Display(Name = "")]
+        [binding.attributes.CheckValid]
+        public int var3 { get; set; }
+        
+        /* TEST */
+        [Display(Name = "Test4iN")]
+        [binding.attributes.CheckValid]
+        public int? var4 { get; set; }
+
+        [Display(Name = "Test5str")]
+        [binding.attributes.CheckValid]
+        public string var5 { get; set; }
+
+        [Display(Name = "Test6dtN")]
+        [binding.attributes.CheckValid]
+        public DateTime? var6 { get; set; }
+
+        [Display(Name = "Test7doN")]
+        [binding.attributes.CheckValid]
+        public double? var7 { get; set; }
+
+        [Display(Name = "Test7do")]
+        [binding.attributes.CheckValid]
+        public double var8 { get; set; }
+
+        #endregion
+    }
+
+    [MetadataType(typeof(FilterOptions_meta))]
     public class FilterOptions : BindableObjectBase
     {
         #region ctors and defaults
@@ -38,7 +87,6 @@ namespace xwcs.core.db.fo
 
         //[?mfsp]
         private bool _mfsp;
-        [Display(Name = "Attiva")]
         public bool mfsp
         {
             get { return _mfsp; }
@@ -47,7 +95,6 @@ namespace xwcs.core.db.fo
 
         //[?var:1:1:4]
         private bool _var;
-        [Display(Name = "Attiva")]
         public bool var
         {
             get { return _var; }
@@ -55,8 +102,6 @@ namespace xwcs.core.db.fo
         }
 
         private int _var1;
-        [Display(Name = "Prefisso")]
-        [binding.attributes.CheckValid]
         public int var1
         {
             get { return _var1; }
@@ -65,8 +110,6 @@ namespace xwcs.core.db.fo
             }
         }
         private int _var2;
-        [Display(Name = "")]
-        [binding.attributes.CheckValid]
         public int var2
         {
             get { return _var2; }
@@ -75,8 +118,6 @@ namespace xwcs.core.db.fo
             }
         }
         private int _var3;
-        [Display(Name = "")]
-        [binding.attributes.CheckValid]
         public int var3
         {
             get { return _var3; }
@@ -88,8 +129,6 @@ namespace xwcs.core.db.fo
 
         /* TEST */
         private int? _var4;
-        [Display(Name = "Test4iN")]
-        [binding.attributes.CheckValid]
         public int? var4
         {
             get { return _var4; }
@@ -100,8 +139,6 @@ namespace xwcs.core.db.fo
         }
 
         private string _var5;
-        [Display(Name = "Test5str")]
-        [binding.attributes.CheckValid]
         public string var5
         {
             get { return _var5; }
@@ -112,8 +149,6 @@ namespace xwcs.core.db.fo
         }
 
         private DateTime? _var6;
-        [Display(Name = "Test6dtN")]
-        [binding.attributes.CheckValid]
         public DateTime? var6
         {
             get { return _var6; }
@@ -124,8 +159,6 @@ namespace xwcs.core.db.fo
         }
 
         private double? _var7;
-        [Display(Name = "Test7doN")]
-        [binding.attributes.CheckValid]
         public double? var7
         {
             get { return _var7; }
@@ -136,8 +169,6 @@ namespace xwcs.core.db.fo
         }
 
         private double _var8;
-        [Display(Name = "Test7do")]
-        [binding.attributes.CheckValid]
         public double var8
         {
             get { return _var8; }
