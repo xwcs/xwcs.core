@@ -202,6 +202,7 @@
     <Compile Include="core\Core.cs" />
     <Compile Include="core\db\binding\attributes\CheckValidAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbCheckedComboAttribute.cs" />
+    <Compile Include="core\db\TypeCache.cs" />
     <Compile Include="core\db\Validation.cs" />
     <Compile Include="core\db\fo\FilterOptions.cs" />
     <Compile Include="core\EnumerableToDataTable.cs" />
