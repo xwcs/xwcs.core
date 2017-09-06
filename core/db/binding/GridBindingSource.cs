@@ -287,7 +287,7 @@ namespace xwcs.core.db.binding
             _target.ValidatingEditor += _target_ValidatingEditor;
 			//connect
 			_target.DataSource = this;
-		}
+        }
 
         
         public void AttachToTree(DevExpress.XtraTreeList.TreeList tree)
@@ -315,8 +315,10 @@ namespace xwcs.core.db.binding
             _target.ValidatingEditor += _target_ValidatingEditor;
             //connect
             _target.DataSource = this;
+            _target.PopulateColumns();
 
-		}
+
+        }
 
 
 		private void DataController_ListSourceChanged(object sender, EventArgs e)
@@ -328,10 +330,11 @@ namespace xwcs.core.db.binding
 			ConnectGrid();
 		}
 
-		public void addNewRecord(object rec)
+		public object addNewRecord(object rec)
 		{
-			AddNew();
-			Current.CopyFrom(rec);
+            object added = AddNew();
+            added.CopyFrom(rec);
+            return added;
 		}
 
         public void setCurrentRecord(object rec)
@@ -372,6 +375,7 @@ namespace xwcs.core.db.binding
 				if (_target.ColumnsCount() == 0)
 				{
 					_target.PopulateColumns();
+
 
 				}
 
