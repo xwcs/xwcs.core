@@ -466,11 +466,13 @@ namespace xwcs.core.db
             if(ReferenceEquals(_originalValues, null))
             {
                 DBContextBase ctx = null;
+                bool oldState = true; // if something goes wrong it will force TRUE, it can slow down program, but cant break anything
                 try{
                     ctx = GetCtx();
                     if (ctx == null) throw new ApplicationException("GetIsReallyChanged need db context!");
 
                     // defaultly off
+                    oldState = ctx.Configuration.AutoDetectChangesEnabled;
                     ctx.Configuration.AutoDetectChangesEnabled = ForceDetectChanges;
 
                     System.Data.Entity.Infrastructure.DbEntityEntry<EntityBase> _Entry = ctx.Entry(this as EntityBase);
@@ -481,7 +483,10 @@ namespace xwcs.core.db
                     _originalValues = _Entry.OriginalValues;
                 }finally{
                     // be sure autodetect is on
-                    ctx.Configuration.AutoDetectChangesEnabled = true;
+                    if(!ReferenceEquals(ctx, null))
+                    {
+                        ctx.Configuration.AutoDetectChangesEnabled = oldState;
+                    }
                 }
 
                 if (ReferenceEquals(_originalValues, null))
