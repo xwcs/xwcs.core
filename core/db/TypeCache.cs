@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,11 +14,11 @@ namespace xwcs.core.db
     {
         private Type _type;
 
-        public Dictionary<string, MethodInfo> Getters = new Dictionary<string, MethodInfo>();
-        public Dictionary<string, MethodInfo> Setters = new Dictionary<string, MethodInfo>();
         public Dictionary<string, PropertyInfo> Properties = new Dictionary<string, PropertyInfo>();
         public Dictionary<Type, IEnumerable<PropertyInfo>> PropertiesForAttribCache = new Dictionary<Type, IEnumerable<PropertyInfo>>();
         public Dictionary<string, IEnumerable<Attribute>> AttributesByPropertyName = new Dictionary<string, IEnumerable<Attribute>>();
+
+        public Dictionary<string, PropertyDescriptor> Pds = new Dictionary<string, PropertyDescriptor>();
         
 
         public TypeCacheData(Type t)
@@ -25,9 +26,11 @@ namespace xwcs.core.db
             _type = t;
             foreach (PropertyInfo pi in t.GetProperties())
             {
-                Getters.Add(pi.Name, pi.GetGetMethod());
-                Setters.Add(pi.Name, pi.GetSetMethod());
                 Properties.Add(pi.Name, pi);
+            }
+            foreach (PropertyDescriptor pd in TypeDescriptor.GetProperties(t))
+            {
+                Pds.Add(pd.Name, pd);
             }
         }
 
@@ -40,8 +43,16 @@ namespace xwcs.core.db
                 if (!PropertiesForAttribCache.TryGetValue(AttrType, out pps))
                 {
                     pps = Properties.Values.Where(
-                        prop => GetCustomAttributesForProperty(prop.Name).Any(a => a.GetType().IsSubclassOf(AttrType)) 
+                        prop => GetCustomAttributesForProperty(prop.Name).Any(a => a.GetType().IsAssignableFrom(AttrType)) 
                     );
+
+                    /*
+                    foreach(PropertyInfo pi in Properties.Values)
+                    {
+                        List<Attribute> atts = GetCustomAttributesForProperty(pi.Name).ToList();
+                        bool r = atts.Any(a => a.GetType().IsAssignableFrom(AttrType));
+                    }
+                    */
                     PropertiesForAttribCache.Add(AttrType, pps);
                 }
             }           
@@ -63,7 +74,7 @@ namespace xwcs.core.db
                     PropertyInfo pi = l.MetadataClassType.GetProperty(propertyName);
                     if (pi != null)
                     {
-                        ret.Union(pi.GetCustomAttributes().Cast<Attribute>());
+                        ret = ret.Union(pi.GetCustomAttributes().Cast<Attribute>());
                     }
                 }
                 AttributesByPropertyName.Add(propertyName, ret);
