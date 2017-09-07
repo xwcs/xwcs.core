@@ -44,7 +44,9 @@ namespace xwcs.core.db.binding.attributes
         }
 
         public override void unbind(IDataBindingSource src) {
-            _ri.Validating -= Rle_Validating;
+            // in case of grid source _ri is not set
+            if (!ReferenceEquals(_ri, null))
+                _ri.Validating -= Rle_Validating;
         }
     }
 }
