@@ -15,12 +15,13 @@ namespace xwcs.core
     {
         public static IEnumerable<PropertyInfo> GetPropertiesWithAttribute(this Type what, Type at)
         {
-            return what.GetProperties().Where(prop => Attribute.IsDefined(prop, at));
+            return db.TypeCache.GetTypeCacheData(what).GetPropertiesWithAttributeType(at);
         }
         
         public static HashSet<string> GetPropertyNamesWithAttribute(this Type what, Type at)
         {
-            return new HashSet<string>(what.GetProperties().Where(prop => Attribute.IsDefined(prop, at)).Select(p => p.Name).ToList());
+            // use of type cache
+            return new HashSet<string>(db.TypeCache.GetTypeCacheData(what).GetPropertiesWithAttributeType(at).Select(p => p.Name).ToList());
         }
         
 
