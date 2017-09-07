@@ -827,7 +827,10 @@ namespace xwcs.core.db
             foreach (var pi in _tcd.GetPropertiesWithAttributeType(typeof(binding.attributes.CheckValidAttribute)))
             {
 				Problem pr = ValidateProperty(pi.Name);
-				yield return pr.Kind == ProblemKind.None ? ValidationResult.Success : pr;
+                if (pr.Kind != ProblemKind.None)
+                {
+                    yield return pr;
+                }
             }
         }
         public virtual Problem ValidateProperty(string pName, object newValue)
@@ -861,7 +864,8 @@ namespace xwcs.core.db
 
         public string ErrorMessage(string separator = "\n")
         {
-            return string.Join(separator, Validate(new ValidationContext(this)).Cast<string>());
+            List<string> erlist = Validate(new ValidationContext(this)).Select(c => c.ToString()).ToList();
+            return string.Join(separator, erlist);
         }
         #endregion
     }
