@@ -528,18 +528,24 @@ namespace xwcs.core.db.binding
         virtual protected void FieldRetrievedHandler(object sender, FieldRetrievedEventArgs e)
 		{
 #if DEBUG_TRACE_LOG_ON
-				_logger.Debug("Retrieving for field:" + e.FieldName);
+			_logger.Debug("Retrieving for field:" + e.FieldName);
 #endif
-				if (_attributesCache.ContainsKey(e.FieldName))
+
+            // force customisation form field name, can be overriden with Style.FormCustomisationCaption
+            e.Item.CustomizationFormText = e.FieldName;
+
+            if (_attributesCache.ContainsKey(e.FieldName))
+			{
+				foreach (CustomAttribute a in _attributesCache[e.FieldName])
 				{
-					foreach (CustomAttribute a in _attributesCache[e.FieldName])
-					{
-						a.applyRetrievedAttribute(this, e);
-					}
+					a.applyRetrievedAttribute(this, e);
 				}
-				// at the end say that layout is valid
-				// TODO: verify what happen if there is a change in the middle, this is called for each field separately
-				_fieldsAreRetrieved = true;
+			}
+           
+
+            // at the end say that layout is valid
+            // TODO: verify what happen if there is a change in the middle, this is called for each field separately
+            _fieldsAreRetrieved = true;
 		}
 
 		private void FieldRetrievingHandler(object sender, FieldRetrievingEventArgs e)

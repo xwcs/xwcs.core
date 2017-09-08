@@ -86,7 +86,26 @@ namespace xwcs.core.db.model{
 			return attrs1;
 		}
 
-		public static void CopyObject(object from, object to) {
+        public static IEnumerable<Attribute> GetAttributesFromPath(Type rootType, string propertyPath)
+        {
+            PropertyDescriptor pd = GetPropertyDescriptorFromPath(rootType, propertyPath);
+            Type t1 = pd.ComponentType;
+            IEnumerable<Attribute> attrs1 = t1.GetProperty(pd.Name).GetCustomAttributes(typeof(Attribute), true).Cast<Attribute>();
+            List<MetadataTypeAttribute> l = TypeDescriptor.GetAttributes(t1).OfType<MetadataTypeAttribute>().ToList();
+            if (l.Count > 0)
+            {
+                Type t2 = l.Single().MetadataClassType;
+                PropertyInfo pi = t2.GetProperty(pd.Name);
+                if (pi != null)
+                {
+                    IEnumerable<Attribute> attrs2 = pi.GetCustomAttributes(typeof(Attribute), true).Cast<Attribute>();
+                    return attrs1.Union(attrs2);
+                }
+            }
+            return attrs1;
+        }
+
+        public static void CopyObject(object from, object to) {
 			to.CopyFrom(from);
 		}
 

@@ -345,23 +345,38 @@ namespace xwcs.core.db.binding
 		
 		private void applyAttributes(PropertyInfo pi)
 		{
-			IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, pi.Name);
-			IList<CustomAttribute> ac = new List<CustomAttribute>();
-			foreach (CustomAttribute a in attrs)
+            // take all first, but cache just custom, but we need Standard Display 
+			IEnumerable<Attribute> attrs = ReflectionHelper.GetAttributesFromPath(_dataType, pi.Name);
+
+            IList<CustomAttribute> ac = new List<CustomAttribute>();
+			foreach (Attribute a in attrs)
 			{
 				IColumnAdapter gc = null;
 				gc = _target.ColumnByFieldName(pi.Name);
-				
-				GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
-				a.applyGridColumnPopulation(this, gcp);
-				RepositoryItem ri = gcp.RepositoryItem;
-				ac.Add(a as CustomAttribute);
-				if (ri != null)
-				{
-					_target.RepositoryItems.Add(ri);
-					_repositories[pi.Name] = ri;
-					if (gc != null) gc.ColumnEdit = ri;
-				}
+			
+                if(a is CustomAttribute)
+                {
+                    GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
+                    (a as CustomAttribute).applyGridColumnPopulation(this, gcp);
+                    ac.Add(a as CustomAttribute);
+                    RepositoryItem ri = gcp.RepositoryItem;
+                    if (ri != null)
+                    {
+                        _target.RepositoryItems.Add(ri);
+                        _repositories[pi.Name] = ri;
+                        if (gc != null) gc.ColumnEdit = ri;
+                    }
+                }
+            
+                // handle column name
+                if(a is System.ComponentModel.DataAnnotations.DisplayAttribute)
+                {
+                    System.ComponentModel.DataAnnotations.DisplayAttribute da = a as System.ComponentModel.DataAnnotations.DisplayAttribute;
+                    if(da.ShortName!= null && da.ShortName.Length > 0)
+                    {
+                        gc.Caption = da.ShortName;
+                    }
+                }
 			}
 			if (ac.Count > 0)
 				_attributesCache[pi.Name] = ac;
