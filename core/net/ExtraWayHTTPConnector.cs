@@ -163,5 +163,36 @@ namespace xwcs.core.net
 
             return new StoredProcResult(Encoding.UTF8.GetString(responsebytes));            
         }
+
+		public string LoadData(string URL)
+		{
+			try
+			{
+				Application.UseWaitCursor = true;
+				Application.DoEvents();
+
+				//Download file : TODO
+				//_logger.Debug("Trying download file, address : " + addr + ", file name : " + localFileName);
+				// ensure dir exists
+
+				byte[] data =_client.DownloadData(URL);
+
+				//_logger.Debug("File downloaded, address : " + addr + ", file name : " + localFileName);
+
+				Application.UseWaitCursor = false;
+				Application.DoEvents();
+
+				return Encoding.ASCII.GetString(data);
+			}
+			catch (Exception ex)
+			{
+				Application.UseWaitCursor = false;
+				Application.DoEvents();
+				//_logger.Debug("Download attachment failed! Address : " + addr + ",  Error : " + ex.Message);
+			}
+			return "";
+		}
+
+
 	}
 }

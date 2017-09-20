@@ -30,8 +30,14 @@ namespace xwcs.core.ui.db
     /*
     * Classes for Form support handling
     */
-    
-    public interface IFormSupport
+
+	public interface IBehaviorContainer
+	{
+		DevExpress.Utils.Behaviors.BehaviorManager BehaviorMan { get; }
+	}
+
+
+	public interface IFormSupport
     {
         void RegisterAction(DynamicFormAction a);
         void RegisterActionTrigger(DynamicFormActionTrigger a);
@@ -40,7 +46,10 @@ namespace xwcs.core.ui.db
         Dictionary<BaseEdit, IStyleController> DefaultStyles { get; }
 		Dictionary<BaseEdit, ControlMeta> ControlsMeta { get; }
 
-    }
+		Control Parent { get; }
+		IBehaviorContainer BehaviorContainer { get; }
+
+	}
     
 
     public class DynamicFormAction

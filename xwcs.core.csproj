@@ -204,6 +204,7 @@
     <Compile Include="core\db\binding\attributes\CheckValidAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbCheckedComboAttribute.cs" />
     <Compile Include="core\db\binding\attributes\CustomizationFormTextAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\FileOpenDialogAttribute.cs" />
     <Compile Include="core\db\TypeCache.cs" />
     <Compile Include="core\db\Validation.cs" />
     <Compile Include="core\db\fo\FilterOptions.cs" />
@@ -282,6 +283,7 @@
     <Compile Include="core\plgs\SPluginsLoader.cs" />
     <Compile Include="core\controls\VisualControlInfo.cs" />
     <Compile Include="core\plgs\VisualPluginBase.cs" />
+    <Compile Include="core\print\ReportOptions.cs" />
     <Compile Include="core\statemachine\StateMachineBase.cs" />
     <Compile Include="core\statemachine\StateMachineHelper.cs" />
     <Compile Include="core\statemachine\test\TestFormBase.cs">
@@ -296,6 +298,7 @@
     <Compile Include="core\user\IUserProviderProfile.cs" />
     <Compile Include="core\user\SecurityContext.cs" />
     <Compile Include="core\user\User.cs" />
+    <Compile Include="core\utils\behaviors\OpenFileBehavior.cs" />
     <Compile Include="core\WaitCursor.cs" />
     <Compile Include="core\WidgetViewExtender.cs" />
     <Compile Include="LinqKit\ExpandableQuery.cs" />
