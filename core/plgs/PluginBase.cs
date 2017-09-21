@@ -16,7 +16,7 @@ namespace xwcs.core.plgs
 		public static string _L<T>(this T input, string key, string def = null) where T : PluginBase
         {
 			try {
-				return input.RsMan.GetString(key, input.RsManCulture);
+				return input.RsMan.GetString(key, input.RsManCulture) ?? def;
 			}catch(Exception e) {
                 SLogManager.getInstance().getClassLogger(typeof(T)).Warn(string.Format(e.Message));
 #if DEBUG_TRACE_LOG_ON
