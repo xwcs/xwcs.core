@@ -569,11 +569,15 @@ namespace xwcs.core.statemachine
                 { // Silent
                     throw new InvalidOperationException("State Machine Disposed");
                 }
-                _CurrentState = value; 
+                _CurrentState = value;
+
+                /* commented we will do notify also on conditions so we can handle UI changes too
                 if ( !(_CurrentState is ConditionStateBase) )
                 {
                     _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs("CurrentState"));
                 }
+                */
+                _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs("CurrentState"));
             }
 		}
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace xwcs.core.statemachine
 {
@@ -19,6 +20,8 @@ namespace xwcs.core.statemachine
             TriggerName = n;
         }
     }
+
+
 
     /// <summary>
     /// This class do some helping functions
@@ -42,6 +45,15 @@ namespace xwcs.core.statemachine
 
         }
 
+        public void Disable()
+        {
+            foreach (StateMachineUiTrigger t in _triggerUiItems.Values)
+            {
+                t.Item.Enabled = false;
+            }
+            Application.DoEvents();
+        }
+
         public void Update()
         {
             // handle enabled state, all UI triggers are enabled only if current state has prper trigger
@@ -49,6 +61,7 @@ namespace xwcs.core.statemachine
             {
                 t.Item.Enabled = _host.CurrentStateMachine.CurrentState.HasTrigger(t.TriggerName);
             }
+            Application.DoEvents();
         }
 
         private void Bi_ItemClick(object sender, ItemClickEventArgs e)
