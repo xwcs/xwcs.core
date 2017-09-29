@@ -157,6 +157,8 @@ namespace xwcs.core.net
         public StoredProcResult CallStoredProc(string spName, NameValueCollection reqparm)
         {
             string addr = PostHttpBaseUrl("stored");
+			if (ReferenceEquals(reqparm, null)) reqparm = new NameValueCollection();
+
             reqparm.Add("db", _databaseName);
             reqparm.Add("stored", spName);
             byte[] responsebytes = _client.UploadValues(addr, "POST", reqparm);
