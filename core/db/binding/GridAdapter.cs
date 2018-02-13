@@ -494,7 +494,11 @@ namespace xwcs.core.db.binding
 
         public IColumnAdapter ColumnByFieldName(string fn)
         {
-            return new GridColumnAdapter(_view.Columns.ColumnByFieldName(fn));
+            DevExpress.XtraGrid.Columns.GridColumn c = _view.Columns.ColumnByFieldName(fn);
+            if (ReferenceEquals(c,null)) {
+                return null;
+            }
+            return new GridColumnAdapter(c);
         }
 
         public int ColumnsCount()
@@ -664,7 +668,12 @@ namespace xwcs.core.db.binding
 
         IColumnAdapter IGridAdapter.ColumnByFieldName(string fn)
         {
-            return new TreeColumnAdapter(_tree.Columns.ColumnByFieldName(fn));
+            DevExpress.XtraTreeList.Columns.TreeListColumn c = _tree.Columns.ColumnByFieldName(fn);
+            if (ReferenceEquals(c, null))
+            {
+                return null;
+            }
+            return new TreeColumnAdapter(c);
         }
 
         public int ColumnsCount()

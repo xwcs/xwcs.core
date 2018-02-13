@@ -442,16 +442,19 @@ namespace xwcs.core.db
         }
         public virtual void SetCtx(DBContextBase c)
         {
-            // context must be assigned max 1 time
-            if(!ReferenceEquals(null, _ctx) && !ReferenceEquals(c, GetCtx()))
-            {
-                throw new ApplicationException("Db context can be assigned just one time!");
+            if (ReferenceEquals(null, c)) {
+                _ctx = null;
+            } else {
+                // context must be assigned max 1 time
+                if (!ReferenceEquals(null, _ctx) && !ReferenceEquals(c, GetCtx()))
+                {
+                    throw new ApplicationException("Db context can be assigned just one time!");
+                }
+                // maby done
+                if (ReferenceEquals(c, GetCtx())) return;
+
+                _ctx = new WeakReference(c);
             }
-            // maby done
-            if (ReferenceEquals(c, GetCtx())) return;
-
-            _ctx = new WeakReference(c);
-
             // reset original values
             _originalValues = null;
         }
@@ -514,6 +517,12 @@ namespace xwcs.core.db
         public string GetFieldName()
         {
             return GetType().Name;
+        }
+
+        protected object GetOriginalPropertyValue(string propertyName)
+        {
+            if (ReferenceEquals(_originalValues ,null)) return GetPropertyValue(propertyName);
+            return _originalValues[propertyName];
         }
 
         public EntityBase() 

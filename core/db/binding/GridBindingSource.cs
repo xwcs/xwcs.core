@@ -345,16 +345,19 @@ namespace xwcs.core.db.binding
 		
 		private void applyAttributes(PropertyInfo pi)
 		{
-            // take all first, but cache just custom, but we need Standard Display 
-			IEnumerable<Attribute> attrs = ReflectionHelper.GetAttributesFromPath(_dataType, pi.Name);
+            IColumnAdapter gc = _target.ColumnByFieldName(pi.Name);
 
+            if (ReferenceEquals(null, gc)) return;
+
+            // take all first, but cache just custom, but we need Standard Display 
+            IEnumerable<Attribute> attrs = ReflectionHelper.GetAttributesFromPath(_dataType, pi.Name);
+            
             IList<CustomAttribute> ac = new List<CustomAttribute>();
 			foreach (Attribute a in attrs)
 			{
-				IColumnAdapter gc = null;
-				gc = _target.ColumnByFieldName(pi.Name);
-			
-                if(a is CustomAttribute)
+				
+
+                if (a is CustomAttribute)
                 {
                     GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
                     (a as CustomAttribute).applyGridColumnPopulation(this, gcp);
