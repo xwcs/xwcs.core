@@ -348,7 +348,6 @@ namespace xwcs.core.db.binding
             IColumnAdapter gc = _target.ColumnByFieldName(pi.Name);
 
             if (ReferenceEquals(null, gc)) return;
-
             // take all first, but cache just custom, but we need Standard Display 
             IEnumerable<Attribute> attrs = ReflectionHelper.GetAttributesFromPath(_dataType, pi.Name);
             
@@ -370,17 +369,39 @@ namespace xwcs.core.db.binding
                         if (gc != null) gc.ColumnEdit = ri;
                     }
                 }
-            
-                // handle column name
-                if(a is System.ComponentModel.DataAnnotations.DisplayAttribute)
+                if (a is xwcs.core.db.binding.attributes.StyleAttribute)
+                {
+                    xwcs.core.db.binding.attributes.StyleAttribute sa = a as xwcs.core.db.binding.attributes.StyleAttribute;
+                    if (!ReferenceEquals(sa.ColumnWidth, null))
+                    {
+                        if (sa.ColumnWidth >= 0)
+                        {
+                            gc.Width = sa.ColumnWidth;
+                        }
+                    }
+                }
+
+                    // handle column name
+                if (a is System.ComponentModel.DataAnnotations.DisplayAttribute)
                 {
                     System.ComponentModel.DataAnnotations.DisplayAttribute da = a as System.ComponentModel.DataAnnotations.DisplayAttribute;
-                    if(da.ShortName!= null && da.ShortName.Length > 0)
+                    gc.Caption = da.GetName() ?? gc.Caption;
+                    gc.Caption = da.GetShortName() ?? gc.Caption;
+                    gc.VisibleIndex = da.GetOrder() ?? gc.VisibleIndex;
+                    
+                    if (gc.Caption.ToUpper() != (da.GetName() ?? gc.Caption).ToUpper())
                     {
-                        gc.Caption = da.ShortName;
+                        gc.ToolTip = da.GetName();
+
+                    }
+                    if (gc.ToolTip.ToUpper() != (da.GetDescription() ?? gc.ToolTip).ToUpper())
+                    {
+                        if (gc.ToolTip != "") { gc.ToolTip = gc.ToolTip + "\n"; }
+                        gc.ToolTip = gc.ToolTip + da.GetDescription();
                     }
                 }
 			}
+
 			if (ac.Count > 0)
 				_attributesCache[pi.Name] = ac;
 		}
@@ -413,7 +434,8 @@ namespace xwcs.core.db.binding
 						PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 						foreach (PropertyInfo pi in pis)
 						{
-							if (dt.Columns[pi.Name]	!= null)
+                            string strName = pi.Name;
+							if (dt.Columns[strName]	!= null)
 							{
 								applyAttributes(pi);
 							}
