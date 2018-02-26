@@ -14,6 +14,7 @@ namespace xwcs.core.db.model{
 	/// </summary>
 	public static class ReflectionHelper
     {
+
         /// <summary>
         /// Searches for a property in the given property path
         /// </summary>
@@ -61,8 +62,10 @@ namespace xwcs.core.db.model{
 
             PropertyDescriptor propertyDescriptor = TypeDescriptor.GetProperties(rootType)[propertyName];
             if (propertyDescriptor == null)
-                throw new ArgumentOutOfRangeException("propertyPath", propertyPath, string.Format("Invalid property path for type '{0}' ",rootType.Name));
-
+            {
+                //throw new ArgumentOutOfRangeException("propertyPath", propertyPath, string.Format("Invalid property path for type '{0}' ", rootType.Name));
+                return null;
+            }
 
             if (!lastProperty)
                 return GetPropertyDescriptorFromPath(propertyDescriptor.PropertyType, propertyPath.Substring(propertyPath.IndexOf(".") + 1));
@@ -72,6 +75,10 @@ namespace xwcs.core.db.model{
 
 		public static IEnumerable<CustomAttribute> GetCustomAttributesFromPath(Type rootType, string propertyPath) {
 			PropertyDescriptor pd = GetPropertyDescriptorFromPath(rootType, propertyPath);
+            if (ReferenceEquals(pd, null))
+            {
+                return new List<CustomAttribute>();
+            }
 			Type t1 = pd.ComponentType;
 			IEnumerable<CustomAttribute> attrs1 = t1.GetProperty(pd.Name).GetCustomAttributes(typeof(CustomAttribute), true).Cast<CustomAttribute>();
 			List<MetadataTypeAttribute> l = TypeDescriptor.GetAttributes(t1).OfType<MetadataTypeAttribute>().ToList();
@@ -80,28 +87,78 @@ namespace xwcs.core.db.model{
 				PropertyInfo pi = t2.GetProperty(pd.Name);
 				if(pi != null) {
 					IEnumerable<CustomAttribute> attrs2 = pi.GetCustomAttributes(typeof(CustomAttribute), true).Cast<CustomAttribute>();
-					return attrs1.Union(attrs2);
+                    attrs1 = attrs1.Union(attrs2);
 				}
 			}
-			return attrs1;
+            return attrs1;
 		}
 
         public static IEnumerable<Attribute> GetAttributesFromPath(Type rootType, string propertyPath)
         {
-            PropertyDescriptor pd = GetPropertyDescriptorFromPath(rootType, propertyPath);
-            Type t1 = pd.ComponentType;
-            IEnumerable<Attribute> attrs1 = t1.GetProperty(pd.Name).GetCustomAttributes(typeof(Attribute), true).Cast<Attribute>();
+            PropertyDescriptor pd = null;
+            Type t1 = null;
+            IEnumerable<Attribute> attrs1 = null;
+            string propertyName = "";
+            try
+            {
+                pd = GetPropertyDescriptorFromPath(rootType, propertyPath);
+                if (ReferenceEquals(pd, null))
+                {
+                    t1 = rootType;
+                    attrs1 = new List<Attribute>();
+                    propertyName = propertyPath;
+                }
+                else {
+                t1 = pd.ComponentType;
+                attrs1 = t1.GetProperty(pd.Name).GetCustomAttributes(typeof(Attribute), true).Cast<Attribute>();
+                propertyName = pd.Name;
+                }
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                pd = null;
+                t1 = rootType;
+                attrs1 = new List<Attribute>();
+                propertyName = propertyPath;
+            }          
+            
+
             List<MetadataTypeAttribute> l = TypeDescriptor.GetAttributes(t1).OfType<MetadataTypeAttribute>().ToList();
             if (l.Count > 0)
             {
                 Type t2 = l.Single().MetadataClassType;
-                PropertyInfo pi = t2.GetProperty(pd.Name);
+                PropertyInfo pi = t2.GetProperty(propertyName);
                 if (pi != null)
                 {
                     IEnumerable<Attribute> attrs2 = pi.GetCustomAttributes(typeof(Attribute), true).Cast<Attribute>();
-                    return attrs1.Union(attrs2);
+                    attrs1=attrs1.Union(attrs2);
                 }
             }
+            // custom just static meta types private to xwcs
+            List<StaticMetatypeAttribute> l1 = TypeDescriptor.GetAttributes(t1).OfType<StaticMetatypeAttribute>().ToList();
+            if (l1.Count > 0)
+            {
+                Type t2 = l1.Single().MetadataClassType;
+                PropertyInfo pi = t2.GetProperty(propertyName);
+                if (pi != null)
+                {
+                    IEnumerable<Attribute> attrs2 = pi.GetCustomAttributes(typeof(Attribute), true).Cast<Attribute>();
+                    attrs1=attrs1.Union(attrs2);
+                }
+            }
+            // custom just dynamic meta types private to xwcs
+            List<DynamicMetatypeAttribute> l2 = TypeDescriptor.GetAttributes(t1).OfType<DynamicMetatypeAttribute>().ToList();
+            if (l2.Count > 0)
+            {
+                Type t2 = l2.Single().MetadataClassType;
+
+                binding.IDynamicAttributeProvider pr = (binding.IDynamicAttributeProvider)Activator.CreateInstance(t2);
+               
+                IEnumerable<Attribute> attrs2 = pr.GetAttributes(t1, propertyName);
+                attrs1 = attrs1.Union(attrs2);
+               
+            }
+
             return attrs1;
         }
 

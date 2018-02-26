@@ -72,7 +72,8 @@ namespace xwcs.core.db.binding.attributes
 			{
 				_backGrndColorReadOnly = value;
 				_styleController.AppearanceReadOnly.BackColor = System.Drawing.Color.FromArgb((int)_backGrndColorReadOnly);
-			}
+
+            }
 		}
 
 		public uint HAlignment

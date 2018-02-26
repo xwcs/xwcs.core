@@ -342,30 +342,29 @@ namespace xwcs.core.db.binding
 			Current.CopyFrom(rec);
 		}
 
-		
-		private void applyAttributes(PropertyInfo pi)
-		{
-            IColumnAdapter gc = _target.ColumnByFieldName(pi.Name);
 
+        //private void applyAttributes(PropertyInfo pi)
+        private void applyAttributes(string propertyName)
+        {
+            IColumnAdapter gc = _target.ColumnByFieldName(propertyName);
             if (ReferenceEquals(null, gc)) return;
             // take all first, but cache just custom, but we need Standard Display 
-            IEnumerable<Attribute> attrs = ReflectionHelper.GetAttributesFromPath(_dataType, pi.Name);
-            
+            IEnumerable<Attribute> attrs = ReflectionHelper.GetAttributesFromPath(_dataType, propertyName);
             IList<CustomAttribute> ac = new List<CustomAttribute>();
-			foreach (Attribute a in attrs)
-			{
-				
+            foreach (Attribute a in attrs)
+            {
+
 
                 if (a is CustomAttribute)
                 {
-                    GridColumnPopulated gcp = new GridColumnPopulated { FieldName = pi.Name, RepositoryItem = null, Column = gc };
+                    GridColumnPopulated gcp = new GridColumnPopulated { FieldName = propertyName, RepositoryItem = null, Column = gc };
                     (a as CustomAttribute).applyGridColumnPopulation(this, gcp);
                     ac.Add(a as CustomAttribute);
                     RepositoryItem ri = gcp.RepositoryItem;
                     if (ri != null)
                     {
                         _target.RepositoryItems.Add(ri);
-                        _repositories[pi.Name] = ri;
+                        _repositories[propertyName] = ri;
                         if (gc != null) gc.ColumnEdit = ri;
                     }
                 }
@@ -379,16 +378,21 @@ namespace xwcs.core.db.binding
                             gc.Width = sa.ColumnWidth;
                         }
                     }
+                    if (sa.BackgrounColor>0)
+                    {
+                        gc.BackGrndColor = sa.BackgrounColor;
+                    }
                 }
 
-                    // handle column name
+                // handle column name
                 if (a is System.ComponentModel.DataAnnotations.DisplayAttribute)
                 {
                     System.ComponentModel.DataAnnotations.DisplayAttribute da = a as System.ComponentModel.DataAnnotations.DisplayAttribute;
+
                     gc.Caption = da.GetName() ?? gc.Caption;
                     gc.Caption = da.GetShortName() ?? gc.Caption;
                     gc.VisibleIndex = da.GetOrder() ?? gc.VisibleIndex;
-                    
+
                     if (gc.Caption.ToUpper() != (da.GetName() ?? gc.Caption).ToUpper())
                     {
                         gc.ToolTip = da.GetName();
@@ -400,10 +404,14 @@ namespace xwcs.core.db.binding
                         gc.ToolTip = gc.ToolTip + da.GetDescription();
                     }
                 }
-			}
+            }
 
-			if (ac.Count > 0)
-				_attributesCache[pi.Name] = ac;
+            if (ac.Count > 0)
+                _attributesCache[propertyName] = ac;
+           
+            
+            
+            
 		}
         
 		private void ConnectGrid() 
@@ -423,7 +431,7 @@ namespace xwcs.core.db.binding
 					PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 					foreach (PropertyInfo pi in pis)
 					{
-						applyAttributes(pi);
+						applyAttributes(pi.Name);
 					}
 				}
 				else 
@@ -431,15 +439,22 @@ namespace xwcs.core.db.binding
 					DataTable dt = base.DataSource as DataTable;
 					if (dt != null)
 					{
+                        /*
 						PropertyInfo[] pis = _dataType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
 						foreach (PropertyInfo pi in pis)
 						{
                             string strName = pi.Name;
 							if (dt.Columns[strName]	!= null)
 							{
-								applyAttributes(pi);
+								applyAttributes(pi.Name);
 							}
 						}
+                        */
+                        foreach (DataColumn c in dt.Columns)
+                        {
+                            
+                            applyAttributes(c.ColumnName);
+                        }
 					}
 				}
 				//attach CustomRowCellEditForEditing event too
@@ -579,16 +594,23 @@ namespace xwcs.core.db.binding
 			if(args.ListChangedType == ListChangedType.ItemChanged)
 			{
 				if(args.PropertyDescriptor != null) {
-					IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, args.PropertyDescriptor.Name);
-					var ra = attrs.OfType<ResetSlavesAttribute>();
-					if(ra.Count() == 1) {
-						//we need reset slaves chain
-						resetSlavesOfModifiedProperty(ra.First());
-					}
-					
+                    try
+                    {
+                        IEnumerable<CustomAttribute> attrs = ReflectionHelper.GetCustomAttributesFromPath(_dataType, args.PropertyDescriptor.Name);
+                        var ra = attrs.OfType<ResetSlavesAttribute>();
+                        if (ra.Count() == 1)
+                        {
+                            //we need reset slaves chain
+                            resetSlavesOfModifiedProperty(ra.First());
+                        }
+
 #if DEBUG_TRACE_LOG_ON
-					_logger.Debug("Item changed! " + args.PropertyDescriptor.Name);
+					                        _logger.Debug("Item changed! " + args.PropertyDescriptor.Name);
 #endif
+                    } catch (ArgumentOutOfRangeException)
+                    {
+                        
+                    }
 				}
 			}
 		}

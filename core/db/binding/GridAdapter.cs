@@ -18,6 +18,7 @@ namespace xwcs.core.db.binding
         string FieldName { get; set; }
         string Caption { get; set; }
         string ToolTip { get; set; }
+        uint BackGrndColor { get; set; }
         DevExpress.Utils.AppearanceObjectEx AppearanceCell { get;}
     }
 
@@ -166,6 +167,7 @@ namespace xwcs.core.db.binding
         public GridColumnAdapter(DevExpress.XtraGrid.Columns.GridColumn c)
         {
             _c = c;
+           
         }
 
         public string ToolTip { get { return _c.ToolTip; } set { _c.ToolTip = value; } }
@@ -260,6 +262,20 @@ namespace xwcs.core.db.binding
                 _c.Width = value;
             }
         }
+
+        public uint BackGrndColor
+        {
+            get
+            {
+                return (uint)_c.AppearanceCell.BackColor.ToArgb();
+            }
+
+            set
+            {
+                _c.AppearanceCell.BackColor = System.Drawing.Color.FromArgb((int)BackGrndColor);
+            }
+        }
+        
     }
 
     public class TreeColumnAdapter : IColumnAdapter
@@ -369,9 +385,21 @@ namespace xwcs.core.db.binding
                 _c.Caption = value;
             }
         }
+        public uint BackGrndColor
+        {
+            get
+            {
+                return (uint)_c.AppearanceCell.BackColor.ToArgb();
+            }
+
+            set
+            {
+                _c.AppearanceCell.BackColor = System.Drawing.Color.FromArgb((int)value);
+            }
+        }
     }
 
-    
+
 
     public class GridAdapter : IGridAdapter
     {
