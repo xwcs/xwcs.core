@@ -13,10 +13,18 @@ namespace xwcs.core.db.binding.attributes
 		uint _backGrndColorFocused;
 		uint _backGrndColorReadOnly;
 		int _columnWidth = -1;
-		uint _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
+        int _columnMinWidth = -1;
+        uint _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
 
         // separate styling
-		public int ColumnWidth 
+
+        public int ColumnMinWidth
+        {
+            get { return _columnMinWidth; } set { _columnMinWidth = value; }
+        }
+
+
+        public int ColumnWidth 
 		{ 
 			get { return _columnWidth; } 
 			set { _columnWidth = value; }
@@ -64,7 +72,8 @@ namespace xwcs.core.db.binding.attributes
 			{
 				_backGrndColorReadOnly = value;
 				_styleController.AppearanceReadOnly.BackColor = System.Drawing.Color.FromArgb((int)_backGrndColorReadOnly);
-			}
+
+            }
 		}
 
 		public uint HAlignment
@@ -91,8 +100,12 @@ namespace xwcs.core.db.binding.attributes
                     e.Column.FixedWidth = true;
                     e.Column.Width = ColumnWidth;
                     e.Column.AppearanceCell.TextOptions.HAlignment = (DevExpress.Utils.HorzAlignment)_halignment;
-                }    
-			}           
+                } 
+                if (ColumnMinWidth >=0)
+                {
+                    e.Column.MinWidth = ColumnMinWidth;
+                }
+            }           
         }
     }	
 }

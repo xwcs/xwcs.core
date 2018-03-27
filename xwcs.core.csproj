@@ -205,6 +205,9 @@
     <Compile Include="core\db\binding\attributes\DbCheckedComboAttribute.cs" />
     <Compile Include="core\db\binding\attributes\CustomizationFormTextAttribute.cs" />
     <Compile Include="core\db\binding\attributes\FileOpenDialogAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\DynamicMetatypeAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\StaticMetatypeAttribute.cs" />
+    <Compile Include="core\db\binding\IDynamicAttributeProvider.cs" />
     <Compile Include="core\db\TypeCache.cs" />
     <Compile Include="core\db\Validation.cs" />
     <Compile Include="core\db\fo\FilterOptions.cs" />

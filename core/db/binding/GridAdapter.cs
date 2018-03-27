@@ -13,9 +13,12 @@ namespace xwcs.core.db.binding
         bool ReadOnly { get; set; }
         bool FixedWidth { get; set; }
         int Width { get; set; }
+        int MinWidth { get; set; }
+        int VisibleIndex { get; set; }
         string FieldName { get; set; }
         string Caption { get; set; }
-
+        string ToolTip { get; set; }
+        uint BackGrndColor { get; set; }
         DevExpress.Utils.AppearanceObjectEx AppearanceCell { get;}
     }
 
@@ -62,7 +65,8 @@ namespace xwcs.core.db.binding
 			GridLike = true;
             _gridArgs = orig;
             _ca = new GridColumnAdapter(orig.Column);
-		}
+            
+        }
         //tree specific
         private DevExpress.XtraTreeList.CustomColumnDisplayTextEventArgs _treeArgs;
         public DevExpress.XtraTreeList.Columns.TreeListColumn TreeColumn { get { return _treeArgs.Column; } }
@@ -163,8 +167,15 @@ namespace xwcs.core.db.binding
         public GridColumnAdapter(DevExpress.XtraGrid.Columns.GridColumn c)
         {
             _c = c;
+           
         }
 
+        public string ToolTip { get { return _c.ToolTip; } set { _c.ToolTip = value; } }
+        public int VisibleIndex
+        {
+            get { return _c.VisibleIndex; }
+            set { _c.VisibleIndex = value; }
+        }
         public DevExpress.Utils.AppearanceObjectEx AppearanceCell
         {
             get
@@ -238,7 +249,7 @@ namespace xwcs.core.db.binding
                 _c.OptionsColumn.ReadOnly = value;
             }
         }
-
+        public int MinWidth { get { return _c.MinWidth; } set { _c.MinWidth = value; } }
         public int Width
         {
             get
@@ -251,6 +262,20 @@ namespace xwcs.core.db.binding
                 _c.Width = value;
             }
         }
+
+        public uint BackGrndColor
+        {
+            get
+            {
+                return (uint)_c.AppearanceCell.BackColor.ToArgb();
+            }
+
+            set
+            {
+                _c.AppearanceCell.BackColor = System.Drawing.Color.FromArgb((int)BackGrndColor);
+            }
+        }
+        
     }
 
     public class TreeColumnAdapter : IColumnAdapter
@@ -261,6 +286,19 @@ namespace xwcs.core.db.binding
         {
             _c = c;
         }
+        public string Group
+        {
+            get { return ""; }
+            set { return; }
+        }
+        public string ToolTip { get { return _c.ToolTip; }
+                set {
+                _c.ToolTip = value; } }
+        public int VisibleIndex
+        {
+            get { return _c.VisibleIndex; }
+            set { _c.VisibleIndex = value; }
+        }
 
         public DevExpress.Utils.AppearanceObjectEx AppearanceCell
         {
@@ -308,7 +346,7 @@ namespace xwcs.core.db.binding
                 _c.OptionsColumn.ReadOnly = value;
             }
         }
-
+        public int MinWidth { get { return _c.MinWidth; } set { _c.MinWidth = value; } }
         public int Width
         {
             get
@@ -347,9 +385,21 @@ namespace xwcs.core.db.binding
                 _c.Caption = value;
             }
         }
+        public uint BackGrndColor
+        {
+            get
+            {
+                return (uint)_c.AppearanceCell.BackColor.ToArgb();
+            }
+
+            set
+            {
+                _c.AppearanceCell.BackColor = System.Drawing.Color.FromArgb((int)value);
+            }
+        }
     }
 
-    
+
 
     public class GridAdapter : IGridAdapter
     {
@@ -533,6 +583,7 @@ namespace xwcs.core.db.binding
 		public TreeListAdapter(DevExpress.XtraTreeList.TreeList tl)
 		{
 			_tree = tl;
+            tl.OptionsView.AllowHtmlDrawHeaders = true;
 			_tree.CellValueChanged += _tree_CellValueChanged;
 			_tree.CustomColumnDisplayText += _tree_CustomColumnDisplayText;
 			_tree.CustomNodeCellEditForEditing += _tree_CustomNodeCellEditForEditing;
