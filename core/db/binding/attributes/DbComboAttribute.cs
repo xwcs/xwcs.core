@@ -45,9 +45,9 @@ namespace xwcs.core.db.binding.attributes
 		}
 
 		private void setupRle(IDataBindingSource src, RepositoryItemComboBox rle, string fn) {
-			//rle.DisplayMember = DisplayMember;
-			//rle.ValueMember = ValueMember;
-			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
+            //rle.DisplayMember = DisplayMember;
+            //rle.ValueMember = ValueMember;
+            GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
 			src.EditorsHost.onGetOptionsList(this, qd);
 			if (qd.Data != null)
 			{
