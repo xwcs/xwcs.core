@@ -533,8 +533,11 @@ namespace xwcs.core.statemachine
                         return true;
                     }
                 }
-                // no one did work so raise error
-                throw new ApplicationException("ConditionState blocked!");
+                if (!disposedValue)
+                {
+                    // no one did work so raise error
+                    throw new ApplicationException("ConditionState blocked!");
+                }
             }
             else
             {
