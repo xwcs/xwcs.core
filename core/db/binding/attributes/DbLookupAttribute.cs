@@ -91,9 +91,10 @@ namespace xwcs.core.db.binding.attributes
 			rle.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Near;
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
-			rle.PopupFormMinSize = new Size(_popUpWidth, _popUpHeight);
-									
-			GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
+            rle.AcceptEditorTextAsNewValue = DevExpress.Utils.DefaultBoolean.True;
+            rle.PopupFormMinSize = new Size(_popUpWidth, _popUpHeight);
+
+            GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
 			src.EditorsHost.onGetOptionsList(this, qd);
 			if (qd.Data != null)
 			{
