@@ -350,7 +350,16 @@ namespace xwcs.core.statemachine
         public ConditionStateBase(StateMachine machine, string Name) : base(machine, Name) { }
     }
 
-    
+    /// <summary>A disposed state.</summary>
+    ///
+    /// <author>Laco</author>
+    ///
+    /// <seealso cref="T:xwcs.core.statemachine.StateBase"/>
+    public class DisposedState : StateBase
+    {
+        public DisposedState(StateMachine machine) : base(machine, "Disposed") { }
+    }
+
     /// <summary>
     /// Base interface for all hosts
     /// </summary>
@@ -366,6 +375,8 @@ namespace xwcs.core.statemachine
     /// </summary>
     public abstract partial class StateMachine : INotifyPropertyChanged, IDisposable
     {
+        private DisposedState _ds = null;
+
 		public string Name { get; protected set; } = "unknown";
 
         
@@ -411,6 +422,8 @@ namespace xwcs.core.statemachine
             _effectsTimer.Interval = 1;
             _effectsTimer.Tick += _effectsTimer_Tick; ;
             _effectsTimer.Enabled = false;
+
+            _ds = new DisposedState(this);
         }
 
        
@@ -423,25 +436,41 @@ namespace xwcs.core.statemachine
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            // @since ERM014207 - added locking so it will dispose synced with transition execution
+
+            if (!disposing || Monitor.TryEnter(this, 60000)) // not disposing call is from destructor, so just go in and deregister SM (skipping locking)
             {
-                if (disposing)
+                try
                 {
-                    _wes_PropertyChanged = null;
-                    _wes_StartTransition = null;
-                    _wes_BeforeExitingPreviousState = null;
-                    _wes_EndTransition = null;
-                    _timer.Tick -= _timer_Tick;
-                    _timer.Dispose();
-                    _effectsTimer.Tick -= _effectsTimer_Tick;
-                    _effectsTimer.Dispose();
+                    if (!disposedValue)
+                    {
+                        if (disposing)
+                        {
+                            _wes_PropertyChanged = null;
+                            _wes_StartTransition = null;
+                            _wes_BeforeExitingPreviousState = null;
+                            _wes_EndTransition = null;
+                            _timer.Tick -= _timer_Tick;
+                            _timer.Dispose();
+                            _effectsTimer.Tick -= _effectsTimer_Tick;
+                            _effectsTimer.Dispose();
+                        }
+
+                        // decrement
+                        StateMachinesDisposer.getInstance().UnRegisterSM(this);
+
+                        disposedValue = true;
+                    }
+
+                    return; // we done
                 }
-
-                // decrement
-                StateMachinesDisposer.getInstance().UnRegisterSM(this);
-
-                disposedValue = true;
+                finally
+                {
+                    // unlock
+                    if(disposing) Monitor.Exit(this);
+                }
             }
+            throw new ApplicationException("State machine dispose timeout!");        
         }
 
         // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
@@ -481,7 +510,7 @@ namespace xwcs.core.statemachine
             return TransitionToNewState( (StateBase) Activator.CreateInstance(newStateType, new object[] { this }), null, null, null);
         }
 
-
+        private int transitionToNewStateRecursionLevel = 0;
         /// <summary>
         /// Makes the state machine go into another state.
         /// </summary>
@@ -490,65 +519,91 @@ namespace xwcs.core.statemachine
         /// <param name="guard"></param>
         /// <param name="EffectHandler"></param>
         /// <returns>true if done</returns>
-        public bool TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, WeakEventSource<TransitionEventArgs> EffectHandler)
+        protected bool TransitionToNewState(StateBase newState, TriggerBase causedByTrigger, GuardBase guard, WeakEventSource<TransitionEventArgs> EffectHandler)
 		{
-            if (disposedValue)
-            { // Silent
-                throw new InvalidOperationException("State Machine Disposed");
-            }
-            // Pull the trigger to find if condition is Ok.
-            _wes_StartTransition?.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
-			if ( guard != null )
+            // we need recursion level here, so we can lock just on highest level
+            try
             {
-                if (!guard.Execute()) return false; // Guard said this trigger can't go on
-            }
+                ++transitionToNewStateRecursionLevel; // first call we will have 1 after this line
 
-			_wes_BeforeExitingPreviousState?.Raise(this, new TransitionEventArgs(CurrentState, newState, causedByTrigger));
-            // exit the current state
-            if (this.CurrentState != null)
-				this.CurrentState.OnExit(causedByTrigger);
 
-            StateBase previousState = this.CurrentState ;
-
-            this.CurrentState = newState;
-			
-			//call effect
-			if(EffectHandler != null)
-            {
-                ProcessEffect(new EffectAction(EffectHandler, new TransitionEventArgs(previousState, newState, causedByTrigger)));
-            }
-
-            // Process Effect can delete SM itself so handle it
-            if (disposedValue) return false; // we are over end of life just exit
-                
-            //check if new state is DecisionState
-            if(CurrentState is ConditionStateBase)
-            {
-                //take triggers
-                foreach (TriggerBase t in (_CurrentState as ConditionStateBase).Triggers)
+                // @since ERM014207 - added locking so it will dispose synced with transition execution, and it will lock just on first call, 
+                // recursed call are not locked (death lock eviction)
+                if (transitionToNewStateRecursionLevel > 1 || Monitor.TryEnter(this, 60000)) // not disposing call is from destructor, so just go in and unregister SM (skipping locking)
                 {
-                    if (ProcessTriggerInternal(t as TriggerBase))
+                    try
                     {
-                        // we did all return true, we should be in after decision state
+                        if (disposedValue)
+                        {
+                            // @since ERM014207 - Silent is better, due to a sync work we can have SM still working so just skip all work if disposed
+                            return false;
+                        }
+
+                        // Pull the trigger to find if condition is Ok.
+                        _wes_StartTransition?.Raise(this, new TransitionEventArgs(_CurrentState, newState, causedByTrigger));
+                        if (guard != null)
+                        {
+                            if (!guard.Execute()) return false; // Guard said this trigger can't go on
+                        }
+
+                        _wes_BeforeExitingPreviousState?.Raise(this, new TransitionEventArgs(_CurrentState, newState, causedByTrigger));
+                        // exit the current state
+                        if (_CurrentState != null)
+                            _CurrentState.OnExit(causedByTrigger);
+
+                        StateBase previousState = _CurrentState;
+
+                        this.CurrentState = newState;
+
+                        //call effect
+                        if (EffectHandler != null)
+                        {
+                            ProcessEffect(new EffectAction(EffectHandler, new TransitionEventArgs(previousState, newState, causedByTrigger)));
+                        }
+
+                        //check if new state is DecisionState
+                        if (_CurrentState is ConditionStateBase)
+                        {
+                            //take triggers
+                            foreach (TriggerBase t in (_CurrentState as ConditionStateBase).Triggers)
+                            {
+                                if (ProcessTriggerInternal(t as TriggerBase))
+                                {
+                                    // we did all return true, we should be in after decision state
+                                    return true;
+                                }
+                            }
+                            // no one did work so raise error
+                            throw new ApplicationException("ConditionState blocked!");
+                        }
+                        else
+                        {
+                            if (_CurrentState != null)
+                                _CurrentState.OnEntry(causedByTrigger);
+                            _wes_EndTransition?.Raise(this, new TransitionEventArgs(previousState, newState, causedByTrigger));
+                        }
+
+                        // we did well so ok send true
                         return true;
                     }
+                    finally
+                    {
+                        // unlock
+                        if(transitionToNewStateRecursionLevel == 1) Monitor.Exit(this);
+                    }
                 }
-                if (!disposedValue)
-                {
-                    // no one did work so raise error
-                    throw new ApplicationException("ConditionState blocked!");
-                }
+                throw new ApplicationException("State machine TransitionToNewState timeout!");
             }
-            else
+            finally
             {
-                if (this.CurrentState != null)
-                    this.CurrentState.OnEntry(causedByTrigger);
-                _wes_EndTransition?.Raise(this, new TransitionEventArgs(previousState, newState, causedByTrigger));
-            }
-            
+                // we go out so decrease
+                --transitionToNewStateRecursionLevel; 
 
-            // we did well so ok send true
-            return true;
+                if(transitionToNewStateRecursionLevel < 0)
+                {
+                    throw new ApplicationException("Wrong transitionToNewStateRecursionLevel!");
+                }
+            }           
         }
 
         private StateBase _CurrentState;
@@ -561,25 +616,19 @@ namespace xwcs.core.statemachine
 		{ 
 			get {
                 if (disposedValue)
-                { // Silent
-                    throw new InvalidOperationException("State Machine Disposed");
+                {   // Silent
+                    return _ds;
                 }
                 return _CurrentState;
             }
 			private set
 			{
                 if (disposedValue)
-                { // Silent
-                    throw new InvalidOperationException("State Machine Disposed");
+                {
+                    // Silent
+                    return;
                 }
                 _CurrentState = value;
-
-                /* commented we will do notify also on conditions so we can handle UI changes too
-                if ( !(_CurrentState is ConditionStateBase) )
-                {
-                    _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs("CurrentState"));
-                }
-                */
                 _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs("CurrentState"));
             }
 		}
@@ -591,8 +640,9 @@ namespace xwcs.core.statemachine
         /// </summary>
         public bool IsWorking { get {
                 if (disposedValue)
-                { // Silent
-                    throw new InvalidOperationException("State Machine Disposed");
+                {
+                    // Silent
+                    return false;
                 }
                 return _CurrentState != null ;
         } }
@@ -629,13 +679,14 @@ namespace xwcs.core.statemachine
         
 
         /// <summary>
-        ///  Makes the state machine recive a command and dispatch it through the internal Queue.
+        ///  Makes the state machine receive a command and dispatch it through the internal Queue.
         /// </summary>
         /// <param name="trigger"></param>
         public void ProcessTrigger(TriggerBase trigger) {
             if (disposedValue)
-            { // Silent
-                throw new InvalidOperationException("State Machine Disposed");
+            {
+                // Silent
+                return; 
             }            
             _queue.Enqueue(trigger);
             _timer.Start();
@@ -644,8 +695,9 @@ namespace xwcs.core.statemachine
         public void ProcessTriggers(IReadOnlyCollection<TriggerBase> triggers)
         {
             if (disposedValue)
-            { // Silent
-                throw new InvalidOperationException("State Machine Disposed");
+            {
+                // Silent
+                return;                
             }
             _queue.Enqueue(triggers);
             _timer.Start();
@@ -684,8 +736,9 @@ namespace xwcs.core.statemachine
         private void ProcessEffect(EffectAction ef)
         {
             if (disposedValue)
-            { // Silent
-                throw new InvalidOperationException("State Machine Disposed");
+            {
+                // Silent
+                return; 
             }
 
             _effectsQueue.Enqueue(ef);
