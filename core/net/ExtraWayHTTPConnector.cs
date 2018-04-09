@@ -186,7 +186,7 @@ namespace xwcs.core.net
 
 				return Encoding.ASCII.GetString(data);
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 				Application.UseWaitCursor = false;
 				Application.DoEvents();
