@@ -16,6 +16,9 @@ namespace xwcs.core.db.binding.attributes
         int _columnMinWidth = -1;
         uint _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
 
+        // if true it will handle column text override
+        bool _manageCustomColumnText = false;
+
         // separate styling
 
         public int ColumnMinWidth
@@ -82,7 +85,25 @@ namespace xwcs.core.db.binding.attributes
 			set { _halignment = value; }
 		}
 
-       
+        public bool ManageCustomColumnText
+        {
+            get
+            {
+                return _manageCustomColumnText;
+            }
+
+            set
+            {
+                _manageCustomColumnText = value;
+            }
+        }
+
+        public override void applyGetFieldDisplayText(IDataBindingSource src, CustomColumnDisplayTextEventArgs e)
+        {
+            if(_manageCustomColumnText)
+                src.EditorsHost.onGetFieldDisplayText(src, e);
+        }
+
         public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) 
 		{
             // register default style controller

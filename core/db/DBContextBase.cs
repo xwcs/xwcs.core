@@ -40,6 +40,12 @@ namespace xwcs.core.db
         public string Owner { get; set; }
     }
 
+    public class UnlockResult
+    {
+        public int Cnt { get; set; }
+        public string Owner { get; set; }
+    }
+
     class LockData
     {
         public string id;
@@ -314,7 +320,8 @@ namespace xwcs.core.db
 
         private LockResult InternalUnlock(LockData ld)
         {
-            return Database.SqlQuery<LockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
+            UnlockResult ur = Database.SqlQuery<UnlockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
+            return new LockResult() { Id_lock = ur.Cnt, Owner = ur.Owner }; // this should not be necessary if DB align lock and unlock result
         }
 
 
