@@ -37,6 +37,20 @@ namespace xwcs.core.db.binding
 		public IDataBindingSource DataBindingSource { get; set; }
 	}
 
+    public enum GridConnectedEventKind
+    {
+        GridConnected,
+        GridDataChanged
+    }
+
+    public class GridConnectedEventData
+    {
+        public Type DataType { get; set; }
+        public IDataBindingSource DataBindingSource { get; set; }
+        public object Control { get; set; }
+        public GridConnectedEventKind Kind { get; set; }
+    }
+
     public interface IDataBindingSource
 	{
 		object Current { get; }
@@ -62,6 +76,8 @@ namespace xwcs.core.db.binding
 	{
 		void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
         void onGetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs cc);
+        void onGridConnected(object sender, GridConnectedEventData data);
+
         string LayoutAssetsPath { get; }
 
         IFormSupport FormSupport { get; }

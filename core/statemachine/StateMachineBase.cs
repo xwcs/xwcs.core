@@ -453,7 +453,7 @@ namespace xwcs.core.statemachine
 
                 disposedValue = true;
 
-                Console.WriteLine("----->" + transitionToNewStateRecursionLevel + "-" + this.GetHashCode() + "[" + GetCurrentThreadId() + "]->DISPOSE");
+                // Console.WriteLine("----->" + transitionToNewStateRecursionLevel + "-" + this.GetHashCode() + "[" + GetCurrentThreadId() + "]->DISPOSE");
             }
 
             return; // we done
@@ -510,7 +510,7 @@ namespace xwcs.core.statemachine
             // we need recursion level here, so we can lock just on highest level
             try
             {
-                Console.WriteLine("----->" + transitionToNewStateRecursionLevel + "-" + this.GetHashCode() + "[" + GetCurrentThreadId() + "]->going in");
+                // Console.WriteLine("----->" + transitionToNewStateRecursionLevel + "-" + this.GetHashCode() + "[" + GetCurrentThreadId() + "]->going in");
 
                 ++transitionToNewStateRecursionLevel; // first call we will have 1 after this line
                 
@@ -592,7 +592,7 @@ namespace xwcs.core.statemachine
                 // we go out so decrease
                 --transitionToNewStateRecursionLevel;
 
-                Console.WriteLine("----->" + transitionToNewStateRecursionLevel + "-" + this.GetHashCode() + "[" + GetCurrentThreadId() + "]->going out");
+                // Console.WriteLine("----->" + transitionToNewStateRecursionLevel + "-" + this.GetHashCode() + "[" + GetCurrentThreadId() + "]->going out");
 
                 if (transitionToNewStateRecursionLevel < 0)
                 {

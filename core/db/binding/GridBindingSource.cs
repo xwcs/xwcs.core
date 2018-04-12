@@ -324,11 +324,21 @@ namespace xwcs.core.db.binding
 		private void DataController_ListSourceChanged(object sender, EventArgs e)
 		{
 			ConnectGrid();
-		}
+
+            if (!ReferenceEquals(null, _editorsHost) && !ReferenceEquals(null, _dataType) && !ReferenceEquals(null, _target))
+            {
+                _editorsHost.onGridConnected(this, new GridConnectedEventData() { Control = _target, DataBindingSource = this, DataType = _dataType, Kind = GridConnectedEventKind.GridDataChanged });
+            }
+        }
 		private void GridDataSourceChanged(object sender, EventArgs e)
 		{
 			ConnectGrid();
-		}
+
+            if (!ReferenceEquals(null, _editorsHost) && !ReferenceEquals(null, _dataType) && !ReferenceEquals(null, _target))
+            {
+                _editorsHost.onGridConnected(this, new GridConnectedEventData() { Control = _target, DataBindingSource = this, DataType = _dataType, Kind = GridConnectedEventKind.GridDataChanged });
+            }
+        }
 
 		public object addNewRecord(object rec)
 		{
@@ -469,8 +479,14 @@ namespace xwcs.core.db.binding
                     _target.CustomColumnDisplayText += CustomColumnDisplayText;
 				
 				_gridIsConnected = true;
-			}	
-		}
+
+
+                if (!ReferenceEquals(null, _editorsHost) && !ReferenceEquals(null, _dataType) && !ReferenceEquals(null, _target))
+                {
+                    _editorsHost.onGridConnected(this, new GridConnectedEventData() { Control = _target, DataBindingSource = this, DataType = _dataType, Kind = GridConnectedEventKind.GridConnected });
+                }
+            }
+        }
 
 		private void _target_CellValueChanged(object sender, CellValueChangedEventArgs e)
 		{
