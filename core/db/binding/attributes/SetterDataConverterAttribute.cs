@@ -5,14 +5,14 @@ using DevExpress.XtraEditors;
 namespace xwcs.core.db.binding.attributes
 {
 	[AttributeUsage(AttributeTargets.Property)]
-	public class AnyToOneConverterAttribute : CustomConverterAttribute
+	public class SetterDataConverterAttribute : CustomConverterAttribute
     {
         private string[] _from = new string[] { "" };
         private string _to = null;
 
 
-        public AnyToOneConverterAttribute(){}
-        public AnyToOneConverterAttribute(string to, params string[] from)
+        public SetterDataConverterAttribute(){}
+        public SetterDataConverterAttribute(string to, params string[] from)
         {
             this._from = from;
             this._to = to;
