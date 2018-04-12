@@ -13,6 +13,7 @@ using System.Data;
 using System.Reflection.Emit;
 using System.Reflection;
 using xwcs.core.db.model;
+using xwcs.core.db.binding.attributes;
 
 namespace xwcs.core.db.fo
 {
@@ -30,11 +31,14 @@ namespace xwcs.core.db.fo
     }
 
     
-	
+	public interface IHasConverter
+    {
+        CustomConverterAttribute Converter { get; set; }
+    }
 
 	[DataContract(IsReference=true)]
-	public class FilterField<T> : ICriteriaTreeNode
-	{
+	public class FilterField<T> : ICriteriaTreeNode, IHasConverter
+    {
 		#region serialize
 		[DataMember(Order = 0)]
 		private object _field;
@@ -91,23 +95,41 @@ namespace xwcs.core.db.fo
         }		
 		public FilterField(string pn, string fn) {
 
-			if (typeof(T).IsValueType)
+            _converter = null;
+
+
+            if (typeof(T).IsValueType)
 				_field = Activator.CreateInstance(typeof(T));
 			else
 				_field = null;
 
 			_fieldName = fn;
 			_fieldFullName = pn != "" ? pn + "." + fn :  fn;
-		}	
-
+		}
 		public static implicit operator T(FilterField<T> from)
 		{
 			return (T)from._field;
 		}
 
-		#region Properties
+        // eventual converter
+        CustomConverterAttribute _converter;
+        public CustomConverterAttribute Converter
+        {
+            get { return _converter; }
+            set {
+                if (value.isCompatible(typeof(T)))
+                {
+                    _converter = value;
+                }else
+                {
+                    _converter = null;
+                }                
+            }
+        } 
 
-        
+        #region Properties
+
+
         public bool ValueEquals(object what)
         {
             return _field != null ? _field.Equals(what) : (what == null);
@@ -115,14 +137,16 @@ namespace xwcs.core.db.fo
 
 		public T Value {
 			get {
-				return (T)_field;
+                    return ReferenceEquals(null, _converter) ? (T)_field : (T)_converter.getConvert(_field);
 			}
 
 			set {
-				_field = value;
-				// see note up: value is weaker then criteria!!
-				// but real value reset criteria, just null no
-				if(value != null) {
+
+                _field = ReferenceEquals(null, _converter) ? value : (T)_converter.setConvert(value);
+               
+                // see note up: value is weaker then criteria!!
+                // but real value reset criteria, just null no
+                if (value != null) {
 					_condition = null;
 					_hasCriteria = false;
 				}

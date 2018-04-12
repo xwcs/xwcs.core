@@ -803,8 +803,7 @@ namespace xwcs.core.db
 
         /*
          * Lets say we need access all property getters with array[name] notation
-         */
-       
+         */       
         protected static void InitReflectionChache(Type who)
         {
             TypeCache.GetTypeCacheData(who);

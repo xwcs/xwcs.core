@@ -202,10 +202,12 @@
     <Compile Include="core\controls\WidgetDescriptor.cs" />
     <Compile Include="core\Core.cs" />
     <Compile Include="core\db\binding\attributes\CheckValidAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\AnyToOneConverterAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DbCheckedComboAttribute.cs" />
     <Compile Include="core\db\binding\attributes\CustomizationFormTextAttribute.cs" />
     <Compile Include="core\db\binding\attributes\FileOpenDialogAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DynamicMetatypeAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\CustomConverterAttribute.cs" />
     <Compile Include="core\db\binding\attributes\StaticMetatypeAttribute.cs" />
     <Compile Include="core\db\binding\IDynamicAttributeProvider.cs" />
     <Compile Include="core\db\TypeCache.cs" />

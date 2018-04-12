@@ -43,16 +43,11 @@ namespace xwcs.core.db
                 if (!PropertiesForAttribCache.TryGetValue(AttrType, out pps))
                 {
                     pps = Properties.Values.Where(
-                        prop => GetCustomAttributesForProperty(prop.Name).Any(a => a.GetType().IsAssignableFrom(AttrType)) 
-                    );
+                        prop => GetCustomTypedAttributesForProperty(prop.Name, AttrType).Count() > 0
+                        //prop => GetCustomAttributesForProperty(prop.Name).Any(a => a.GetType().IsAssignableFrom(AttrType)) 
+                    ).ToList(); // execute it now !!
 
-                    /*
-                    foreach(PropertyInfo pi in Properties.Values)
-                    {
-                        List<Attribute> atts = GetCustomAttributesForProperty(pi.Name).ToList();
-                        bool r = atts.Any(a => a.GetType().IsAssignableFrom(AttrType));
-                    }
-                    */
+                    // pps can be also empty list !!
                     PropertiesForAttribCache.Add(AttrType, pps);
                 }
             }           
@@ -75,6 +70,29 @@ namespace xwcs.core.db
                     if (pi != null)
                     {
                         ret = ret.Union(pi.GetCustomAttributes().Cast<Attribute>());
+                    }
+                }
+                AttributesByPropertyName.Add(propertyName, ret);
+            }
+
+            return ret;
+        }
+
+        public IEnumerable<Attribute> GetCustomTypedAttributesForProperty(string propertyName, Type attrType)
+        {
+            IEnumerable<Attribute> ret;
+            if (!AttributesByPropertyName.TryGetValue(propertyName, out ret))
+            {
+                // capture them 
+                ret = Properties[propertyName].GetCustomAttributes(attrType).Cast<Attribute>();
+                // merge with meta class
+                MetadataTypeAttribute l = TypeDescriptor.GetAttributes(_type).OfType<MetadataTypeAttribute>().FirstOrDefault();
+                if (!ReferenceEquals(null, l))
+                {
+                    PropertyInfo pi = l.MetadataClassType.GetProperty(propertyName);
+                    if (pi != null)
+                    {
+                        ret = ret.Union(pi.GetCustomAttributes(attrType).Cast<Attribute>());
                     }
                 }
                 AttributesByPropertyName.Add(propertyName, ret);

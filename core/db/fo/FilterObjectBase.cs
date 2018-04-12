@@ -19,6 +19,7 @@ namespace xwcs.core.db.fo
     using System.Reflection.Emit;
     using System.Linq.Expressions;
     using DevExpress.Data.Linq;
+    using binding.attributes;
 
 
 
@@ -198,6 +199,7 @@ namespace xwcs.core.db.fo
 	public abstract class FilterObjectbase : INotifyPropertyChanged, INotifyModelPropertyChanged, ICriteriaTreeNode, IModelEntity
 	{
         protected static manager.ILogger _logger = manager.SLogManager.getInstance().getClassLogger(typeof(FilterObjectbase));
+        private TypeCacheData _tcd;
 
         // this is for some FO internals handling
         internal class fake_filter_field
@@ -269,7 +271,7 @@ namespace xwcs.core.db.fo
         }
 
         // de serialization
-        protected virtual void wakeup() {;}
+        protected virtual void wakeup() {}
         [OnDeserialized()]
         internal void OnDeserializedMethod(StreamingContext context)
         {
@@ -318,8 +320,15 @@ namespace xwcs.core.db.fo
         }
         #endregion
 
-        public FilterObjectbase() : this("", "") { }
+        /*
+         * Lets say we need access all property getters with array[name] notation
+         */
+        protected static void InitReflectionChache(Type who)
+        {
+            TypeCache.GetTypeCacheData(who);
+        }
 
+        public FilterObjectbase() : this("", "") {}
         public FilterObjectbase(string pn, string fn)
         {
             if (_wes_PropertyChanged == null) _wes_PropertyChanged = new WeakEventSource<PropertyChangedEventArgs>();
@@ -647,8 +656,10 @@ namespace xwcs.core.db.fo
 
         protected void BindToNesteds()
         {
+            Type selfT = GetType();
+
             // fields   
-            GetType().GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+            selfT.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
             .Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectbase)) || f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectsCollection<>)))
             .Select(field => field.GetValue(this))
             .Cast<INotifyModelPropertyChanged>()
@@ -663,6 +674,26 @@ namespace xwcs.core.db.fo
             });
 
             AfterBindToNesteds();
+
+
+            if (ReferenceEquals(null, _tcd))
+            {
+                _tcd = TypeCache.GetTypeCacheData(GetType());
+            }
+            // handle conversion attributes for fields
+            IEnumerable<PropertyInfo> pps = _tcd.GetPropertiesWithAttributeType(typeof(CustomConverterAttribute)).ToList();
+
+            foreach (PropertyInfo pi in pps)
+            {
+
+                IHasConverter ff = selfT.GetField("_" + pi.Name, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this) as IHasConverter;
+
+                if(!ReferenceEquals(null, ff))
+                {
+                    CustomConverterAttribute a = _tcd.GetCustomTypedAttributesForProperty(pi.Name, typeof(CustomConverterAttribute)).First() as CustomConverterAttribute;
+                    ff.Converter = a;
+                }
+            }
         }
 
 
