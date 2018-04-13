@@ -206,6 +206,8 @@
     <Compile Include="core\db\binding\attributes\CustomizationFormTextAttribute.cs" />
     <Compile Include="core\db\binding\attributes\FileOpenDialogAttribute.cs" />
     <Compile Include="core\db\binding\attributes\DynamicMetatypeAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\CustomConverterAttribute.cs" />
+    <Compile Include="core\db\binding\attributes\SetterDataConverterAttribute.cs" />
     <Compile Include="core\db\binding\attributes\StaticMetatypeAttribute.cs" />
     <Compile Include="core\db\binding\IDynamicAttributeProvider.cs" />
     <Compile Include="core\db\TypeCache.cs" />
