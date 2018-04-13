@@ -258,7 +258,11 @@ namespace xwcs.core.db.binding
                     _cnt.AllowGeneratingNestedGroups = DevExpress.Utils.DefaultBoolean.True;
                     _cnt.AllowGeneratingCollectionProperties = DevExpress.Utils.DefaultBoolean.False;
                     _cnt.AutoRetrieveFields = true;
+#if DEBUG
                     _cnt.AllowCustomization = true;
+#else
+                    _cnt.AllowCustomization = false;
+#endif
                     _cnt.OptionsItemText.TextAlignMode = DevExpress.XtraLayout.TextAlignMode.AlignInGroups;
                     _cnt.FieldRetrieved += FieldRetrievedHandler;
 					_cnt.FieldRetrieving += FieldRetrievingHandler;
@@ -300,7 +304,7 @@ namespace xwcs.core.db.binding
         public string LayoutBaseFileName { get; set; } = "";
         public string CurrentLayoutSuffix { get; set; } = "";
 
-        #endregion
+#endregion
 
         public bool ChangeLayout(string LayoutSuffix)
         {
