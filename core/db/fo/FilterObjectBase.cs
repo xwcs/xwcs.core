@@ -249,6 +249,8 @@ namespace xwcs.core.db.fo
         }
 
         private CriteriaToEFExpressionConverter _converter = null;
+        //private CriteriaToExpressionConverter _converter = null;
+        
 
         #region serialize
         [DataMember(Order = 0)]
@@ -357,6 +359,9 @@ namespace xwcs.core.db.fo
             if(ReferenceEquals(null, _converter))
             {
                 _converter = new CriteriaToEFExpressionConverter();
+                //_converter = new CriteriaToExpressionConverter();
+
+
             }
             return  _converter.Convert(Expression.Parameter(typeof(T), "el"), GetMixedCriteria());
         }
@@ -558,10 +563,10 @@ namespace xwcs.core.db.fo
 				suffix = path.Substring(l + 1);
 			}
 
-			try {
+            try {
 				obj = obj.GetType()
 				.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
-				.Where(field => field.Name == '_' + name)
+				.Where(field => field.Name == '_' + name.LowercaseFirst())
 				.Select(field => field.GetValue(obj))
 				.Single() as ICriteriaTreeNode;
 			}catch(Exception) {
@@ -601,24 +606,50 @@ namespace xwcs.core.db.fo
             IEnumerable<FieldInfo> fields = t.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
 
             fields.Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterField<>)))
-            .Select(f => new fake_filter_field()
-            {
-                name = f.Name.Substring(f.Name.IndexOf('_') + 1),
-                // filter field is template so take its first generic argument and check it if it is generic again
-                type = f.FieldType.GenericTypeArguments[0].IsGenericType ?
+            .Select(f => {
+                // we need handle correctly name of field cause private filed will lowercased first letter just
+                // after first _
+                // so we have to attempt to find property which need to match
+                String tmpName = f.Name.Substring(f.Name.IndexOf('_') + 1);
+                PropertyInfo pi = t.GetProperty(tmpName, BindingFlags.Public | BindingFlags.Instance);
+                if(ReferenceEquals(null, pi))
+                {
+                    // try with uppercased first letter
+                    pi = t.GetProperty(tmpName.UppercaseFirst(), BindingFlags.Public | BindingFlags.Instance);
+                }
+                tmpName = ReferenceEquals(null, pi) ? tmpName : pi.Name;
+                return new fake_filter_field()
+                {
+                    name = tmpName,  //  f.Name.Substring(f.Name.IndexOf('_') + 1),
+                    // filter field is template so take its first generic argument and check it if it is generic again
+                    type = f.FieldType.GenericTypeArguments[0].IsGenericType ?
                             // nullable<>
                             f.FieldType.GenericTypeArguments[0].GenericTypeArguments[0] :
                             // direct type
                             f.FieldType.GenericTypeArguments[0]
+                };
             }).ToList()
             .ForEach(c => { ReflectionHelper.AddProperty(ntb, c.name, c.type); });
 
             // nested collections
             fields.Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectsCollection<>)))
-            .Select(f => new fake_filter_field()
-            {
-                name = f.Name.Substring(f.Name.IndexOf('_') + 1),
-                type = f.FieldType.GenericTypeArguments[0]
+            .Select(f => {
+                // we need handle correctly name of field cause private filed will lowercased first letter just
+                // after first _
+                // so we have to attempt to find property which need to match
+                String tmpName = f.Name.Substring(f.Name.IndexOf('_') + 1);
+                PropertyInfo pi = t.GetProperty(tmpName, BindingFlags.Public | BindingFlags.Instance);
+                if (ReferenceEquals(null, pi))
+                {
+                    // try with uppercased first letter
+                    pi = t.GetProperty(tmpName.UppercaseFirst(), BindingFlags.Public | BindingFlags.Instance);
+                }
+                tmpName = ReferenceEquals(null, pi) ? tmpName : pi.Name;
+                return new fake_filter_field()
+                {
+                    name = tmpName,
+                    type = f.FieldType.GenericTypeArguments[0]
+                };
             }).ToList()
             .ForEach(c =>
             {
@@ -631,10 +662,23 @@ namespace xwcs.core.db.fo
 
             // nested objects
             fields.Where(f => f.FieldType.IsSubclassOfRawGeneric(typeof(FilterObjectbase)))
-            .Select(f => new fake_filter_field()
-            {
-                name = f.Name.Substring(f.Name.IndexOf('_') + 1),
-                type = f.FieldType
+            .Select(f => {
+                // we need handle correctly name of field cause private filed will lowercased first letter just
+                // after first _
+                // so we have to attempt to find property which need to match
+                String tmpName = f.Name.Substring(f.Name.IndexOf('_') + 1);
+                PropertyInfo pi = t.GetProperty(tmpName, BindingFlags.Public | BindingFlags.Instance);
+                if (ReferenceEquals(null, pi))
+                {
+                    // try with uppercased first letter
+                    pi = t.GetProperty(tmpName.UppercaseFirst(), BindingFlags.Public | BindingFlags.Instance);
+                }
+                tmpName = ReferenceEquals(null, pi) ? tmpName : pi.Name;
+                return new fake_filter_field()
+                {
+                    name = tmpName,
+                    type = f.FieldType
+                };
             }).ToList()
             .ForEach(c =>
             {

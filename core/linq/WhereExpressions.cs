@@ -1,4 +1,8 @@
-﻿using System;
+﻿using DevExpress.Data.Filtering;
+using DevExpress.Data.Filtering.Helpers;
+using DevExpress.Data.Linq;
+using DevExpress.Data.Linq.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -125,7 +129,7 @@ namespace xwcs.core.linq
 
             _remaper = new RemapEntities(_splitTypes);
 
-            _allowedFunctions = new HashSet<string>(new string[] { "Contains", "Any", "StartsWith" });
+            _allowedFunctions = new HashSet<string>(new string[] { "Contains", "Any", "StartsWith", "PatIndex" });
             _allLiterals = new Dictionary<string, QLiteral>();
         }
 
@@ -281,6 +285,7 @@ namespace xwcs.core.linq
         // unary for us is the same as constant
         protected override Expression VisitUnary(UnaryExpression u)
         {
+            /*
             if(u.NodeType == ExpressionType.Convert)
             {
                 // do constant here instead of convert
@@ -292,6 +297,7 @@ namespace xwcs.core.linq
                 return _current.Exp;
             }else
             {
+            */
 				PushStatus();
 				Expression operand = this.Visit(u.Operand);
 				CurentStatus currStatus = _current;
@@ -309,13 +315,22 @@ namespace xwcs.core.linq
 						_allLiterals.Add(name, new QLiteral() { Tag = name, Exp = u, SType = _current.CurrentType });
 						return Expression.Constant(name);
 					}
-					
-					// non trivial unary
+
+                    
+                    if (operand is ConstantExpression && u.NodeType == ExpressionType.Convert)
+                    {
+                        _current.Clean = true;
+                        _current.Exp = u;
+                        _current.CurrentType = currStatus.CurrentType;
+                        return Expression.Constant(operand);
+                    }
+
+                    // non trivial unary
                     return Expression.MakeUnary(u.NodeType, operand, u.Type, u.Method);
                 }
                 return u;
 
-            }
+           // }
         }
 
         protected override Expression VisitBinary(BinaryExpression b)
@@ -354,7 +369,10 @@ namespace xwcs.core.linq
                     (ReferenceEquals(null, leftStatus.CurrentType.Type) && ReferenceEquals(null, rightStatus.CurrentType.Type) && leftStatus.Clean && rightStatus.Clean) ||
 
                     // or the same
-                    !ReferenceEquals(null, leftStatus.CurrentType.Type) && leftStatus.CurrentType.Type.Equals(rightStatus.CurrentType.Type))
+                    !ReferenceEquals(null, leftStatus.CurrentType.Type) && leftStatus.CurrentType.Type.Equals(rightStatus.CurrentType.Type) ||
+
+                    // or there is clean type operated against constant with null type
+                    !ReferenceEquals(null, leftStatus.CurrentType.Type) && ReferenceEquals(null, rightStatus.CurrentType.Type) && rightStatus.Exp.NodeType == ExpressionType.Constant)
                 {
                     // remove current constants from literals, so we will not use them
                     _allLiterals.Remove((left as ConstantExpression).Value.ToString());
@@ -402,7 +420,7 @@ namespace xwcs.core.linq
             }
             else
             {
-                Expression obj = this.Visit(m.Arguments[0]);
+                Expression obj = this.Visit(m.Arguments[m.Method.Name == "PatIndex" ? 1 : 0]);
             }
 
             CurentStatus methodStatus = _current;
@@ -871,5 +889,131 @@ namespace xwcs.core.linq
             }
             return iv;
         }
+    }
+
+
+
+    public sealed class LikeFunction : ICustomFunctionOperatorConvertibleToExpression, ICustomFunctionOperatorEvaluatableWithCaseSensitivity, ICustomFunctionOperatorCompileableWithCaseSensitivity, ICustomFunctionOperatorCompileable, ICustomFunctionOperatorFormattable
+    {
+        private static DevExpress.Data.Filtering.Helpers.LikeCustomFunction Original;
+
+        static LikeFunction()
+        {
+            LikeFunction.Original = new DevExpress.Data.Filtering.Helpers.LikeCustomFunction();
+        }
+
+        static Expression MakeLinq(ICriteriaToExpressionConverter converter, Expression vExpr, Expression pExpr)
+        {
+            if (pExpr.NodeType == ExpressionType.Constant)
+            {
+                object boxedVal = ((ConstantExpression)pExpr).Value;
+                string pattern = boxedVal != null ? boxedVal.ToString() : null;
+                if (pattern == null)
+                    return Expression.Constant(false);
+                string body = pattern;
+                bool lastPercent = body.EndsWith("%");
+                if (lastPercent)
+                    body = body.Substring(0, body.Length - 1);
+                bool firstPercent = body.StartsWith("%");
+                if (firstPercent)
+                    body = body.Substring(1);
+                if (!body.Contains('%') && !body.Contains('_') && !body.Contains('[') && (lastPercent || firstPercent))
+                {
+                    var stringExpr = EvalHelpers.SafeToString(vExpr);
+                    {
+                        var maybeIifConverter = converter as CriteriaToExpressionConverterInternal;
+                        if (maybeIifConverter != null && maybeIifConverter.ForceIifForInstance)
+                        {
+                            Expression<Func<string, bool>> method;
+                            if (!firstPercent)
+                                method = s => s != null ? s.StartsWith(body) : false;
+                            else if (!lastPercent)
+                                method = s => s != null ? s.EndsWith(body) : false;
+                            else
+                                method = s => s != null ? s.Contains(body) : false;
+                            return Expression.Invoke(Expression.Constant(method), stringExpr);
+                        }
+                    }
+                    string methodName;
+                    if (!firstPercent)
+                        methodName = "StartsWith";
+                    else if (!lastPercent)
+                        methodName = "EndsWith";
+                    else
+                        methodName = "Contains";
+                    return Expression.Call(stringExpr, methodName, null, Expression.Constant(body));
+                }
+            }
+            return ((ICustomFunctionOperatorConvertibleToExpression)LikeFunction.Original).Convert(converter, vExpr, pExpr);
+        }
+
+
+        #region ICustomFunctionOperatorConvertibleToExpression Members
+
+        Expression ICustomFunctionOperatorConvertibleToExpression.Convert(ICriteriaToExpressionConverter converter, params Expression[] operands)
+        {
+            if (operands.Length != 2)
+                throw new ArgumentException("operands.Length != 2");
+            if (converter is CriteriaToEFExpressionConverter || converter is CriteriaToEFExpressionConverterInternal)
+                return LikeFunction.MakeLinq(converter, operands[0], operands[1]);
+            return ((ICustomFunctionOperatorConvertibleToExpression)LikeFunction.Original).Convert(converter, operands);
+        }
+
+        #endregion
+
+        #region ICustomFunctionOperator Members
+
+        object ICustomFunctionOperator.Evaluate(params object[] operands)
+        {
+            return ((ICustomFunctionOperator)LikeFunction.Original).Evaluate(operands);
+        }
+
+        string ICustomFunctionOperator.Name
+        {
+            get { return "Like"; }
+        }
+
+        Type ICustomFunctionOperator.ResultType(params Type[] operands)
+        {
+            return typeof(bool);
+        }
+
+        #endregion
+
+        #region ICustomFunctionOperatorEvaluatableWithCaseSensitivity Members
+
+        object ICustomFunctionOperatorEvaluatableWithCaseSensitivity.Evaluate(bool caseSensetive, params object[] operands)
+        {
+            return ((ICustomFunctionOperatorEvaluatableWithCaseSensitivity)LikeFunction.Original).Evaluate(caseSensetive, operands);
+        }
+
+        #endregion
+
+        #region ICustomFunctionOperatorCompileableWithCaseSensitivity Members
+
+        Expression ICustomFunctionOperatorCompileableWithCaseSensitivity.Create(bool caseSensetive, params Expression[] operands)
+        {
+            return ((ICustomFunctionOperatorCompileableWithCaseSensitivity)LikeFunction.Original).Create(caseSensetive, operands);
+        }
+
+        #endregion
+
+        #region ICustomFunctionOperatorCompileable Members
+
+        Expression ICustomFunctionOperatorCompileable.Create(params Expression[] operands)
+        {
+            return ((ICustomFunctionOperatorCompileable)LikeFunction.Original).Create(operands);
+        }
+
+        #endregion
+
+        #region ICustomFunctionOperatorFormattable Members
+
+        string ICustomFunctionOperatorFormattable.Format(Type providerType, params string[] operands)
+        {
+            return ((ICustomFunctionOperatorFormattable)LikeFunction.Original).Format(providerType, operands);
+        }
+
+        #endregion
     }
 }

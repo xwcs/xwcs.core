@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,16 +15,18 @@ namespace xwcs.core
 
         private System.Windows.Forms.Timer _executeLaterTimer;
         private Queue<VoidNoParamDelegate> _executeLaterQueue;
+        private ISynchronizeInvoke _invokationTarget;
 
-        public CmdQueue()
+        public CmdQueue(ISynchronizeInvoke invokationTarget)
         {
+            _invokationTarget = invokationTarget;
             _executeLaterQueue = new Queue<VoidNoParamDelegate>();
             _executeLaterTimer = new Timer();
             _executeLaterTimer.Interval = 1;
             _executeLaterTimer.Enabled = false;
             _executeLaterTimer.Tick += _executeLaterTimer_Tick;
         }
-
+        
         private void _executeLaterTimer_Tick(object sender, EventArgs e)
         {
             _executeLaterTimer.Stop();
@@ -32,13 +35,19 @@ namespace xwcs.core
         
         public void ExecuteLater(VoidNoParamDelegate d)
         {
-            if (disposedValue)
-            { // Silent
-                throw new InvalidOperationException("ExecuteLater Disposed");
-            }
-            _executeLaterQueue.Enqueue(d);
-            _executeLaterTimer.Start();
-            Application.DoEvents();
+            if (_invokationTarget.InvokeRequired)
+            {
+                _invokationTarget.Invoke(new Action<VoidNoParamDelegate>(ExecuteLater), new Object[] { d });
+            }else
+            {
+                if (disposedValue)
+                { // Silent
+                    throw new InvalidOperationException("ExecuteLater Disposed");
+                }
+                _executeLaterQueue.Enqueue(d);
+                _executeLaterTimer.Start();
+                Application.DoEvents();
+            }           
         }
 
         
