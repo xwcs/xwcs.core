@@ -26,12 +26,13 @@ namespace xwcs.core.db.binding.attributes
 
 		public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e)
 		{
-			e.RepositoryItem = new RepositoryItemMemoEdit();
+			e.RepositoryItem = new RepositoryItemRichTextEdit();
 
 			RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;
 			rle.AutoHeight = true;
 			rle.Appearance.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
-		}
+            rle.DocumentFormat = DevExpress.XtraRichEdit.DocumentFormat.Html;
+        }
 		public override void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e)
 		{
 			RepositoryItemRichTextEdit rle = e.RepositoryItem as RepositoryItemRichTextEdit;

@@ -190,7 +190,7 @@ namespace xwcs.core.manager
         /// <returns></returns>
         public static string TemplatizePath(string path)
         {
-            return Regex.Replace(path, _pattern, new MatchEvaluator(Includer));
+            return Path.GetFullPath(Regex.Replace(path, _pattern, new MatchEvaluator(Includer))).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
         private static string Includer(Match match)
         {
