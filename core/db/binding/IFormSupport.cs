@@ -48,8 +48,10 @@ namespace xwcs.core.ui.db
 
 		Control Parent { get; }
 		IBehaviorContainer BehaviorContainer { get; }
+        StyleController ModifiedStyle { get;  }
 
-	}
+
+    }
     
 
     public class DynamicFormAction

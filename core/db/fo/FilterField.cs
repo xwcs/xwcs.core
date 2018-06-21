@@ -36,8 +36,10 @@ namespace xwcs.core.db.fo
         CustomConverterAttribute Converter { get; set; }
     }
 
+    
+
 	[DataContract(IsReference=true)]
-	public class FilterField<T> : ICriteriaTreeNode, IHasConverter
+	public class FilterField<T> : ICriteriaTreeNode, IHasConverter, ICanBeNull
     {
 		#region serialize
 		[DataMember(Order = 0)]
@@ -157,7 +159,12 @@ namespace xwcs.core.db.fo
         {
             return _field != null ? _field.ToString() : "";
         }
-        
+
+        public bool isNull()
+        {
+            return Value == null; 
+        }
+
         public CriteriaOperator Condition {
 			get {
 				if(_hasCriteria) {
