@@ -27,6 +27,9 @@ namespace xwcs.core.controls
 		);
 
 		RibbonControl Ribbon { get; }
+
+        // method will check if document can be closed
+        bool checkClosable();
     }
 }
 
