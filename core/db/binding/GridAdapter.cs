@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace xwcs.core.db.binding
 {
@@ -145,6 +146,7 @@ namespace xwcs.core.db.binding
         object DataSource { get; set; }
         void PopulateColumns();
         IColumnAdapter ColumnByFieldName(string fn);
+        System.Windows.Forms.Control Control { get; }
         int ColumnsCount();
         void ClearColumns();
 
@@ -496,7 +498,15 @@ namespace xwcs.core.db.binding
             }
         }
 
-		public event DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler ValidatingEditor
+        public Control Control
+        {
+            get
+            {
+                return _grid;
+            }
+        }
+
+        public event DevExpress.XtraEditors.Controls.BaseContainerValidateEditorEventHandler ValidatingEditor
 		{
             add
             {
@@ -676,6 +686,14 @@ namespace xwcs.core.db.binding
 				_tree.OptionsBehavior.AutoPopulateColumns = value;
 			}
 		}
+
+        public Control Control
+        {
+            get
+            {
+                return _tree;
+            }
+        }
 
         public event EventHandler DataSourceChanged
         {
