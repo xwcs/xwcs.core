@@ -593,7 +593,7 @@ namespace xwcs.core.db.binding
             if (ReferenceEquals(null, _cnt)) return null;
 
             return _cnt.Items.Where(i => i is LayoutControlItem).Cast<LayoutControlItem>()
-            //.Where(o => !ReferenceEquals(o.Control, null))
+            .Where(o => !ReferenceEquals(o.Control, null))
             .Where(o => o.Control.DataBindings.Count > 0 && o.Control.DataBindings[0].BindingMemberInfo.BindingMember == ModelPropertyName)
             .Select(o => o.Control)
             .FirstOrDefault();
