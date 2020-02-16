@@ -353,7 +353,7 @@ namespace xwcs.core.db
         {
             if (_entityLockDisabled) return new MultiLockResult() { id_batch = 1 };
 
-            MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock({1}, '{2}');", _adminDb, string.Join(",", ids), "v_nrecord")).FirstOrDefault();
+            MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock('{1}', '{2}');", _adminDb, string.Join(",", ids), "v_nrecord")).FirstOrDefault();
             if (lr.id_batch <= 0)
             {
                 throw new DBMultiLockException(lr);
