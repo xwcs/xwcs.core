@@ -353,12 +353,51 @@ namespace xwcs.core.db
         {
             if (_entityLockDisabled) return new MultiLockResult() { id_batch = 1 };
 
-            MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock('{1}', '{2}');", _adminDb, string.Join(",", ids), "v_nrecord")).FirstOrDefault();
-            if (lr.id_batch <= 0)
+            // do it in blocks for 50 records!!!
+
+            using (var tr = Database.BeginTransaction())
             {
-                throw new DBMultiLockException(lr);
-            }
-            return lr;
+                // start lock -10, v_nrecord, -1
+                MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock(-1, '-10', 'v_nrecord');", _adminDb)).FirstOrDefault();
+
+                if(lr.id_batch <= 0)
+                {
+                    tr.Rollback();
+                    throw new DBMultiLockException(lr);
+                }
+
+                bool done = false;
+                int elements = ids.Count;
+                int pos = 0;
+                int rSize = 25;
+                while (!done)
+                {
+                    List<int> slice;
+
+                    if (elements > rSize)
+                    {
+                        slice = ids.GetRange(pos, rSize);
+                        pos += rSize;
+                        elements -= rSize;
+                    } else
+                    {
+                        slice = ids.GetRange(pos, elements);
+                        done = true;
+                    }
+
+                    MultiLockResult lrsingle = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock({3}, '{1}', '{2}');", _adminDb, string.Join(",", slice), "v_nrecord", lr.id_batch)).FirstOrDefault();
+                    if (lrsingle.id_batch <= 0)
+                    {
+                        tr.Rollback();
+                        throw new DBMultiLockException(lrsingle);
+                    }
+
+                }
+                
+                tr.Commit();
+
+                return lr;
+            }  
         }
 
         public UnlockResult MultiUnlock(int id_batch)

@@ -112,7 +112,7 @@ namespace xwcs.core.net
 			}
 			catch (Exception ex)
 			{
-				_logger.Debug("Upload file failed! Address : " + addr + ",  Error : " + ex.Message);
+				_logger.Debug("Upload file failed! Address : " + addr + ",  Error : " + ex.ToString());
 			}
 			return "";
 		}
@@ -147,7 +147,7 @@ namespace xwcs.core.net
 			{
 				Application.UseWaitCursor = false;
 				Application.DoEvents();
-				_logger.Debug("Download attachment failed! Address : " + addr + ",  Error : " + ex.Message);
+				_logger.Debug("Download attachment failed! Address : " + addr + ",  Error : " + ex.ToString());
 			}
 			return false;
 		}
@@ -190,7 +190,7 @@ namespace xwcs.core.net
 			{
 				Application.UseWaitCursor = false;
 				Application.DoEvents();
-				//_logger.Debug("Download attachment failed! Address : " + addr + ",  Error : " + ex.Message);
+				//_logger.Debug("Download attachment failed! Address : " + addr + ",  Error : " + ex.ToString());
 			}
 			return "";
 		}
