@@ -191,9 +191,22 @@ namespace xwcs.core.db
             MyEntry(e).CurrentValues.SetValues(table.Where(expressionHere).FirstOrDefault());
         }
 
+        public void MarkEntityForDelete(EntityBase e)
+        {
+            MyEntry(e).State = EntityState.Deleted;
+        }
+
         public void ReloadEntity(EntityBase e)
         {
             MyEntry(e).Reload();
+        }
+
+        // clean context
+        public void DetachAll()
+        {
+            foreach(var e in ChangeTracker.Entries()){
+                e.State = EntityState.Detached;
+            }
         }
 
         public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName, bool reloadFromDb = false)
