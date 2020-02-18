@@ -63,7 +63,8 @@ namespace xwcs.core.db.binding.attributes
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e)
         {
             RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
-			setupRle(src, rle, e.FieldName);
+            src.EditorsHost.onSetupLookUpGridEventData(this, new SetupLookUpGridEventData { FieldName = e.FieldName, DataBindingSource = src, Rle = rle });
+            setupRle(src, rle, e.FieldName);
 		}
 
 		// grid like container
@@ -73,7 +74,8 @@ namespace xwcs.core.db.binding.attributes
 		public override void applyCustomRowCellEdit(IDataBindingSource src, CustomRowCellEditEventArgs e) {
             RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
 			rle.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.Standard;
-		}
+            src.EditorsHost.onSetupLookUpGridEventData(this, new SetupLookUpGridEventData { FieldName = e.Column.FieldName, DataBindingSource = src, Rle = rle });
+        }
 		public override void applyCustomEditShown(IDataBindingSource src, ViewEditorShownEventArgs e) {
             RepositoryItemGridLookUpEdit rle = e.RepositoryItem as RepositoryItemGridLookUpEdit;
             setupRle(src, rle, e.FieldName);
@@ -93,14 +95,16 @@ namespace xwcs.core.db.binding.attributes
 			rle.ValueMember = ValueMember;
             rle.AcceptEditorTextAsNewValue = DevExpress.Utils.DefaultBoolean.True;
             rle.PopupFormMinSize = new Size(_popUpWidth, _popUpHeight);
-
+            rle.View.OptionsView.ShowFilterPanelMode = ShowFilterPanelMode.Default;
+            rle.View.OptionsView.ShowAutoFilterRow=true;
             GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
-			src.EditorsHost.onGetOptionsList(this, qd);
+            src.EditorsHost.onGetOptionsList(this, qd);
 			if (qd.Data != null)
 			{
 				rle.DataSource = qd.Data;
 			}
-		}
+
+        }
 
         public override void applyGetFieldDisplayText(IDataBindingSource src, CustomColumnDisplayTextEventArgs e) {
             src.EditorsHost.onGetFieldDisplayText(src, e);
