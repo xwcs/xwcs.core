@@ -37,6 +37,13 @@ namespace xwcs.core.db.binding
 		public IDataBindingSource DataBindingSource { get; set; }
 	}
 
+    public class SetupLookUpGridEventData
+    {
+        public string FieldName { get; set; }
+        public IDataBindingSource DataBindingSource { get; set; }
+        public RepositoryItemGridLookUpEdit Rle { get; set; }
+    }
+
     public enum GridConnectedEventKind
     {
         GridConnected,
@@ -77,6 +84,7 @@ namespace xwcs.core.db.binding
 		void onGetOptionsList(object sender, GetFieldOptionsListEventData qd);
         void onGetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs cc);
         void onGridConnected(object sender, GridConnectedEventData data);
+        void onSetupLookUpGridEventData(object sender, SetupLookUpGridEventData data);
 
         string LayoutAssetsPath { get; }
 
