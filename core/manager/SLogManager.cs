@@ -395,7 +395,7 @@ namespace xwcs.core.manager
         {
             // unwind exception
             while (ex.InnerException != null) ex = ex.InnerException;
-            return ex.Message;
+            return ex.ToString();
         }
 
         /****
