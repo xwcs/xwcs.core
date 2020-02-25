@@ -33,11 +33,33 @@ namespace xwcs.core.db
             }
         }
     }
-    
+
+    public class DBMultiLockException : ApplicationException
+    {
+        public DBMultiLockException(MultiLockResult lr)
+        {
+            MultiLockResult = lr;
+        }
+        public MultiLockResult MultiLockResult;
+
+        public override string Message
+        {
+            get
+            {
+                return string.Format("Can't finish operation, soem of records are allready locked!");
+            }
+        }
+    }
+
     public class LockResult
     {
         public int Id_lock { get; set; }
         public string Owner { get; set; }
+    }
+
+    public class MultiLockResult
+    {
+        public int id_batch { get; set; }
     }
 
     public class UnlockResult
@@ -169,9 +191,22 @@ namespace xwcs.core.db
             MyEntry(e).CurrentValues.SetValues(table.Where(expressionHere).FirstOrDefault());
         }
 
+        public void MarkEntityForDelete(EntityBase e)
+        {
+            MyEntry(e).State = EntityState.Deleted;
+        }
+
         public void ReloadEntity(EntityBase e)
         {
             MyEntry(e).Reload();
+        }
+
+        // clean context
+        public void DetachAll()
+        {
+            foreach(var e in ChangeTracker.Entries()){
+                e.State = EntityState.Detached;
+            }
         }
 
         public object LazyLoadOrDefaultReference(EntityBase e, string PropertyName, bool reloadFromDb = false)
@@ -262,6 +297,8 @@ namespace xwcs.core.db
             return InternalUnlock(ld);            
         }
 
+       
+
         public LockState TableLockState (EntityBase e)
         {
             return InternalLockState (new LockData() { id = "-1", entity = e.GetFieldName() });
@@ -322,6 +359,65 @@ namespace xwcs.core.db
         {
             UnlockResult ur = Database.SqlQuery<UnlockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
             return new LockResult() { Id_lock = ur.Cnt, Owner = ur.Owner }; // this should not be necessary if DB align lock and unlock result
+        }
+
+
+        public MultiLockResult MultiLock(List<int> ids)
+        {
+            if (_entityLockDisabled) return new MultiLockResult() { id_batch = 1 };
+
+            // do it in blocks for 50 records!!!
+
+            using (var tr = Database.BeginTransaction())
+            {
+                // start lock -10, v_nrecord, -1
+                MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock(-1, '-10', 'v_nrecord');", _adminDb)).FirstOrDefault();
+
+                if(lr.id_batch <= 0)
+                {
+                    tr.Rollback();
+                    throw new DBMultiLockException(lr);
+                }
+
+                bool done = false;
+                int elements = ids.Count;
+                int pos = 0;
+                int rSize = 25;
+                while (!done)
+                {
+                    List<int> slice;
+
+                    if (elements > rSize)
+                    {
+                        slice = ids.GetRange(pos, rSize);
+                        pos += rSize;
+                        elements -= rSize;
+                    } else
+                    {
+                        slice = ids.GetRange(pos, elements);
+                        done = true;
+                    }
+
+                    MultiLockResult lrsingle = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock({3}, '{1}', '{2}');", _adminDb, string.Join(",", slice), "v_nrecord", lr.id_batch)).FirstOrDefault();
+                    if (lrsingle.id_batch <= 0)
+                    {
+                        tr.Rollback();
+                        throw new DBMultiLockException(lrsingle);
+                    }
+
+                }
+                
+                tr.Commit();
+
+                return lr;
+            }  
+        }
+
+        public UnlockResult MultiUnlock(int id_batch)
+        {
+            if (_entityLockDisabled) return new UnlockResult() { Cnt = 1 };
+
+            return Database.SqlQuery<UnlockResult>(string.Format("call {0}.multi_entity_unlock({1}, '{2}');", _adminDb, id_batch, "v_nrecord")).FirstOrDefault();
         }
 
 

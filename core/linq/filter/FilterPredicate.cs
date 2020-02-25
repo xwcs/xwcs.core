@@ -297,7 +297,7 @@ namespace xwcs.core.linq.filter
 			}
 			catch (Exception ex)
 			{
-				manager.SLogManager.getInstance().getClassLogger(this.GetType()).Error(ex.Message);
+				manager.SLogManager.getInstance().getClassLogger(this.GetType()).Error(ex.ToString());
 			}
 
 			//now own properties => these are later then those from surrogated so locals will do override
