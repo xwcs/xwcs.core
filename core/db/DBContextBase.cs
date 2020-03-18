@@ -29,7 +29,7 @@ namespace xwcs.core.db
         {
             get
             {
-                return string.Format("Can't finish operation, record is LOCKED by user : {0}", LockResult.Owner);
+                return string.Format("Impossibile completare l'operazione, il record è BLOCCATO da: {0}", LockResult.Owner);
             }
         }
     }
@@ -46,7 +46,7 @@ namespace xwcs.core.db
         {
             get
             {
-                return string.Format("Can't finish operation, soem of records are allready locked!");
+                return string.Format("Impossibile completare l'operazione, alcuni reord sono già bloccati!");
             }
         }
     }
@@ -72,9 +72,23 @@ namespace xwcs.core.db
     {
         public string id;
         public string entity;
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(obj, null)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return id.Equals((obj as LockData).id) && entity.Equals((obj as LockData).entity);
+        }
+
+        public override int GetHashCode()
+        {
+            return id.GetHashCode() + 13 * entity.GetHashCode();
+        }
+
+
     }
 
-   
+
     public class DBContextBase : DbContext, IDisposable
     {
         private Config _cfg = new Config("MainAppConfig");
@@ -84,7 +98,7 @@ namespace xwcs.core.db
 
         // avoid infinity entry creation
         private Dictionary<EntityBase, DbEntityEntry<EntityBase>> _entries = new Dictionary<EntityBase, DbEntityEntry<EntityBase>>();
-                
+
 
         private HashSet<LockData> _locks = new HashSet<LockData>();
 
@@ -110,13 +124,14 @@ namespace xwcs.core.db
 
         private void ObjectStateManager_ObjectStateManagerChanged(object sender, System.ComponentModel.CollectionChangeEventArgs e)
         {
-            if(e.Action == System.ComponentModel.CollectionChangeAction.Add)
+            if (e.Action == System.ComponentModel.CollectionChangeAction.Add)
             {
-                if(e.Element is IModelEntity)
+                if (e.Element is IModelEntity)
                 {
                     (e.Element as IModelEntity).SetCtx(this);
                 }
-            }else if (e.Action == System.ComponentModel.CollectionChangeAction.Remove)
+            }
+            else if (e.Action == System.ComponentModel.CollectionChangeAction.Remove)
             {
                 if (e.Element is IModelEntity)
                 {
@@ -135,7 +150,7 @@ namespace xwcs.core.db
 
         private void Connection_StateChange(object sender, System.Data.StateChangeEventArgs e)
         {
-            if(e.CurrentState == System.Data.ConnectionState.Open)
+            if (e.CurrentState == System.Data.ConnectionState.Open)
             {
                 DoLoginForConnection();
             }
@@ -147,7 +162,7 @@ namespace xwcs.core.db
             {
                 return Database.SqlQuery<string>(string.Format("select {0}.get_current_egaf_user();", _adminDb)).FirstOrDefault();
             }
-            
+
         }
 
         private void DoLoginForConnection()
@@ -156,17 +171,18 @@ namespace xwcs.core.db
             string who = Database.SqlQuery<string>(string.Format("call {0}.login('{1}');", _adminDb, xwcs.core.user.SecurityContext.getInstance().CurrentUser.Login)).FirstOrDefault();
             if (who.Equals("missing user error"))
             {
-                throw new ApplicationException("Current user is not allowed to access DB!");
+                throw new ApplicationException("L'utente corrente non è abilitato ad accedere al DB!");
             }
         }
 
-       
+
         private DbEntityEntry<EntityBase> MyEntry(EntityBase e)
         {
             if (_entries.ContainsKey(e))
             {
                 return _entries[e];
-            }else
+            }
+            else
             {
                 DbEntityEntry<EntityBase> ne = Entry(e);
                 _entries[e] = ne;
@@ -174,7 +190,7 @@ namespace xwcs.core.db
             }
         }
 
-        public void ReplaceEntity<T,P>(T e, P KeyValue, string KeyName) where T : EntityBase
+        public void ReplaceEntity<T, P>(T e, P KeyValue, string KeyName) where T : EntityBase
         {
             // First resolve the used table according to given type
             DbSet<T> table = this.GetPropertyByName(KeyName) as DbSet<T>;
@@ -204,7 +220,8 @@ namespace xwcs.core.db
         // clean context
         public void DetachAll()
         {
-            foreach(var e in ChangeTracker.Entries()){
+            foreach (var e in ChangeTracker.Entries())
+            {
                 e.State = EntityState.Detached;
             }
         }
@@ -219,7 +236,7 @@ namespace xwcs.core.db
 
                 DbReferenceEntry en = et.Reference(PropertyName);
 
-                if (!en.IsLoaded || reloadFromDb) 
+                if (!en.IsLoaded || reloadFromDb)
                 {
                     en.Load();
                 }
@@ -230,7 +247,7 @@ namespace xwcs.core.db
             {
                 SEventProxy.AllowModelEvents();
             }
-            
+
         }
         public object LazyLoadOrDefaultCollection(EntityBase e, string PropertyName, bool reloadFromDb = false)
         {
@@ -258,12 +275,10 @@ namespace xwcs.core.db
         {
             return InternalLockState(new LockData() { id = e.GetLockId().ToString(), entity = e.GetFieldName() });
         }
-
-
-        public LockResult EntityLock(EntityBase e, bool persistent=false)
+        private LockResult EntityLockInternal(EntityBase e, bool persistent = false)
         {
-            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
 
+            
 
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
@@ -280,9 +295,28 @@ namespace xwcs.core.db
             return lr;
         }
 
-        public LockResult EntityUnlock(EntityBase e)
+        //qui metto il reserve del nome file, poi nel trigger on save di iter su mysql faccio il leave reserved o il confirm reserve
+        public LockResult EntityLock(EntityBase e, bool persistent = false)
         {
             if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
+            if (ReferenceEquals(Database.CurrentTransaction, null))
+            {
+                using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
+                {
+                    var ret = EntityLockInternal(e, persistent);
+                    tr.Commit();
+                    return ret;
+                }
+            }
+            else
+            {
+                return EntityLockInternal(e, persistent);
+            }
+        }
+
+        private LockResult EntityUnlockInternal(EntityBase e)
+        {
+            
 
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
@@ -292,17 +326,36 @@ namespace xwcs.core.db
             if (_locks.Contains(ld))
             {
                 _locks.Remove(ld);
+
             }
 
-            return InternalUnlock(ld);            
+            return InternalUnlock(ld);
         }
-
-       
-
-        public LockState TableLockState (EntityBase e)
+        public LockResult EntityUnlock(EntityBase e)
         {
-            return InternalLockState (new LockData() { id = "-1", entity = e.GetFieldName() });
+            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
+            if (ReferenceEquals(Database.CurrentTransaction, null))
+            {
+                using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
+                {
+                    var ret = EntityUnlockInternal(e);
+                    tr.Commit();
+                    return ret;
+                }
+            }
+            else
+            {
+                return EntityUnlockInternal(e);
+            }
         }
+
+
+
+        public LockState TableLockState(EntityBase e)
+        {
+            return InternalLockState(new LockData() { id = "-1", entity = e.GetFieldName() });
+        }
+
         private LockState InternalLockState(LockData ld)
         {
             //waiting for the correct procedure on mysql i implement this function with a lock test
@@ -320,29 +373,46 @@ namespace xwcs.core.db
                     return LockState.NotMine;
             }
         }
-        public LockResult TableLock(EntityBase e, bool persistent = false)
+        private LockResult TableLockInternal(EntityBase e, bool persistent = false)
         {
-            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
+            
 
 
             string ename = e.GetFieldName(); // name of table
 
-            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}', {2});", _adminDb, ename, (persistent?'1':'0') )).FirstOrDefault();
+            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}', {2});", _adminDb, ename, (persistent ? '1' : '0'))).FirstOrDefault();
             if (lr.Id_lock == 0)
             {
                 throw new DBLockException(lr);
             }
-            
+
             // save lock internally
             if (!(persistent)) _locks.Add(new LockData() { id = "-1", entity = ename });
 
             return lr;
         }
 
-        public LockResult TableUnlock(EntityBase e)
+        public LockResult TableLock(EntityBase e, bool persistent = false)
         {
             if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
 
+            if (ReferenceEquals(Database.CurrentTransaction, null))
+            {
+                using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
+                {
+                    var ret = TableLockInternal(e, persistent);
+                    tr.Commit();
+                    return ret;
+                }
+            }
+            else
+            {
+                return TableLockInternal(e, persistent);
+            }
+        }
+
+        private LockResult TableUnlockIternal(EntityBase e)
+        {
             string ename = e.GetFieldName(); // name of table
 
             LockData ld = new LockData() { id = "-1", entity = ename };
@@ -355,6 +425,24 @@ namespace xwcs.core.db
             return InternalUnlock(ld);
         }
 
+        public LockResult TableUnlock(EntityBase e)
+        {
+            if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
+            if (ReferenceEquals(Database.CurrentTransaction, null))
+            {
+                using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
+                {
+                    var ret = TableUnlockIternal(e);
+                    tr.Commit();
+                    return ret;
+                }
+            }
+            else
+            {
+                return TableUnlockIternal(e);
+            }
+        }
+
         private LockResult InternalUnlock(LockData ld)
         {
             UnlockResult ur = Database.SqlQuery<UnlockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
@@ -362,62 +450,90 @@ namespace xwcs.core.db
         }
 
 
-        public MultiLockResult MultiLock(List<int> ids)
+        private MultiLockResult MultiLockInternal<T>(List<T> ids) where T : EntityBase
         {
-            if (_entityLockDisabled) return new MultiLockResult() { id_batch = 1 };
 
+            string ename = ids[0].GetFieldName();
             // do it in blocks for 50 records!!!
+            // start lock -10, v_nrecord, -1
+            MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock(-1, '-10', '{1}');", _adminDb, ename)).FirstOrDefault();
 
-            using (var tr = Database.BeginTransaction())
+            if (lr.id_batch <= 0)
             {
-                // start lock -10, v_nrecord, -1
-                MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock(-1, '-10', 'v_nrecord');", _adminDb)).FirstOrDefault();
+                throw new DBMultiLockException(lr);
+            }
 
-                if(lr.id_batch <= 0)
+            bool done = false;
+            int elements = ids.Count;
+            int pos = 0;
+            int rSize = 25;
+            List<int> idsList = ids.Select(xxx => xxx.GetLockId()).ToList();
+            while (!done)
+            {
+                List<int> slice;
+
+                if (elements > rSize)
                 {
-                    tr.Rollback();
-                    throw new DBMultiLockException(lr);
+                    slice = idsList.GetRange(pos, rSize);
+                    pos += rSize;
+                    elements -= rSize;
+                }
+                else
+                {
+                    slice = idsList.GetRange(pos, elements);
+                    done = true;
                 }
 
-                bool done = false;
-                int elements = ids.Count;
-                int pos = 0;
-                int rSize = 25;
-                while (!done)
+                MultiLockResult lrsingle = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock({3}, '{1}', '{2}');", _adminDb, string.Join(",", slice), ename, lr.id_batch)).FirstOrDefault();
+                if (lrsingle.id_batch <= 0)
                 {
-                    List<int> slice;
-
-                    if (elements > rSize)
-                    {
-                        slice = ids.GetRange(pos, rSize);
-                        pos += rSize;
-                        elements -= rSize;
-                    } else
-                    {
-                        slice = ids.GetRange(pos, elements);
-                        done = true;
-                    }
-
-                    MultiLockResult lrsingle = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock({3}, '{1}', '{2}');", _adminDb, string.Join(",", slice), "v_nrecord", lr.id_batch)).FirstOrDefault();
-                    if (lrsingle.id_batch <= 0)
-                    {
-                        tr.Rollback();
-                        throw new DBMultiLockException(lrsingle);
-                    }
-
+                    throw new DBMultiLockException(lrsingle);
                 }
-                
-                tr.Commit();
 
-                return lr;
-            }  
+            }
+
+            return lr;
+        }
+
+        public MultiLockResult MultiLock<T>(List<T> ids) where T : EntityBase
+        {
+            if (_entityLockDisabled || ids.Count == 0) return new MultiLockResult() { id_batch = 1 };
+            if (ReferenceEquals(Database.CurrentTransaction, null))
+            {
+                using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
+                {
+                    var ret = MultiLockInternal(ids);
+                    tr.Commit();
+                    return ret;
+                }
+            }
+            else
+            {
+                return MultiLockInternal(ids);
+            }
+        }
+
+        private UnlockResult MultiUnlockInternal(int id_batch)
+        {
+            return Database.SqlQuery<UnlockResult>(string.Format("call {0}.multi_entity_unlock({1});", _adminDb, id_batch)).FirstOrDefault();
         }
 
         public UnlockResult MultiUnlock(int id_batch)
         {
             if (_entityLockDisabled) return new UnlockResult() { Cnt = 1 };
-
-            return Database.SqlQuery<UnlockResult>(string.Format("call {0}.multi_entity_unlock({1}, '{2}');", _adminDb, id_batch, "v_nrecord")).FirstOrDefault();
+            if (ReferenceEquals(Database.CurrentTransaction, null))
+            {
+                using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
+                {
+                    var ret = MultiUnlockInternal(id_batch);
+                    tr.Commit();
+                    return ret;
+                }
+            }
+            else
+            {
+                return MultiUnlockInternal(id_batch);
+            }
         }
 
 
@@ -456,7 +572,7 @@ namespace xwcs.core.db
         {
             string ret = "";
 
-            foreach(DbEntityValidationResult r in ex.EntityValidationErrors)
+            foreach (DbEntityValidationResult r in ex.EntityValidationErrors)
             {
                 r.ValidationErrors.ToList().ForEach(e => ret += "\r\n" + e.ErrorMessage);
             }
@@ -467,11 +583,11 @@ namespace xwcs.core.db
 
         #region IDisposable Support
         private bool disposedValue = false;
-        
+
         public bool Valid
         {
             get { return !disposedValue; }
-        } 
+        }
 
         protected override void Dispose(bool disposing)
         {
@@ -497,6 +613,6 @@ namespace xwcs.core.db
         }
         #endregion
 
-        
+
     }
 }
