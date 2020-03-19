@@ -88,14 +88,12 @@ namespace xwcs.core.db
 
     }
 
-
     public class DBContextBase : DbContext, IDisposable
     {
         private Config _cfg = new Config("MainAppConfig");
         private string _adminDb = "admin";
         private bool _entityLockDisabled = false;
         private ObjectContext _oc;
-
         // avoid infinity entry creation
         private Dictionary<EntityBase, DbEntityEntry<EntityBase>> _entries = new Dictionary<EntityBase, DbEntityEntry<EntityBase>>();
 
@@ -295,7 +293,6 @@ namespace xwcs.core.db
             return lr;
         }
 
-        //qui metto il reserve del nome file, poi nel trigger on save di iter su mysql faccio il leave reserved o il confirm reserve
         public LockResult EntityLock(EntityBase e, bool persistent = false)
         {
             if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
