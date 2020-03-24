@@ -313,8 +313,14 @@ namespace xwcs.core.db.binding
             if (LayoutSuffix.Length > 0)
             {
                 CurrentLayoutSuffix = LayoutSuffix;
-                return TryLoadLayuotFromFile(LayoutSuffix);
-            }else
+                if (!TryLoadLayuotFromFile(LayoutSuffix))
+                {
+                    CurrentLayoutSuffix = "_Default";
+                    return TryLoadLayuotFromFile(CurrentLayoutSuffix);
+                }
+                return true;
+            }
+            else
             {
                 if (CurrentLayoutSuffix.Equals("_Default")) return false;
 
