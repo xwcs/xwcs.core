@@ -1,4 +1,5 @@
 ﻿using DevExpress.XtraEditors;
+using DevExpress.XtraEditors.Controls;
 using DevExpress.XtraEditors.Repository;
 using DevExpress.XtraGrid;
 using DevExpress.XtraGrid.Views.Base;
@@ -85,6 +86,7 @@ namespace xwcs.core.db.binding
         void onGetFieldDisplayText(object sender, CustomColumnDisplayTextEventArgs cc);
         void onGridConnected(object sender, GridConnectedEventData data);
         void onSetupLookUpGridEventData(object sender, SetupLookUpGridEventData data);
+        void onButtonEditClick(object sender, ButtonPressedEventArgs e);
 
         string LayoutAssetsPath { get; }
 
