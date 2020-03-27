@@ -216,6 +216,12 @@ namespace xwcs.core.db
         }
 
         // clean context
+        public void MarkEntityAsDetached(EntityBase e)
+        {
+            MyEntry(e).State = EntityState.Detached;
+        }
+
+        // clean context
         public void DetachAll()
         {
             foreach (var e in ChangeTracker.Entries())
