@@ -914,7 +914,7 @@ namespace xwcs.core.db
     public class EntityProxy<TEntity> : EntityBase, IProxyable where TEntity : class, IProxyable
     {
         bool _edited = false;
-        [Display(Name = "Ed.", ShortName = "Ed.", Description = "record editato", Order = 0)]
+        [Display(Name = "Edit.", ShortName = "Edit.", Description = "record editato", Order = 0)]
         public bool Edited { get { return _edited; } }
 
         protected System.Data.Entity.DbSet<TEntity> _srcList = null;
