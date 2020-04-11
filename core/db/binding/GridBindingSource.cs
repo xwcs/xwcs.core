@@ -26,7 +26,7 @@ namespace xwcs.core.db.binding
 
 	public class GridBindingSource : BindingSource, IDisposable, IDataBindingSource
 	{
-		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(GridBindingSource));
+        private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(GridBindingSource));
 
 		private IEditorsHost _editorsHost = null;
         private IGridAdapter _target = null;
@@ -316,8 +316,6 @@ namespace xwcs.core.db.binding
             //connect
             _target.DataSource = this;
             _target.PopulateColumns();
-
-
         }
 
 
@@ -668,6 +666,20 @@ namespace xwcs.core.db.binding
             }
         }
 
-        
+        // grid layout management
+        public void SaveGridLayout(string name)
+        {
+            _target.SaveLayout(name);
+        }
+
+        public void LoadGridLayout(string name)
+        {
+            _target.LoadLayout(name);
+        }
+
+        public void RestoreDefaultGridLayout()
+        {
+            _target.RestoreDefaultLayout();
+        }
     }
 }

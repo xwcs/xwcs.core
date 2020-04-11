@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using xwcs.core.manager;
 
 namespace xwcs.core.db.binding
 {
@@ -159,6 +160,23 @@ namespace xwcs.core.db.binding
 		event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
 		event xwcs.core.db.binding.CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
 		event xwcs.core.db.binding.CustomRowCellEditEventHandler CustomRowCellEditForEditing;
+
+        // layout management
+        /// <summary>
+        /// Saves current layout to file
+        /// There is everytime one default done just after gridb attach
+        /// </summary>
+        void SaveLayout(string name);
+
+        /// <summary>
+        /// Restores default grid Layout
+        /// </summary>
+        void RestoreDefaultLayout();
+
+        /// <summary>
+        /// Loads last SavedLayout
+        /// </summary>
+        void LoadLayout(string name);
 
 	}
 
@@ -576,8 +594,22 @@ namespace xwcs.core.db.binding
 			_view.PostEditor();
 			_view.UpdateCurrentRow();
 		}
-		
-	}
+
+        public void SaveLayout(string name)
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Save Layout");
+        }
+
+        public void RestoreDefaultLayout()
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Restore layout");
+        }
+
+        public void LoadLayout(string name)
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Load layout");
+        }
+    }
 
 /******************************/
 /*
@@ -760,5 +792,20 @@ namespace xwcs.core.db.binding
 			_tree.PostEditor();
 			_tree.EndCurrentEdit();
 		}
-	}
+
+        public void SaveLayout(string name)
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Save Layout");
+        }
+
+        public void RestoreDefaultLayout()
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Restore layout");
+        }
+
+        public void LoadLayout(string name)
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Load layout");
+        }
+    }
 }
