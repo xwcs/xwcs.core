@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -166,17 +167,12 @@ namespace xwcs.core.db.binding
         /// Saves current layout to file
         /// There is everytime one default done just after gridb attach
         /// </summary>
-        void SaveLayout(string name);
-
-        /// <summary>
-        /// Restores default grid Layout
-        /// </summary>
-        void RestoreDefaultLayout();
+        void SaveLayout(string name, bool isDefault = false);
 
         /// <summary>
         /// Loads last SavedLayout
         /// </summary>
-        void LoadLayout(string name);
+        void LoadLayout(string name, bool isDefault = false);
 
 	}
 
@@ -595,19 +591,28 @@ namespace xwcs.core.db.binding
 			_view.UpdateCurrentRow();
 		}
 
-        public void SaveLayout(string name)
+        public void SaveLayout(string name, bool isDefault = false)
         {
-            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Save Layout");
+            using (Stream wr = SPersistenceManager.getInstance().GetWriter($"grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}"))
+            {
+                if (wr != null)
+                {
+                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Save Layout: grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}");
+                    _view.SaveLayoutToStream(wr);
+                }
+            }
         }
-
-        public void RestoreDefaultLayout()
+        
+        public void LoadLayout(string name, bool isDefault = false)
         {
-            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Restore layout");
-        }
-
-        public void LoadLayout(string name)
-        {
-            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Load layout");
+            using (Stream rr = SPersistenceManager.getInstance().GetReader($"grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}"))
+            {
+                if (rr != null)
+                {
+                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Load layout: grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}");
+                    _view.RestoreLayoutFromStream(rr);
+                }
+            }
         }
     }
 
@@ -793,17 +798,12 @@ namespace xwcs.core.db.binding
 			_tree.EndCurrentEdit();
 		}
 
-        public void SaveLayout(string name)
+        public void SaveLayout(string name, bool isDefault = false)
         {
             SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Save Layout");
         }
 
-        public void RestoreDefaultLayout()
-        {
-            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Restore layout");
-        }
-
-        public void LoadLayout(string name)
+        public void LoadLayout(string name, bool isDefault = false)
         {
             SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Load layout");
         }

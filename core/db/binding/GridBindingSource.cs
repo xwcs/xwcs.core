@@ -483,6 +483,9 @@ namespace xwcs.core.db.binding
                 {
                     _editorsHost.onGridConnected(this, new GridConnectedEventData() { Control = _target, DataBindingSource = this, DataType = _dataType, Kind = GridConnectedEventKind.GridConnected });
                 }
+
+                // probably good place save default layout
+                _target.SaveLayout(_dataType.Name, true);
             }
         }
 
@@ -667,19 +670,28 @@ namespace xwcs.core.db.binding
         }
 
         // grid layout management
-        public void SaveGridLayout(string name)
+        public void SaveGridLayout()
         {
-            _target.SaveLayout(name);
+            if(_dataType != null)
+            {
+                _target.SaveLayout(_dataType.Name, false);
+            }
         }
 
-        public void LoadGridLayout(string name)
+        public void LoadGridLayout()
         {
-            _target.LoadLayout(name);
+            if (_dataType != null)
+            {
+                _target.LoadLayout(_dataType.Name, false);
+            }
         }
 
         public void RestoreDefaultGridLayout()
         {
-            _target.RestoreDefaultLayout();
+            if(_dataType != null)
+            {
+                _target.LoadLayout(_dataType.Name, true);
+            }
         }
     }
 }
