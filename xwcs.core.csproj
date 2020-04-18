@@ -209,6 +209,7 @@
     <Compile Include="core\db\binding\attributes\CustomConverterAttribute.cs" />
     <Compile Include="core\db\binding\attributes\SetterDataConverterAttribute.cs" />
     <Compile Include="core\db\binding\attributes\StaticMetatypeAttribute.cs" />
+    <Compile Include="core\db\binding\GridLayoutsMan.cs" />
     <Compile Include="core\db\binding\IDynamicAttributeProvider.cs" />
     <Compile Include="core\db\TypeCache.cs" />
     <Compile Include="core\db\Validation.cs" />

@@ -167,12 +167,12 @@ namespace xwcs.core.db.binding
         /// Saves current layout to file
         /// There is everytime one default done just after gridb attach
         /// </summary>
-        void SaveLayout(string name, bool isDefault = false);
+        void SaveLayout(LayoutDescriptor descr);
 
         /// <summary>
         /// Loads last SavedLayout
         /// </summary>
-        void LoadLayout(string name, bool isDefault = false);
+        void LoadLayout(LayoutDescriptor descr);
 
 	}
 
@@ -591,26 +591,29 @@ namespace xwcs.core.db.binding
 			_view.UpdateCurrentRow();
 		}
 
-        public void SaveLayout(string name, bool isDefault = false)
+        public void SaveLayout(LayoutDescriptor descr)
         {
-            using (Stream wr = SPersistenceManager.getInstance().GetWriter($"grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}"))
+            using (Stream wr = descr.GetWriter())
             {
                 if (wr != null)
                 {
-                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Save Layout: grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}");
+                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Save Layout: {descr.CombinePath()}");
                     _view.SaveLayoutToStream(wr);
                 }
             }
         }
         
-        public void LoadLayout(string name, bool isDefault = false)
+        public void LoadLayout(LayoutDescriptor descr)
         {
-            using (Stream rr = SPersistenceManager.getInstance().GetReader($"grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}"))
+            using (Stream rr = descr.GetReader())
             {
                 if (rr != null)
                 {
-                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Load layout: grid{Path.DirectorySeparatorChar}GridLayout_{(isDefault ? "Default_" : "")}{name}");
+                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Load layout: {descr.CombinePath()}");
                     _view.RestoreLayoutFromStream(rr);
+                } else
+                {
+                    SLogManager.getInstance().getClassLogger(GetType()).Warn($"Grid layout: {descr.CombinePath()} NOT FOUND!");
                 }
             }
         }
@@ -798,12 +801,12 @@ namespace xwcs.core.db.binding
 			_tree.EndCurrentEdit();
 		}
 
-        public void SaveLayout(string name, bool isDefault = false)
+        public void SaveLayout(LayoutDescriptor descr)
         {
             SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Save Layout");
         }
 
-        public void LoadLayout(string name, bool isDefault = false)
+        public void LoadLayout(LayoutDescriptor descr)
         {
             SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Load layout");
         }

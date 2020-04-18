@@ -485,7 +485,7 @@ namespace xwcs.core.db.binding
                 }
 
                 // probably good place save default layout
-                _target.SaveLayout(_dataType.Name, true);
+                _target.SaveLayout(LayoutDescriptor.makeDirectDefaultForType(_dataType));
             }
         }
 
@@ -674,23 +674,28 @@ namespace xwcs.core.db.binding
         {
             if(_dataType != null)
             {
-                _target.SaveLayout(_dataType.Name, false);
+                _target.SaveLayout(LayoutDescriptor.makeDirectForType(_dataType));
+            }
+        }
+
+        public void LoadGridLayout(LayoutDescriptor descr)
+        {
+            if (_dataType != null)
+            {
+                _target.LoadLayout(descr);
             }
         }
 
         public void LoadGridLayout()
         {
-            if (_dataType != null)
-            {
-                _target.LoadLayout(_dataType.Name, false);
-            }
+            LoadGridLayout(LayoutDescriptor.makeDirectForType(_dataType));
         }
 
         public void RestoreDefaultGridLayout()
         {
             if(_dataType != null)
             {
-                _target.LoadLayout(_dataType.Name, true);
+                _target.LoadLayout(LayoutDescriptor.makeDirectDefaultForType(_dataType));
             }
         }
     }
