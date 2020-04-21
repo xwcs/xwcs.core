@@ -119,6 +119,51 @@ namespace xwcs.core.db
             Configuration.LazyLoadingEnabled = false;
             Configuration.ProxyCreationEnabled = false;
         }
+        /*
+        public override int SaveChanges()
+        {
+            
+            var before = ChangeTracker.Entries().ToList();
+            foreach (var entry in before)
+            {
+                if (entry.Entity is ICompletableEntity)
+                {
+                    switch (entry.State)
+                    {
+                        case EntityState.Modified:
+                            (entry.Entity as ICompletableEntity).CompleteUpdate();
+                            if (entry.State!= EntityState.Modified)
+                            {
+                                throw new ApplicationException("change state from modified detected");
+                            }
+                            break;
+                        case EntityState.Added:
+                            (entry.Entity as ICompletableEntity).CompleteInsert();
+                            if (entry.State != EntityState.Added)
+                            {
+                                throw new ApplicationException("change state from added detected");
+                            }
+                            break;
+                        // If the EntityState is the Deleted, reload the date from the database.   
+                        case EntityState.Deleted:
+                            (entry.Entity as ICompletableEntity).CompleteDelete();
+                            if (entry.State != EntityState.Deleted)
+                            {
+                                throw new ApplicationException("change state from deleted detected");
+                            }
+                            break;
+                        default: break;
+                    }
+                }
+            }
+            if (ChangeTracker.Entries().Count()!=before.Count())
+            {
+                //nei completamento non deve cambiare il numero di entità modificate
+                throw new ApplicationException("complete method deep changes detected");
+            }
+            return base.SaveChanges();
+        }
+        */
 
         private void ObjectStateManager_ObjectStateManagerChanged(object sender, System.ComponentModel.CollectionChangeEventArgs e)
         {
@@ -213,6 +258,12 @@ namespace xwcs.core.db
         public void ReloadEntity(EntityBase e)
         {
             MyEntry(e).Reload();
+        }
+
+        // clean context
+        public void MarkEntityAsDetached(EntityBase e)
+        {
+            MyEntry(e).State = EntityState.Detached;
         }
 
         // clean context

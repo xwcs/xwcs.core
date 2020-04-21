@@ -27,7 +27,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;DEBUG_TRACE_LOG_OFF</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;DEBUG_TRACE_LOG_ON</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>true</UseVSHostingProcess>
@@ -210,6 +210,7 @@
     <Compile Include="core\db\binding\attributes\CustomConverterAttribute.cs" />
     <Compile Include="core\db\binding\attributes\SetterDataConverterAttribute.cs" />
     <Compile Include="core\db\binding\attributes\StaticMetatypeAttribute.cs" />
+    <Compile Include="core\db\binding\GridLayoutsMan.cs" />
     <Compile Include="core\db\binding\IDynamicAttributeProvider.cs" />
     <Compile Include="core\db\TypeCache.cs" />
     <Compile Include="core\db\Validation.cs" />
@@ -333,6 +334,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="LinqKit\license.txt" />
+    <Content Include="readme.txt" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
