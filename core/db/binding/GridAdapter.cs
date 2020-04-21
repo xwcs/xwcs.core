@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using xwcs.core.manager;
 
 namespace xwcs.core.db.binding
 {
@@ -159,6 +161,18 @@ namespace xwcs.core.db.binding
 		event xwcs.core.db.binding.CellValueChangedEventHandler CellValueChanged;
 		event xwcs.core.db.binding.CustomColumnDisplayTextEventHandler CustomColumnDisplayText;
 		event xwcs.core.db.binding.CustomRowCellEditEventHandler CustomRowCellEditForEditing;
+
+        // layout management
+        /// <summary>
+        /// Saves current layout to file
+        /// There is everytime one default done just after gridb attach
+        /// </summary>
+        void SaveLayout(LayoutDescriptor descr);
+
+        /// <summary>
+        /// Loads last SavedLayout
+        /// </summary>
+        void LoadLayout(LayoutDescriptor descr);
 
 	}
 
@@ -576,8 +590,34 @@ namespace xwcs.core.db.binding
 			_view.PostEditor();
 			_view.UpdateCurrentRow();
 		}
-		
-	}
+
+        public void SaveLayout(LayoutDescriptor descr)
+        {
+            using (Stream wr = descr.GetWriter())
+            {
+                if (wr != null)
+                {
+                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Save Layout: {descr.CombinePath()}");
+                    _view.SaveLayoutToStream(wr);
+                }
+            }
+        }
+        
+        public void LoadLayout(LayoutDescriptor descr)
+        {
+            using (Stream rr = descr.GetReader())
+            {
+                if (rr != null)
+                {
+                    SLogManager.getInstance().getClassLogger(GetType()).Debug($"Grid Load layout: {descr.CombinePath()}");
+                    _view.RestoreLayoutFromStream(rr);
+                } else
+                {
+                    SLogManager.getInstance().getClassLogger(GetType()).Warn($"Grid layout: {descr.CombinePath()} NOT FOUND!");
+                }
+            }
+        }
+    }
 
 /******************************/
 /*
@@ -760,5 +800,15 @@ namespace xwcs.core.db.binding
 			_tree.PostEditor();
 			_tree.EndCurrentEdit();
 		}
-	}
+
+        public void SaveLayout(LayoutDescriptor descr)
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Save Layout");
+        }
+
+        public void LoadLayout(LayoutDescriptor descr)
+        {
+            SLogManager.getInstance().getClassLogger(GetType()).Debug("Grid Load layout");
+        }
+    }
 }

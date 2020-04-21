@@ -387,11 +387,44 @@ namespace xwcs.core.db.binding
             if (File.Exists(filePath))
             {  
                 _cnt.RestoreLayoutFromXml(filePath);
+                //test for resising foont. Approz work, but not resize crid font
+                //SetFontSize(_cnt, 10);
                 return true;
             }
 
             _logger.Warn("Missing layout file: " + filePath);
             return false;           
+        }
+
+        private void SetFontSize(Control cnt, float ems)
+        {
+            cnt.Font = new System.Drawing.Font(cnt.Font.FontFamily, ems);
+            if (cnt is ContainerControl)
+            {
+                foreach (Control c in (cnt as ContainerControl).Controls)
+                {
+                    SetFontSize(c, ems);
+                }
+            }
+            
+            if (cnt.GetType().GetProperties().Where(p => p.Name == "ControlCollection").Any())
+            {
+                try
+                {
+                    var cc = cnt.GetPropertyByName("ControlCollection");
+                    foreach (Control c in (cc as Control.ControlCollection))
+                    {
+                        SetFontSize(c, ems);
+                    }
+
+                } catch(Exception ex)
+                {
+#if DEBUG_TRACE_LOG_ON
+                    _logger.Debug(ex.ToString());
+#endif
+
+                }
+            }
         }
 
         // we will hook model properties changed event

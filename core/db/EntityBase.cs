@@ -155,8 +155,27 @@ namespace xwcs.core.db
         public object SourceProperty { get; private set; }
         public string SourcePropertyName { get; private set; }
     }
+    /*
+    public interface ICompletableEntity
+    {
+        /// <summary>
+        /// finalize update of entity. 
+        /// PAY ATTENTION implementing this method to not change any other entity, it can cause undefine behaviour
+        /// </summary>
+        void CompleteUpdate();
+        /// <summary>
+        /// finalize creation of entity. 
+        /// PAY ATTENTION implementing this method to not change any other entity, it can cause undefine behaviour
+        /// </summary>
+        void CompleteInsert();
+        /// <summary>
+        /// finalize delting of entity. 
+        /// PAY ATTENTION implementing this method to not change any other entity, it can cause undefine behaviour
+        /// </summary>
+        void CompleteDelete();
 
-
+    }
+    */
     public interface IModelEntity
     {
         object GetModelPropertyValueByName(string PropName);
@@ -431,9 +450,8 @@ namespace xwcs.core.db
         }
     }
 
-
     [TypeDescriptionProvider(typeof(HyperTypeDescriptionProvider))]
-    public abstract class EntityBase : BindableObjectBase, INotifyModelPropertyChanged, IModelEntity
+    public abstract class EntityBase : BindableObjectBase, INotifyModelPropertyChanged, IModelEntity //, ICompletableEntity
     {
         private WeakReference _ctx = null;
         public DBContextBase GetCtx()
@@ -674,6 +692,13 @@ namespace xwcs.core.db
                 }
             });
         }
+        /*
+        public virtual void CompleteUpdate(){ }
+
+        public virtual void CompleteInsert(){ }
+
+        public virtual void CompleteDelete(){ }
+        */
     }
 
     public abstract class SerializedEntityBase : EntityBase
@@ -888,12 +913,15 @@ namespace xwcs.core.db
 
     public class EntityProxy<TEntity> : EntityBase, IProxyable where TEntity : class, IProxyable
     {
+        bool _edited = false;
+        [Display(Name = "Edit.", ShortName = "Edit.", Description = "record editato", Order = 0)]
+        public bool Edited { get { return _edited; } }
 
         protected System.Data.Entity.DbSet<TEntity> _srcList = null;
         private TEntity _destination = null;
         protected bool _attachedToDb = false;
         protected string _RootEntityPropertyName = "";
-
+        [Browsable(false)]
         public TEntity Entity
         {
             get
@@ -920,6 +948,8 @@ namespace xwcs.core.db
         {
             // load entity from db
             _destination = _srcList.Where(e => e.id == this.id).FirstOrDefault();
+            _edited = true;
+            NotifyPropertyChanged("Edited");
         }
 
         /// <summary>
@@ -929,6 +959,9 @@ namespace xwcs.core.db
         public virtual void DetachEntity()
         {
             _destination = null;
+            _edited = false;
+            NotifyPropertyChanged("Edited");
+
         }
 
 
@@ -1013,6 +1046,12 @@ namespace xwcs.core.db
             }
 
             return Problem.Success;
+        }
+
+
+        protected virtual void NotifyPropertyChanged(string propertyName = "")
+        {
+            _wes_PropertyChanged?.Raise(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 
