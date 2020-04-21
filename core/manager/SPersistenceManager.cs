@@ -154,7 +154,33 @@ namespace xwcs.core.manager
 			return false;
 		}
 
-		private static string AssetsPath(AssetKind k) {
+        public bool LoadObjectFromXmlNode<T>(XmlNode node, ref T dest)
+        {
+            XmlNodeReader reader = new XmlNodeReader(node);
+            try
+            {
+                
+                if (reader != null)
+                {
+                    //NetDataContractSerializer serial = new NetDataContractSerializer();
+                    XmlSerializer serial = new XmlSerializer(typeof(T));
+                    dest = (T)serial.Deserialize(reader);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                SLogManager.getInstance().getClassLogger(GetType()).Error(e.Message);
+            }
+            finally
+            {
+                if (reader != null) reader.Close();
+            }
+
+            return false;
+        }
+
+        private static string AssetsPath(AssetKind k) {
 			switch(k) {
 				case AssetKind.Image: return Path.DirectorySeparatorChar + "img";
 				case AssetKind.Layout: return Path.DirectorySeparatorChar + "layout";

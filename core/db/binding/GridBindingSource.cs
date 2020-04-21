@@ -26,7 +26,7 @@ namespace xwcs.core.db.binding
 
 	public class GridBindingSource : BindingSource, IDisposable, IDataBindingSource
 	{
-		private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(GridBindingSource));
+        private static manager.ILogger _logger =  manager.SLogManager.getInstance().getClassLogger(typeof(GridBindingSource));
 
 		private IEditorsHost _editorsHost = null;
         private IGridAdapter _target = null;
@@ -316,8 +316,6 @@ namespace xwcs.core.db.binding
             //connect
             _target.DataSource = this;
             _target.PopulateColumns();
-
-
         }
 
 
@@ -485,6 +483,9 @@ namespace xwcs.core.db.binding
                 {
                     _editorsHost.onGridConnected(this, new GridConnectedEventData() { Control = _target, DataBindingSource = this, DataType = _dataType, Kind = GridConnectedEventKind.GridConnected });
                 }
+
+                // probably good place save default layout
+                _target.SaveLayout(LayoutDescriptor.makeDirectDefaultForType(_dataType));
             }
         }
 
@@ -668,6 +669,34 @@ namespace xwcs.core.db.binding
             }
         }
 
-        
+        // grid layout management
+        public void SaveGridLayout()
+        {
+            if(_dataType != null)
+            {
+                _target.SaveLayout(LayoutDescriptor.makeDirectForType(_dataType));
+            }
+        }
+
+        public void LoadGridLayout(LayoutDescriptor descr)
+        {
+            if (_dataType != null)
+            {
+                _target.LoadLayout(descr);
+            }
+        }
+
+        public void LoadGridLayout()
+        {
+            LoadGridLayout(LayoutDescriptor.makeDirectForType(_dataType));
+        }
+
+        public void RestoreDefaultGridLayout()
+        {
+            if(_dataType != null)
+            {
+                _target.LoadLayout(LayoutDescriptor.makeDirectDefaultForType(_dataType));
+            }
+        }
     }
 }
