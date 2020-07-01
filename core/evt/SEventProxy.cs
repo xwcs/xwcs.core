@@ -116,15 +116,37 @@ namespace xwcs.core.evt
 
 
         /* globally allow and disallow events */
-        static private HashSet<Type> _blockedEvents = new HashSet<Type>();
+        static private Dictionary<Type, int> _blockedEvents = new Dictionary<Type,int>();
+        private static void AllowEventTypeInternal(Type ea)
+        {
+            if (_blockedEvents.ContainsKey(ea) )
+            {
+                if (_blockedEvents[ea]>0)
+                {
+                    _blockedEvents[ea]--;
+                } else
+                {
+                    _blockedEvents.Remove(ea);
+                }
+            }
+        }
+
         public static void BlockEventTypes(Type[] events)
         {
             foreach (Type ea in events)
-                if (!_blockedEvents.Contains(ea)) _blockedEvents.Add(ea);
+                BlockEventType(ea);
         }
         public static void BlockEventType(Type ea)
         {
-            if (!_blockedEvents.Contains(ea)) _blockedEvents.Add(ea);
+            if (_blockedEvents.ContainsKey(ea))
+            {
+                _blockedEvents[ea]++;
+            }
+            else
+            {
+                _blockedEvents[ea] = 1;
+            }
+
         }
         public static void BlockModelEvents()
         {
@@ -139,11 +161,21 @@ namespace xwcs.core.evt
         public static void AllowEventTypes(Type[] events)
         {
             foreach (Type ea in events)
-                if (_blockedEvents.Contains(ea)) _blockedEvents.Remove(ea);        
+                AllowEventType(ea);
         }
         public static void AllowEventType(Type ea)
         {
-            if (_blockedEvents.Contains(ea)) _blockedEvents.Remove(ea);
+            if (_blockedEvents.ContainsKey(ea))
+            {
+                if (_blockedEvents[ea] > 1)
+                {
+                    _blockedEvents[ea]--;
+                }
+                else
+                {
+                    _blockedEvents.Remove(ea);
+                }
+            }
         }
         public static void AllowModelEvents()
         {
@@ -157,7 +189,7 @@ namespace xwcs.core.evt
 
         public static bool CanFireEvent(Type ea)
         {
-            return _blockedEvents.Count == 0 || !_blockedEvents.Contains(ea);
+            return _blockedEvents.Count == 0 || !_blockedEvents.ContainsKey(ea);
         }
     }
 }

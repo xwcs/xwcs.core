@@ -4,7 +4,16 @@ using DevExpress.XtraEditors;
 
 namespace xwcs.core.db.binding.attributes
 {
-	[AttributeUsage(AttributeTargets.Property,	AllowMultiple = true)]
+    public enum VAlignment: int
+    {
+        Default = 0, Top = 1, Center = 2, Bottom = 3
+    }
+    public enum HAlignment : int
+    {
+        Default = 0, Near = 1, Center = 2, Far = 3
+    }
+
+    [AttributeUsage(AttributeTargets.Property,	AllowMultiple = true)]
 	public class StyleAttribute : CustomAttribute
 	{
 		StyleController _styleController = new StyleController();
@@ -14,7 +23,8 @@ namespace xwcs.core.db.binding.attributes
 		uint _backGrndColorReadOnly;
 		int _columnWidth = -1;
         int _columnMinWidth = -1;
-        uint _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
+        HAlignment _halignment = 0; //Default = 0, Near = 1, Center = 2, Far = 3
+        VAlignment _valignment = 0; //Default = 0, Top = 1, Center = 2, Bottom = 3
 
         // if true it will handle column text override
         bool _manageCustomColumnText = false;
@@ -33,8 +43,7 @@ namespace xwcs.core.db.binding.attributes
 			set { _columnWidth = value; }
 		}
 
-
-		public StyleAttribute()
+        public StyleAttribute()
 		{
 		}
 
@@ -79,7 +88,13 @@ namespace xwcs.core.db.binding.attributes
             }
 		}
 
-		public uint HAlignment
+        public VAlignment VAlignment
+        {
+            get { return _valignment; }
+            set { _valignment = value; }
+        }
+
+        public HAlignment HAlignment
 		{
 			get { return _halignment; }
 			set { _halignment = value; }

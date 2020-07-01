@@ -379,6 +379,15 @@ namespace xwcs.core.db.binding
                 if (a is xwcs.core.db.binding.attributes.StyleAttribute)
                 {
                     xwcs.core.db.binding.attributes.StyleAttribute sa = a as xwcs.core.db.binding.attributes.StyleAttribute;
+                    if (sa.VAlignment!= VAlignment.Default)
+                    {
+                        gc.VAlignment = sa.VAlignment;
+                    }
+                    if (sa.HAlignment!= HAlignment.Default)
+                    {
+                        gc.HAlignment = sa.HAlignment;
+                    }
+
                     if (!ReferenceEquals(sa.ColumnWidth, null))
                     {
                         if (sa.ColumnWidth >= 0)
