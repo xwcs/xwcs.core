@@ -13,6 +13,7 @@ namespace xwcs.core.net
 
     public class StoredProcResult : IEnumerable
     {
+        public StoredProcResult() : this("<?xml version=\"1.0\" encoding=\"UTF-8\"?><rsp ack=\"1\" e=\"1\"><dtl dtype=\"result\" dval=\"Empty!\"/></rsp>") { }
         public StoredProcResult(string rsp) 
         {
             /*

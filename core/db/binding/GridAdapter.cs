@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DevExpress.Utils;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -17,6 +18,8 @@ namespace xwcs.core.db.binding
         bool FixedWidth { get; set; }
         int Width { get; set; }
         int MinWidth { get; set; }
+        attributes.VAlignment VAlignment { get; set; }
+        attributes.HAlignment HAlignment { get; set; }
         int VisibleIndex { get; set; }
         string FieldName { get; set; }
         string Caption { get; set; }
@@ -187,6 +190,22 @@ namespace xwcs.core.db.binding
         }
 
         public string ToolTip { get { return _c.ToolTip; } set { _c.ToolTip = value; } }
+
+        public attributes.VAlignment VAlignment
+        {
+            get { return (attributes.VAlignment)((int)_c.AppearanceCell.TextOptions.VAlignment); }
+            set {
+                    _c.AppearanceCell.TextOptions.VAlignment = (DevExpress.Utils.VertAlignment)((int)value);
+            }
+        }
+        public attributes.HAlignment HAlignment
+        {
+            get { return (attributes.HAlignment)((int)_c.AppearanceCell.TextOptions.HAlignment); }
+            set { _c.AppearanceCell.TextOptions.HAlignment = (DevExpress.Utils.HorzAlignment)((int)value); }
+        }
+
+
+
         public int VisibleIndex
         {
             get { return _c.VisibleIndex; }
@@ -314,6 +333,17 @@ namespace xwcs.core.db.binding
         {
             get { return _c.VisibleIndex; }
             set { _c.VisibleIndex = value; }
+        }
+
+        public attributes.VAlignment VAlignment
+        {
+            get { return (attributes.VAlignment)((int)_c.AppearanceCell.TextOptions.VAlignment); }
+            set { _c.AppearanceCell.TextOptions.VAlignment = (DevExpress.Utils.VertAlignment)((int)value); }
+        }
+        public attributes.HAlignment HAlignment
+        {
+            get { return (attributes.HAlignment)((int)_c.AppearanceCell.TextOptions.HAlignment); }
+            set { _c.AppearanceCell.TextOptions.HAlignment = (DevExpress.Utils.HorzAlignment)((int)value); }
         }
 
         public DevExpress.Utils.AppearanceObjectEx AppearanceCell
