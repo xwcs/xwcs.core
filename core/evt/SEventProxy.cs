@@ -117,20 +117,6 @@ namespace xwcs.core.evt
 
         /* globally allow and disallow events */
         static private Dictionary<Type, int> _blockedEvents = new Dictionary<Type,int>();
-        private static void AllowEventTypeInternal(Type ea)
-        {
-            if (_blockedEvents.ContainsKey(ea) )
-            {
-                if (_blockedEvents[ea]>0)
-                {
-                    _blockedEvents[ea]--;
-                } else
-                {
-                    _blockedEvents.Remove(ea);
-                }
-            }
-        }
-
         public static void BlockEventTypes(Type[] events)
         {
             foreach (Type ea in events)
