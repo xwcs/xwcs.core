@@ -701,6 +701,12 @@ namespace xwcs.core.db
         */
     }
 
+    public interface IVocabularyElement
+    {
+        int Occorrenze { get; }
+        bool  IsDeletable();
+        EntityBase GetFirstFree();
+    }
     public abstract class SerializedEntityBase : EntityBase
     {
 
