@@ -421,13 +421,9 @@ namespace xwcs.core.db
                     return LockState.NotMine;
             }
         }
-        private LockResult TableLockInternal(EntityBase e, bool persistent = false)
+
+        private LockResult TableLockInternal(string ename, bool persistent = false)
         {
-            
-
-
-            string ename = e.GetFieldName(); // name of table
-
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}', {2});", _adminDb, ename, (persistent ? '1' : '0'))).FirstOrDefault();
             if (lr.Id_lock == 0)
             {
@@ -440,7 +436,14 @@ namespace xwcs.core.db
             return lr;
         }
 
+
         public LockResult TableLock(EntityBase e, bool persistent = false)
+        {
+            string ename = e.GetFieldName();
+            return TableLock(ename, persistent);
+        }
+
+        public LockResult TableLock(string ename, bool persistent = false)
         {
             if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
 
@@ -448,21 +451,19 @@ namespace xwcs.core.db
             {
                 using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
                 {
-                    var ret = TableLockInternal(e, persistent);
+                    var ret = TableLockInternal(ename, persistent);
                     tr.Commit();
                     return ret;
                 }
             }
             else
             {
-                return TableLockInternal(e, persistent);
+                return TableLockInternal(ename, persistent);
             }
         }
 
-        private LockResult TableUnlockIternal(EntityBase e)
+        private LockResult TableUnlockIternal(string ename)
         {
-            string ename = e.GetFieldName(); // name of table
-
             LockData ld = new LockData() { id = "-1", entity = ename };
 
             if (_locks.Contains(ld))
@@ -475,19 +476,25 @@ namespace xwcs.core.db
 
         public LockResult TableUnlock(EntityBase e)
         {
+            string ename = e.GetFieldName();
+            return TableUnlock(ename);
+        }
+
+        public LockResult TableUnlock(string ename)
+        {
             if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
             if (ReferenceEquals(Database.CurrentTransaction, null))
             {
                 using (var tr = Database.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted))
                 {
-                    var ret = TableUnlockIternal(e);
+                    var ret = TableUnlockIternal(ename);
                     tr.Commit();
                     return ret;
                 }
             }
             else
             {
-                return TableUnlockIternal(e);
+                return TableUnlockIternal(ename);
             }
         }
 
