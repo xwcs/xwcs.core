@@ -896,13 +896,18 @@ namespace xwcs.core.db
             return ValidateProperty(pName, GetPropertyValue(pName));
         }
 
-        public bool IsValid()
-        {			
+        private bool ValidationDefaultPredicate(Problem p)
+        {
+            return p.Kind == ProblemKind.None;
+        }
+
+        public bool IsValid(Predicate<Problem> pred=null)
+        {
+            pred = pred??ValidationDefaultPredicate;
 			foreach (var vr in Validate(new ValidationContext(this)).Cast<Problem>())
             {
-                if (vr.Kind != ProblemKind.None) return false;
+                if (!pred(vr)) return false;
             }
-
             return true;
         }
 
