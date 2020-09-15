@@ -774,7 +774,7 @@ namespace xwcs.core.db
         {
             _changed = true;
         }
-        
+
         public BindableObjectBase()
         {
             _tcd = TypeCache.GetTypeCacheData(GetType());
@@ -834,7 +834,7 @@ namespace xwcs.core.db
 
         /*
          * Lets say we need access all property getters with array[name] notation
-         */       
+         */
         protected static void InitReflectionChache(Type who)
         {
             TypeCache.GetTypeCacheData(who);
@@ -843,9 +843,9 @@ namespace xwcs.core.db
         //we do delegates
         public object GetPropertyValue(string pName)
         {
-            
+
             PropertyDescriptor pd;
-            if(_tcd.Pds.TryGetValue(pName, out pd))
+            if (_tcd.Pds.TryGetValue(pName, out pd))
             {
                 return pd.GetValue(this);
             }
@@ -861,7 +861,7 @@ namespace xwcs.core.db
             }
         }
 
-        
+
         #endregion
 
 
@@ -870,7 +870,7 @@ namespace xwcs.core.db
         {
             foreach (var pi in _tcd.GetPropertiesWithAttributeType(typeof(binding.attributes.CheckValidAttribute)))
             {
-				Problem pr = ValidateProperty(pi.Name);
+                Problem pr = ValidateProperty(pi.Name);
                 if (pr.Kind != ProblemKind.None)
                 {
                     yield return pr;
@@ -880,12 +880,19 @@ namespace xwcs.core.db
         public virtual Problem ValidateProperty(string pName, object newValue)
         {
             // convert new value to correct type
-            PropertyInfo pi = _tcd.Properties[pName];
-            // handle null also
-            if (newValue != null && (newValue is string || newValue.GetType() != pi.PropertyType)) {
-                newValue = TConvert.ChangeType(newValue, pi.PropertyType);
+            if (_tcd.Properties.Where(p => p.Key.Equals(pName)).Any())
+            { 
+                PropertyInfo pi = _tcd.Properties[pName];
+                // handle null also
+                if (newValue != null && (newValue is string || newValue.GetType() != pi.PropertyType)) {
+                    newValue = TConvert.ChangeType(newValue, pi.PropertyType);
+                }
+                return ValidatePropertyInternal(pName, newValue);
             }
-            return ValidatePropertyInternal(pName, newValue);
+            else
+            {
+                    return Problem.Success;
+            }
         }
         protected virtual Problem ValidatePropertyInternal(string pName, object newValue)
         {
