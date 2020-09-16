@@ -18,7 +18,7 @@ namespace xwcs.core.db
     {
         Problem ValidateProperty(string pName, object newValue);
         Problem ValidateProperty(string pName);
-        bool IsValid();
+        bool IsValid(Predicate<Problem> pred = null);
     }
 
     public class Problem : ValidationResult

@@ -497,6 +497,7 @@ namespace xwcs.core.statemachine
         }
 
         private int transitionToNewStateRecursionLevel = 0;
+        private bool isInGuard = false;
         /// <summary>
         /// Makes the state machine go into another state.
         /// </summary>
@@ -521,8 +522,18 @@ namespace xwcs.core.statemachine
                 if (!disposedValue && guard != null)
                 {
                     // guard is where thread can come IDLE so here it can dispose in parallel
-                    if (disposedValue || !guard.Execute() || disposedValue)
-                        return false; // Guard said this trigger can't go on
+                    isInGuard = true;
+                    try
+                    {
+                        bool returnFalseFromGuardOrDisposedValue = (disposedValue || !guard.Execute() || disposedValue);
+                        if (returnFalseFromGuardOrDisposedValue) return false; // Guard said this trigger can't go on
+                    }
+                    finally
+                    {
+                        isInGuard = false;
+                    }
+                    
+                        
                 }
 
                 _wes_BeforeExitingPreviousState?.Raise(this, new TransitionEventArgs(_CurrentState, newState, causedByTrigger));
@@ -687,20 +698,28 @@ namespace xwcs.core.statemachine
 
             if (_queue.Count > 0)
             {
-                object tt = _queue.Dequeue();
-                if(tt is IReadOnlyCollection<TriggerBase>)
+                if (isInGuard)
                 {
-                    foreach(TriggerBase t in (tt as IReadOnlyCollection<TriggerBase>))
+                    //during guard execution all triggers are deferred to end of guard
+                    System.Diagnostics.Trace.WriteLine("Queue deferred durin guard " + _queue.Count);
+                }
+                else
+                {
+                    object tt = _queue.Dequeue();
+                    if (tt is IReadOnlyCollection<TriggerBase>)
                     {
-                        if (disposedValue || ProcessTriggerInternal(t as TriggerBase)) return; // we done here we skip others after first good
+                        foreach (TriggerBase t in (tt as IReadOnlyCollection<TriggerBase>))
+                        {
+                            if (disposedValue || ProcessTriggerInternal(t as TriggerBase)) return; // we done here we skip others after first good
+                        }
                     }
-                }else
-                {
-                    ProcessTriggerInternal(tt as TriggerBase);
-
-                    // maybe disposed
-                    if (disposedValue) return;
-                }                
+                    else
+                    {
+                        ProcessTriggerInternal(tt as TriggerBase);
+                        // maybe disposed
+                        if (disposedValue) return;
+                    }
+                }
             }
             if (_queue.Count > 0)
             {
