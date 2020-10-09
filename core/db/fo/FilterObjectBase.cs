@@ -394,8 +394,13 @@ namespace xwcs.core.db.fo
         // cant use getter/setter
         public CriteriaOperator GetAdvancedCriteria()
         {
+            if (ReferenceEquals(_advancedCriteria, null))
+            {
+                SaveToAdvancedCriteria();
+            }
             return _advancedCriteria;
         }
+
         public void  SetAdvancedCriteria(CriteriaOperator c)
         {
             if (ReferenceEquals(null, _advancedCriteria) || !_advancedCriteria.Equals(c))
