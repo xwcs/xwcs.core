@@ -701,7 +701,12 @@ namespace xwcs.core.db
         */
     }
 
-    
+
+    public interface IPreventDelete
+    {
+        bool IsDeletable();
+    }
+
     public interface IVocabularyElement
     {
         int GetOccorrenze();
