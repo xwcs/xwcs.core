@@ -416,13 +416,12 @@ namespace xwcs.core.db.binding
                     {
                         SetFontSize(c, ems);
                     }
-
-                } catch(Exception ex)
-                {
+                } catch(Exception
 #if DEBUG_TRACE_LOG_ON
-                    _logger.Debug(ex.ToString());
+                    ex){ _logger.Debug(ex.ToString());
+#else
+                ) { 
 #endif
-
                 }
             }
         }
