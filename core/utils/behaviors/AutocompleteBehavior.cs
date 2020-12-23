@@ -16,11 +16,10 @@ namespace xwcs.core.utils.behaviors
     [DisplayName("File Ext Behavior")]
     public sealed class AutocompleteBehavior : PathCompletionBehaviorBase<IFilePathBehaviorSource, FilePathBehaviorProperties>
     {
-        private IEditorsHost _host;
+        private IEditorsHost _host=null;
         public AutocompleteBehavior(Type filePathBehaviorSourceType, IEditorsHost host): base(filePathBehaviorSourceType)
         {
             throw new NotImplementedException();
-            _host = host;
         } // , iconSize , defaultImage , invalidPathImage , mode , filter ) {}
 
         [Browsable(false)]
