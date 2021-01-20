@@ -119,8 +119,36 @@ namespace xwcs.core.db
             Configuration.LazyLoadingEnabled = false;
             Configuration.ProxyCreationEnabled = false;
         }
-        /*
+        /// <summary>
+        /// Richiama la SqlQuery dopo acver verificato che per il database l'utente corrente sia ancora quello
+        /// che impostato alla login e non l'utente reale della connessione
+        /// Da usare preferibilmente per eseguire query che devono creare o modificare dati
+        /// ma anche per stored che internamente fanno uso dell'utente "logico" (cioè della funzione `get_current_egaf_user`)
+        /// </summary>
+        /// <typeparam name="TElement">The type of object returned by the query.</typeparam>
+        /// <param name="sql"> The SQL query string.</param>
+        /// <param name="parameters">
+        /// parameters:
+        ///     The parameters to apply to the SQL query string. If output parameters are used,
+        ///     their values will not be available until the results have been read completely.
+        ///     This is due to the underlying behavior of DbDataReader, see http://go.microsoft.com/fwlink/?LinkID=398589
+        ///     for more details.
+        ///  </param>
+        /// <returns>A System.Data.Entity.Infrastructure.DbRawSqlQuery`1 object that will execute the query when it is enumerated.</returns>
+        public DbRawSqlQuery<TElement> SqlQueryWithCheckLogin<TElement>(string sql, params object[] parameters)
+        {
+            CheckLoginForConnection();
+            return Database.SqlQuery<TElement>(sql, parameters);
+        }
         public override int SaveChanges()
+        {
+            //CompleteEntity();
+            CheckLoginForConnection();
+            return base.SaveChanges();
+        }
+
+        /*
+        private void CompleteEntity()
         {
             
             var before = ChangeTracker.Entries().ToList();
@@ -161,10 +189,8 @@ namespace xwcs.core.db
                 //nei completamento non deve cambiare il numero di entità modificate
                 throw new ApplicationException("complete method deep changes detected");
             }
-            return base.SaveChanges();
         }
         */
-
         private void ObjectStateManager_ObjectStateManagerChanged(object sender, System.ComponentModel.CollectionChangeEventArgs e)
         {
             if (e.Action == System.ComponentModel.CollectionChangeAction.Add)
@@ -207,6 +233,36 @@ namespace xwcs.core.db
             }
 
         }
+        DateTime _lastCheckLogin;
+        private static int _MINUTE_BETWEEN_CHECK_USER = 300; //oltre 5' faccio la verifica sull'utente
+        private void CheckLoginForConnection()
+        {
+            /*
+             * introdotta a seguioto del fatto che dopo molti minuti di inattivita la get_current_egaf_user() del db non restituisce
+             * più l'utente impostato con login''() ma l'utente vero della connection (crediamo che la variabile di sessione venga 
+             * persa dopo un tempo di inattività)
+             */
+            //se non ho mai fatto login non aggiorno la login :-)
+            if (!ReferenceEquals(_lastCheckLogin, null))
+            {
+                //verifico se è passato più tempo della soglia 
+                if (Math.Abs((System.DateTime.Now - _lastCheckLogin).TotalSeconds) >= _MINUTE_BETWEEN_CHECK_USER)
+                {
+                    //verifico che utente crede di avere adesso il database
+                    if (!CurrentConnectedUser.Equals(xwcs.core.user.SecurityContext.getInstance().CurrentUser.Login))
+                    {
+                        //l'utente non è uguale quindi devo rifare la login
+                        DoLoginForConnection();
+                    }
+                    else
+                    {
+                        //l'utente è uguale, quindi basta solo aggiornare la data di verifica (perché con la chiamata 
+                        //per chiedere l'utente dovrei aver evitato il timeout
+                        _lastCheckLogin = System.DateTime.Now;
+                    }
+                }
+            }
+        }
 
         private void DoLoginForConnection()
         {
@@ -216,6 +272,7 @@ namespace xwcs.core.db
             {
                 throw new ApplicationException("L'utente corrente non è abilitato ad accedere al DB!");
             }
+            _lastCheckLogin=System.DateTime.Now;
         }
 
 
@@ -331,7 +388,7 @@ namespace xwcs.core.db
 
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
-
+            CheckLoginForConnection();
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}', {3});", _adminDb, eid, ename, (persistent ? '1' : '0'))).FirstOrDefault();
             if (lr.Id_lock == 0)
             {
@@ -407,6 +464,7 @@ namespace xwcs.core.db
         private LockState InternalLockState(LockData ld)
         {
             //waiting for the correct procedure on mysql i implement this function with a lock test
+            CheckLoginForConnection();
             var sel = Database.SqlQuery<int>(string.Format("select {0}.entity_state({1}, '{2}')", _adminDb, ld.id, ld.entity));
             int intLockState = sel.FirstOrDefault();
             switch (intLockState)
@@ -424,6 +482,7 @@ namespace xwcs.core.db
 
         private LockResult TableLockInternal(string ename, bool persistent = false)
         {
+            CheckLoginForConnection();
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}', {2});", _adminDb, ename, (persistent ? '1' : '0'))).FirstOrDefault();
             if (lr.Id_lock == 0)
             {
@@ -500,6 +559,7 @@ namespace xwcs.core.db
 
         private LockResult InternalUnlock(LockData ld)
         {
+            CheckLoginForConnection();
             UnlockResult ur = Database.SqlQuery<UnlockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
             return new LockResult() { Id_lock = ur.Cnt, Owner = ur.Owner }; // this should not be necessary if DB align lock and unlock result
         }
@@ -511,6 +571,7 @@ namespace xwcs.core.db
             string ename = ids[0].GetFieldName();
             // do it in blocks for 50 records!!!
             // start lock -10, v_nrecord, -1
+            CheckLoginForConnection();
             MultiLockResult lr = Database.SqlQuery<MultiLockResult>(string.Format("call {0}.multi_entity_lock(-1, '-10', '{1}');", _adminDb, ename)).FirstOrDefault();
 
             if (lr.id_batch <= 0)
@@ -570,6 +631,7 @@ namespace xwcs.core.db
 
         private UnlockResult MultiUnlockInternal(int id_batch)
         {
+            CheckLoginForConnection();
             return Database.SqlQuery<UnlockResult>(string.Format("call {0}.multi_entity_unlock({1});", _adminDb, id_batch)).FirstOrDefault();
         }
 
