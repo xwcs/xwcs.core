@@ -57,7 +57,19 @@ namespace xwcs.core.net
 
     public class ExtraWayHTTPConnector
 	{
-		private const string CFG_MAXFILE_PATH = "ExtraWayHTTPConnector/MaxFileSize";
+        private class PatientWebClient : WebClient
+        {
+            // The WebRequest timeout in seconds.
+            private const int CFG_TIMEOUT_SECOND = 600;
+
+            protected override WebRequest GetWebRequest(Uri uri)
+            {
+                WebRequest w = base.GetWebRequest(uri);
+                w.Timeout = CFG_TIMEOUT_SECOND * 1000; // Set your timeout value
+                return w;
+            }
+        }
+        private const string CFG_MAXFILE_PATH = "ExtraWayHTTPConnector/MaxFileSize";
 		private const string CFG_BASEURL_PATH = "ExtraWayHTTPConnector/BaseUrl";
         private const string CFG_DATABASENAME_PATH = "ExtraWayHTTPConnector/Db";
 
@@ -91,7 +103,8 @@ namespace xwcs.core.net
 			_httpAddress = httpAddress.Length > 0 ? httpAddress : _cfg.getCfgParam(CFG_BASEURL_PATH, "");
 			_databaseName = databaseName.Length > 0 ? databaseName : _cfg.getCfgParam(CFG_DATABASENAME_PATH, "");
 
-			_client = new WebClient();
+            _client = new PatientWebClient();//WebClient();
+            
 			NameValueCollection parameters = new NameValueCollection();
 			parameters.Add("MAX_FILE_SIZE", _cfg.getCfgParam(CFG_MAXFILE_PATH, "10000"));
 			_client.QueryString = parameters;
@@ -107,7 +120,7 @@ namespace xwcs.core.net
 
 				//Upload file
 				_logger.Debug("Trying upload file, address : " + addr + ", file name : " + localFileName);
-				var responseBytes = _client.UploadFile(addr, null, localFileName);
+                var responseBytes = _client.UploadFile(addr, null, localFileName);
 				_logger.Debug("File uploaded, address : " + addr + ", file name : " + localFileName);
 				return Encoding.ASCII.GetString(responseBytes);
 			}
