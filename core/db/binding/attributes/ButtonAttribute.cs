@@ -12,6 +12,7 @@ namespace xwcs.core.db.binding.attributes
 		StyleController _styleController = new StyleController();
         private RepositoryItemButtonEdit _rle;
         private IDataBindingSource _src;
+        private FieldRetrievedEventArgs _FieldRetrievedEventArgs;
         public ButtonAttribute()
 		{
 		}
@@ -24,6 +25,7 @@ namespace xwcs.core.db.binding.attributes
 		public override void applyRetrievedAttribute(IDataBindingSource src, FieldRetrievedEventArgs e) 
 		{
             _rle = (e.RepositoryItem as RepositoryItemButtonEdit);
+            _FieldRetrievedEventArgs = e;
             _src = src;
             _rle.ButtonClick += Rle_ButtonClick;
             
@@ -31,7 +33,10 @@ namespace xwcs.core.db.binding.attributes
 
         private void Rle_ButtonClick(object sender, DevExpress.XtraEditors.Controls.ButtonPressedEventArgs e)
         {
+            Object tagSave = e.Button.Tag;
+            e.Button.Tag = _FieldRetrievedEventArgs;
             if (!ReferenceEquals(_src, null)) _src.EditorsHost.onButtonEditClick(sender, e);
+            e.Button.Tag=tagSave;
         }
 
         public override void unbind(IDataBindingSource src)
