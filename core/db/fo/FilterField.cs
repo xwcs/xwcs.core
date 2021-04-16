@@ -179,7 +179,8 @@ namespace xwcs.core.db.fo
                             return _field != null ? new InOperator(GetFullFieldName(), _field.ToString().Split(',').ToList().Select(e=>e.Trim())) : null;
                         case "ContainsOperator":
                             return _field != null ? new FunctionOperator(FunctionOperatorType.Contains, new OperandProperty(GetFullFieldName()), _field.ToString()) : null;
-                            
+                        case "StartsWith":
+                            return _field != null ? new FunctionOperator(FunctionOperatorType.StartsWith, new OperandProperty(GetFullFieldName()), _field.ToString()) : null;
                     }
 
                     return null;
