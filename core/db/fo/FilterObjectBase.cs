@@ -309,9 +309,29 @@ namespace xwcs.core.db.fo
             GetType()
 			.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
 			.Select(field => field.GetValue(this))
+            .Where(val => (val is ICriteriaTreeNode))
 			.Cast<ICriteriaTreeNode>()
+            //.Where(c => !ReferenceEquals(c, null))
 			.ToList()
 			.ForEach(c => { c.Reset(); } );
+
+            GetType()
+            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Select(field => field.GetValue(this))
+            .Where(val => (val is String))
+            .Cast<String>()
+            //.Where(c => !ReferenceEquals(c, null))
+            .ToList()
+            .ForEach(c => { c = null; });
+
+            GetType()
+            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Select(field => field.GetValue(this))
+            .Where(val => (val is DateTime?))
+            .Cast<DateTime?>()
+            //.Where(c => !ReferenceEquals(c, null))
+            .ToList()
+            .ForEach(c => { c = null; });
 
             //invoke property changed on last property, it will force update all bindings anyway
             OnPropertyChanged(String.Empty);
