@@ -267,6 +267,16 @@ namespace xwcs.core.db
         /*
          * Overrides
          */
+        public override string ToString()
+        {
+            return String.Format("{0}", String.Join("\r\n", base.Items.Select(i => i.ToString().Replace("\r\n","\r\n ")).ToList()));
+        }
+
+        public string ToJsonString()
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(this.Items.ToList());
+        }
+
         protected override void InsertItem(int index, T item)
         {
             SetChaged();
@@ -699,6 +709,11 @@ namespace xwcs.core.db
 
         public virtual void CompleteDelete(){ }
         */
+        public string ToJsonString()
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(this);
+        }
+
     }
 
 
