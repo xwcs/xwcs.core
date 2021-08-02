@@ -18,8 +18,13 @@ namespace xwcs.core.db.binding.attributes
 
 		private int _popUpWidth = 0;
 		private int _popUpHeight = 0;
-
-		public int PopUpWidth
+        private bool _UseCtrlScroll = true;
+        public bool UseCtrlScroll
+        {
+            get { return _UseCtrlScroll; }
+            set { _UseCtrlScroll = value; }
+        }
+        public int PopUpWidth
 		{
 			get { return _popUpWidth; }
 			set { _popUpWidth = value; }
@@ -96,7 +101,8 @@ namespace xwcs.core.db.binding.attributes
             rle.AcceptEditorTextAsNewValue = DevExpress.Utils.DefaultBoolean.True;
             rle.PopupFormMinSize = new Size(_popUpWidth, _popUpHeight);
             rle.View.OptionsView.ShowFilterPanelMode = ShowFilterPanelMode.Default;
-            rle.View.OptionsView.ShowAutoFilterRow=true;
+            rle.View.OptionsView.ShowAutoFilterRow = true;
+            rle.UseCtrlScroll = _UseCtrlScroll;
             GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
             src.EditorsHost.onGetOptionsList(this, qd);
 			if (qd.Data != null)
