@@ -12,8 +12,15 @@ namespace xwcs.core.db.binding.attributes
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public class DbComboAttribute : CustomAttribute
 	{
-		// data layout like container
-		public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
+
+        private bool _UseCtrlScroll = true;
+        public bool UseCtrlScroll
+        {
+            get { return _UseCtrlScroll; }
+            set { _UseCtrlScroll = value; }
+        }
+        // data layout like container
+        public override void applyRetrievingAttribute(IDataBindingSource src, FieldRetrievingEventArgs e)
 		{
 			e.EditorType = typeof(DevExpress.XtraEditors.ComboBoxEdit);
 		}
@@ -48,7 +55,8 @@ namespace xwcs.core.db.binding.attributes
             //rle.DisplayMember = DisplayMember;
             //rle.ValueMember = ValueMember;
             GetFieldOptionsListEventData qd = new GetFieldOptionsListEventData { Data = null, FieldName = fn, DataBindingSource = src };
-			src.EditorsHost.onGetOptionsList(this, qd);
+            rle.UseCtrlScroll = _UseCtrlScroll;
+            src.EditorsHost.onGetOptionsList(this, qd);
 			if (qd.Data != null)
 			{
 				ComboBoxItemCollection coll = rle.Items;
