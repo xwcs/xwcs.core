@@ -390,6 +390,7 @@ namespace xwcs.core.db
             string ename = e.GetFieldName(); // name of table
             CheckLoginForConnection();
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}', {3});", _adminDb, eid, ename, (persistent ? '1' : '0'))).FirstOrDefault();
+            Database.Log?.Invoke(String.Format("entity entity_lock({0}, {1}, {2}) return {3}, '{4}'", eid, ename, persistent, lr.Id_lock, lr.Owner));
             if (lr.Id_lock == 0)
             {
                 throw new DBLockException(lr);
@@ -484,6 +485,7 @@ namespace xwcs.core.db
         {
             CheckLoginForConnection();
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}', {2});", _adminDb, ename, (persistent ? '1' : '0'))).FirstOrDefault();
+            Database.Log?.Invoke(String.Format("table entity_lock(-1, '{0}', {1}) return {2}, '{3}'", ename, persistent, lr.Id_lock, lr.Owner));
             if (lr.Id_lock == 0)
             {
                 throw new DBLockException(lr);
@@ -527,7 +529,11 @@ namespace xwcs.core.db
 
             if (_locks.Contains(ld))
             {
+                Database.Log?.Invoke(String.Format("remove local table lock for {0}", ename));
                 _locks.Remove(ld);
+            } else
+            {
+                Database.Log?.Invoke(String.Format("not present local table lock for {0}", ename));
             }
 
             return InternalUnlock(ld);
@@ -561,6 +567,7 @@ namespace xwcs.core.db
         {
             CheckLoginForConnection();
             UnlockResult ur = Database.SqlQuery<UnlockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
+            Database.Log?.Invoke(String.Format("entity_unlock({0}, '{1}') return {2}, '{3}'", ld.id, ld.entity, ur.Cnt, ur.Owner));
             return new LockResult() { Id_lock = ur.Cnt, Owner = ur.Owner }; // this should not be necessary if DB align lock and unlock result
         }
 
