@@ -398,6 +398,8 @@ namespace xwcs.core.db.binding
                     if (sa.BackgrounColor>0)
                     {
                         gc.BackGrndColor = sa.BackgrounColor;
+                        gc.AppearanceCell.BackColor = System.Drawing.Color.FromArgb((int)sa.BackgrounColor);
+                        gc.AppearanceCell.Options.UseBackColor = true;
                     }
                 }
 

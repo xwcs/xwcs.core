@@ -129,6 +129,9 @@ namespace xwcs.core.db.binding.attributes
         public override void applyGridColumnPopulation(IDataBindingSource src, GridColumnPopulated e) {
             if (!ReferenceEquals(e.Column, null))
             {
+                e.Column.BackGrndColor = _backGrndColor;
+                e.Column.AppearanceCell.BackColor = _styleController.Appearance.BackColor;
+                e.Column.AppearanceCell.Options.UseBackColor = true;
                 if (ColumnWidth != -1)
                 {
                     //set column width
