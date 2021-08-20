@@ -51,6 +51,44 @@ namespace xwcs.core.db
         }
     }
 
+    public class HistoryItem
+    {
+        [System.ComponentModel.DataAnnotations.Display(Name = "Utente", ShortName = "Utente", Description = "utente che ha fatto l'intervento")]
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        // [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        public string Utente { get; set; }
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        public DateTime Quando { get; set; }
+        private string _Obj_Json;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Completo", ShortName = "JSON", Description = "Contenuto JSON completo")]
+        public string Obj_Json { get
+            {
+                return _Obj_Json;
+            }
+            set
+            {
+                try
+                {
+                 _Obj_Json = Newtonsoft.Json.JsonConvert.SerializeObject(Newtonsoft.Json.JsonConvert.DeserializeObject(value),Newtonsoft.Json.Formatting.Indented);
+                } catch
+                {
+                    _Obj_Json = value;
+                }
+            }
+
+        }
+
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        public string Abstract { get; set; }
+        public override string ToString()
+        {
+            return string.Format("{0} {1}\r\n{2}", this.Utente, this.Quando, this.Abstract);
+        }
+    }
+
     public class LockResult
     {
         public int Id_lock { get; set; }
@@ -437,6 +475,7 @@ namespace xwcs.core.db
 
             return InternalUnlock(ld);
         }
+
         public LockResult EntityUnlock(EntityBase e)
         {
             if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
@@ -455,8 +494,7 @@ namespace xwcs.core.db
             }
         }
 
-
-
+        
         public LockState TableLockState(EntityBase e)
         {
             return InternalLockState(new LockData() { id = "-1", entity = e.GetFieldName() });
@@ -704,6 +742,26 @@ namespace xwcs.core.db
             return ret;
         }
 
+        public List<xwcs.core.db.HistoryItem> EntityHistory(xwcs.core.db.EntityBase e)
+        {
+            string eid = e.GetLockId().ToString();
+            string ename = e.GetFieldName(); // name of table
+            try
+            {
+                Database.ExecuteSqlCommand("SET SESSION group_concat_max_len = 320000;");
+                Database.ExecuteSqlCommand("SET SESSION max_sp_recursion_depth = 10;");
+                return Database.SqlQuery<HistoryItem>(
+                    string.Format(
+                        "call {0}_history({1});", 
+                        ename, 
+                        eid.Replace("\\","\\\\").Replace("\"","\\\"")
+                        )).ToList();
+            }
+            catch
+            {
+                return new List<HistoryItem>();
+            }
+        }
 
         #region IDisposable Support
         private bool disposedValue = false;
