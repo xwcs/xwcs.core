@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace xwcs.core.db
 {
+    using binding.attributes;
     using cfg;
     using evt;
     using System.Data.Entity;
@@ -54,13 +55,14 @@ namespace xwcs.core.db
     public class HistoryItem
     {
         [System.ComponentModel.DataAnnotations.Display(Name = "Utente", ShortName = "Utente", Description = "utente che ha fatto l'intervento")]
-        [xwcs.core.db.binding.attributes.ReadOnly]
-        // [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
         public string Utente { get; set; }
-        [xwcs.core.db.binding.attributes.ReadOnly]
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
         public DateTime Quando { get; set; }
         private string _Obj_Json;
-        [xwcs.core.db.binding.attributes.ReadOnly]
+        [ReadOnly]
         [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
         [System.ComponentModel.DataAnnotations.Display(Name = "Completo", ShortName = "JSON", Description = "Contenuto JSON completo")]
         public string Obj_Json { get
@@ -77,15 +79,105 @@ namespace xwcs.core.db
                     _Obj_Json = value;
                 }
             }
-
         }
 
+        string _Abstract;
         [xwcs.core.db.binding.attributes.ReadOnly]
         [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
-        public string Abstract { get; set; }
+        public string Abstract { get
+            {
+                return _Abstract;
+            }
+            set {
+                _Abstract = value;
+                _AbstractFieldList = null;
+                _VariazioneA = null;
+            }
+        }
         public override string ToString()
         {
             return string.Format("{0} {1}\r\n{2}", this.Utente, this.Quando, this.Abstract);
+        }
+        string _VariazioneA = null;
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Text)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Variazione abstract", ShortName = "variazione", Description = "Campi modificati")]
+        public string VariazioneAbstract {
+            get
+            {
+                return _VariazioneA;
+            }
+        }
+
+        public void CalcolaVariazioneAbstract(HistoryItem c)
+        {
+            var ret = new List<string>();
+            _VariazioneA = String.Join(",", AbstractFieldList());
+            var l = c.AbstractFieldList();
+            l.AddRange(this.AbstractFieldList());
+            l = l.Distinct().ToList().OrderBy(s => s).ToList();
+            foreach(var f in l)
+            {
+                if (!c.AbstractGetField(f).Equals(this.AbstractGetField(f)))
+                {
+                    ret.Add(f);
+                }
+            }
+            _VariazioneA = String.Join(", ", ret);
+        }
+
+        List<string> _AbstractFieldList = null;
+        public List<string> AbstractFieldList()
+        {
+            if (ReferenceEquals(_AbstractFieldList, null))
+            {
+                var vs = Abstract.Split(new string[1] { "\r\n" }, StringSplitOptions.None);
+                var ret = new List<string>();
+                String riga;
+                for (var i = 0; i < vs.Length; i++)
+                {
+                    riga = vs.ElementAt(i);
+                    if (riga.Length > 0 && !riga.StartsWith("\t"))
+                    {
+                        riga=riga.Split(new string[1] { ": " }, StringSplitOptions.None)[0];
+                        if (riga.Length > 0) ret.Add(riga);
+                    }
+                }
+                _AbstractFieldList = ret;
+            }
+            return _AbstractFieldList;
+        }
+        
+        public string AbstractGetField(string FieldName)
+        {
+            var fn = FieldName + ": ";
+            bool dentro = false;
+            var ret = new List<string>();
+            var vs = Abstract.Split(new string[1] { "\r\n" }, StringSplitOptions.None);
+            for (var i = vs.Length - 1; i >= 0; i--)
+            {
+                string riga = vs.ElementAt(i);
+                if (riga.StartsWith(fn))
+                {
+                    dentro = true;
+                    riga = riga.Substring(fn.Length);
+                    ret.Add(riga);
+                } else
+                {
+                    if (dentro)
+                    {
+                        if (riga.StartsWith("\t"))
+                        {
+                            riga = riga.Substring(1);
+                            ret.Add(riga);
+                        } else
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            return string.Join("\r\n",ret);
+
         }
     }
 
@@ -750,12 +842,23 @@ namespace xwcs.core.db
             {
                 Database.ExecuteSqlCommand("SET SESSION group_concat_max_len = 320000;");
                 Database.ExecuteSqlCommand("SET SESSION max_sp_recursion_depth = 10;");
-                return Database.SqlQuery<HistoryItem>(
+                var ret = new List<xwcs.core.db.HistoryItem>();
+                HistoryItem precelemento=null;
+                foreach (var elemento in Database.SqlQuery<HistoryItem>(
                     string.Format(
                         "call {0}_history({1});", 
                         ename, 
                         eid.Replace("\\","\\\\").Replace("\"","\\\"")
-                        )).ToList();
+                        )).ToList().OrderBy(d=>d.Quando))
+                {
+                    if (!ReferenceEquals(null,precelemento))
+                    {
+                        elemento.CalcolaVariazioneAbstract(precelemento);
+                    }
+                    ret.Add(elemento);
+                    precelemento = elemento;
+                }
+                return ret.OrderByDescending(d => d.Quando).ToList();
             }
             catch
             {
