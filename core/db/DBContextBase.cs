@@ -60,6 +60,7 @@ namespace xwcs.core.db
         public string Utente { get; set; }
         [ReadOnly]
         [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        [System.ComponentModel.DataAnnotations.DisplayFormat(DataFormatString = "G", ApplyFormatInEditMode = false)]
         public DateTime Quando { get; set; }
         private string _Obj_Json;
         [ReadOnly]
