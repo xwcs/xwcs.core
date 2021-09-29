@@ -563,9 +563,13 @@ namespace xwcs.core.db
             }
         }
 
-        public virtual int GetLockId()
+        public virtual string GetLockIdPropertyName()
         {
-            object idFiled = GetModelPropertyValueByName("id");
+            return "id";
+        }
+        public int GetLockId()
+        {
+            object idFiled = GetModelPropertyValueByName(GetLockIdPropertyName());
             return ReferenceEquals(idFiled, null) ? -1 : (int)idFiled;
         }
 
@@ -947,7 +951,7 @@ namespace xwcs.core.db
         }
         #endregion
     }
-
+    
 
     
 
