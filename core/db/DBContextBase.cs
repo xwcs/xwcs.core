@@ -10,6 +10,7 @@ namespace xwcs.core.db
     using binding.attributes;
     using cfg;
     using evt;
+    using System.Data;
     using System.Data.Entity;
     using System.Data.Entity.Core.Objects;
     using System.Data.Entity.Infrastructure;
@@ -66,7 +67,8 @@ namespace xwcs.core.db
         [ReadOnly]
         [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
         [System.ComponentModel.DataAnnotations.Display(Name = "Completo", ShortName = "JSON", Description = "Contenuto JSON completo")]
-        public string Obj_Json { get
+        public string Obj_Json {
+            get
             {
                 return _Obj_Json;
             }
@@ -835,6 +837,73 @@ namespace xwcs.core.db
             return ret;
         }
 
+        public DataTable ExecuteQuery(string e)
+        {
+            var ret = new DataTable();
+            var cmd = Database.Connection.CreateCommand();
+            cmd.Connection = Database.Connection;
+            var dbFactory = System.Data.Common.DbProviderFactories.GetFactory(Database.Connection);
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = e;
+            var adapter = dbFactory.CreateDataAdapter();
+            adapter.SelectCommand = cmd;
+            adapter.Fill(ret);
+            return ret;
+        }
+        public DataTable EntityDataTableHistory(string e, string idpropertyname="id")
+        {
+            var ret = new DataTable();
+            try
+            {
+                ret = ExecuteQuery(String.Format("select a.* from {0}_audit_log a order by (select max(b.`when`) from {1}_audit_log b where b.{2}=a.{3}) desc, a.{4}, a.revision desc", e, e, idpropertyname, idpropertyname, idpropertyname));
+
+                //ret = ExecuteQuery(String.Format("select * from {0}_audit_log order by `when` desc", e));
+                ret.Columns["who"].Caption = "Utente";
+                ret.Columns["when"].Caption = "Quando";
+                ret.Columns["action"].Caption = "Operazione";
+                ret.Columns["revision"].Caption = "Revisione";
+                return ret;
+            } catch (Exception ex) { 
+                ret = new DataTable();
+                var column = new DataColumn();
+                column.DataType = Type.GetType("System.String");
+                column.ColumnName = "Errore";
+                ret.Columns.Add(column);
+                DataRow row;
+                row = ret.NewRow();
+                row["Errore"] = ex.ToString();
+                ret.Rows.Add(row);
+                return ret;
+            }
+        }
+        public DataTable EntityDataTableHistory(xwcs.core.db.EntityBase e) {
+            string eid = e.GetLockId().ToString();
+            string ename = e.GetFieldName(); // name of table
+            string idname = e.GetLockIdPropertyName(); // name of table
+            try
+            {
+                var ret = ExecuteQuery(String.Format("select * from {0}_audit_log a where {1}='{2}' order by `when` desc, revision desc", ename, idname,eid));
+                ret.Columns["who"].Caption = "Utente";
+                ret.Columns["when"].Caption = "Quando";
+                ret.Columns["action"].Caption = "Operazione";
+                ret.Columns["revision"].Caption = "Revisione";
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                var ret = new DataTable();
+                var column = new DataColumn();
+                column.DataType = Type.GetType("System.String");
+                column.ColumnName = "Errore";
+                ret.Columns.Add(column);
+                DataRow row;
+                row = ret.NewRow();
+                row["Errore"] = ex.ToString();
+                ret.Rows.Add(row);
+                return ret;
+            }
+
+        }
         public List<xwcs.core.db.HistoryItem> EntityHistory(xwcs.core.db.EntityBase e)
         {
             string eid = e.GetLockId().ToString();
