@@ -156,7 +156,7 @@ namespace xwcs.core.db
             bool dentro = false;
             var ret = new List<string>();
             var vs = Abstract.Split(new string[1] { "\r\n" }, StringSplitOptions.None);
-            for (var i = vs.Length - 1; i >= 0; i--)
+            for (var i = 0; i<vs.Length; i++)
             {
                 string riga = vs.ElementAt(i);
                 if (riga.StartsWith(fn))
