@@ -52,7 +52,206 @@ namespace xwcs.core.db
             }
         }
     }
+    public class ClassificazioniHistoryItem
+    {
+        internal class ClassificazioniHistoryItemSubrow
+        {
+            internal int index;
+            internal string riga;
+            internal string id { get; set; }
+            internal string parent_id { get; set; }
+            internal string classificazione { get; set; }
+            internal string descrizione { get; set; }
+            internal string opere { get; set; }
+            internal bool disabilitato { get; set; }
+            internal ClassificazioniHistoryItemSubrow(string _riga, int _index)
+            {
+                //campi separati da tab (in alcuni casi paddato a dx con spazi)
+                //0 id
+                //1 classificazione (+ "*" se disabilitato)
+                //2 descrizione
+                //3 "[" + opere separate da ", " + "]"
+                //4 "{" + parent_id + "}"
+                index = _index;
+                riga = _riga;
+                string[] r = riga.Split('\t');
+                id = r[0];
+                classificazione = r[1].Trim();
+                if (classificazione.EndsWith("*"))
+                {
+                    disabilitato = true;
+                    classificazione = classificazione.Substring(0, classificazione.Length - 1);
+                } else {
+                    disabilitato = false;
+                }
+                descrizione = r[2];
+                if (r[3].Length > 0)
+                {
+                    opere = r[3].Substring(1, r[3].Length - 2);
+                } else
+                {
+                    opere = String.Empty;
+                }
+                parent_id = r[4];
+            }
+            internal string Diff(ClassificazioniHistoryItemSubrow c)
+            {
+                if (!c.id.Equals(id)) return "#";
+                string _c;
+                string _d;
+                string _o;
+                if (c.classificazione.Equals(this.classificazione)) {
+                    _c = this.classificazione;
+                } else
+                {
+                    _c = String.Format("\"{0}\"->\"{1}\"", c.classificazione, this.classificazione);
+                }
+                if (c.descrizione.Equals(this.descrizione))
+                {
+                    _d = "";
+                }
+                else
+                {
+                    _d = String.Format(", {0}->{1}", c.descrizione, this.descrizione);
+                }
+                if (c.opere.Equals(this.opere))
+                {
+                    _o = "";
+                }
+                else
+                {
+                    string[] currOp = this.opere.Split(new string[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] precOp = c.opere.Split(new string[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                    var diffOp = new List<string>();
+                    foreach(var op in currOp)
+                    {
+                        if (!precOp.Contains(op))
+                        {
+                            diffOp.Add("(+)" + op);
+                        }
+                    }
+                    foreach (var op in precOp)
+                    {
+                        if (!currOp.Contains(op))
+                        {
+                            diffOp.Add("(-)" + op);
+                        }
+                    }
+                    if (diffOp.Count==0)
+                    {
+                        _o = "";
+                    } else
+                    {
+                        _o = " " + string.Join("", diffOp);
+                    }
+                    
+                }
+                return String.Format("{0}{1}{2}",_c,_d,_o);
+            }
 
+        }
+        private Dictionary<String,ClassificazioniHistoryItemSubrow> _righe;
+        [System.ComponentModel.DataAnnotations.Display(Name = "Utente", ShortName = "Utente", Description = "utente che ha fatto l'intervento")]
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        public string Utente { get; set; }
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        [System.ComponentModel.DataAnnotations.DisplayFormat(DataFormatString = "G", ApplyFormatInEditMode = false)]
+        public DateTime Quando { get; set; }
+        string _Albero;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Albero", ShortName = "Albero", Description = "Albero di classificazone")]
+        public string Albero
+        {
+            get
+            {
+                return _Albero;
+                
+            }
+            set
+            {
+                _Albero = value;
+                _righe = null;
+                _Variazione = null;
+                _VariazioneCL = null;
+
+            }
+        }
+        private string _Variazione = null;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Modifiche Albero", ShortName = " Modifiche", Description = "Righe modificate nell'albero")]
+        public string Variazione
+        {
+            get
+            {
+                return _Variazione;
+            }
+        }
+        private string _VariazioneCL = null;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Text)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Classificazioni modificate", ShortName = "Cl. mod.", Description = "Elenco classificazioni modificate")]
+        public string VariazioneCL
+        {
+            get
+            {
+                return _VariazioneCL;
+            }
+        }
+
+        internal Dictionary<string,ClassificazioniHistoryItemSubrow> Righe()
+        {
+            if (ReferenceEquals(_righe,null)) {
+                int i=0;
+                _righe = _Albero.Split(new String[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(r => new ClassificazioniHistoryItemSubrow(r, i++)).ToDictionary(r => r.id);
+            }
+            return _righe;
+        }
+        internal void CalcolaVariazione(ClassificazioniHistoryItem c)
+        {
+            var diffCL = new List<String>();
+            var prec = c.Righe();
+            var curr = this.Righe();
+            var currL = curr.Select(i=>i.Value).OrderBy(v=>v.index).ToList();
+            var diff = new List<string>();
+            foreach(var r in currL)
+            {
+                if (prec.ContainsKey(r.id)) {
+                    var p = prec[r.id];
+                    if (!r.riga.Equals(p.riga))
+                    {
+                        diff.Add(" \t" + r.riga);
+                        diffCL.Add(r.classificazione);
+                    }
+                } else
+                {
+                    diff.Add("+\t" + r.riga);
+                    diffCL.Add(r.classificazione + "(+)");
+                }
+            }
+            foreach (var r in prec.Values)
+            {
+                if (!curr.ContainsKey(r.id))
+                {
+                    diff.Add("-\t" + r.riga);
+                    diffCL.Add(r.classificazione+"(-)");
+                }
+            }
+            _Variazione = String.Join("\r\n", diff);
+            _VariazioneCL= String.Join(", ", diffCL.OrderBy(s=>s).Distinct());
+            const int MAX_LEN_CLASSIFICAZIONI = 200;
+            if (_VariazioneCL.Length> MAX_LEN_CLASSIFICAZIONI)
+            {
+                _VariazioneCL = _VariazioneCL.Substring(0, MAX_LEN_CLASSIFICAZIONI-3) + "...";
+            }
+        }
+
+        
+
+    }
     public class HistoryItem
     {
         [System.ComponentModel.DataAnnotations.Display(Name = "Utente", ShortName = "Utente", Description = "utente che ha fatto l'intervento")]
@@ -149,7 +348,7 @@ namespace xwcs.core.db
             }
             return _AbstractFieldList;
         }
-        
+
         public string AbstractGetField(string FieldName)
         {
             var fn = FieldName + ": ";
@@ -180,7 +379,6 @@ namespace xwcs.core.db
                 }
             }
             return string.Join("\r\n",ret);
-
         }
     }
 
@@ -850,8 +1048,117 @@ namespace xwcs.core.db
             adapter.Fill(ret);
             return ret;
         }
+
+        public List<xwcs.core.db.ClassificazioniHistoryItem> ClassificazioniHistory()
+        {
+            string sql = @"
+
+                select
+                    `when` as Quando, `who` As Utente,
+                    (case when length(stato) != lunghezza then concat(substr(stato, 1, length(stato)-5), '\r\n...') else stato end) as Albero
+                from 
+                    (
+                    select 
+                        `when`, `who`,
+                        concat(group_concat(riga order by (case when c.classificazione <=> 'root' then 0 else 1 end), c.classificazione separator '\r\n')) as stato,
+                        sum(length(riga))+count(*)*2-2 as lunghezza
+                    from
+                        (
+                        select
+                        c.*,
+                        concat(
+                            substr(concat(c.id_mask, c.id), -length(c.id_mask)), 
+                            '\t',
+                            substr(
+                                concat(c.classificazione, (case when c.disabilitato then '*' else ' ' end) , classificazione_mask),
+                                1, length(classificazione_mask)+1), 
+                            '\t',
+                            c.descrizione,'\t',
+                            (case when c.opere is null or c.opere = '' then '' else Concat('[', c.opere, ']') end),
+                            '\t', (case when c.parent_id is null then '' else concat('{', c.parent_id, '}') end),
+                            '') as riga
+                        from
+                        (
+                        select
+                            d.`when`, d.who, 
+                            replace(space((select length(max(l.id)) from classificazioni_audit_log l)), ' ' , '0') as id_mask,
+                            space((select max(length(l.classificazione)) from classificazioni_audit_log l)) as classificazione_mask,
+                            c.classificazione as classificazione_parent,
+                            (case when c.parent_id is null then 0 else length(c.classificazione) - length(replace(c.classificazione, '.', '')) + 1 end) as livello,
+                            c.id, c.parent_id, c.classificazione, c.descrizione, c.disabilitato, c.revision, c.action, c.when_c, c.who_c,
+      
+                            ifnull((select group_concat(oic.opera order by oic.opera separator ', ' ) from
+                            (
+                            select
+                                oic.action, oic.revision, d.`when`, d.`who`, oic.id, oic.id_classificazioni, oic.id_opere,
+                                (select ifnull(o.dna_cod_articolo, o.descrizione) from opere_audit_log o where o.id = oic.id_opere and o.`when`<=oic.`when` order by oic.`when` desc limit 1) as opera, 
+                                oic.`when` as when_oic, oic.`who` as who_oic
+                            from
+                                (
+                                select distinct `who`, `when` from classificazioni_audit_log
+                                union
+                                select distinct `who`, `when` from opere_in_classificazioni_audit_log
+                                ) d
+                                join opere_in_classificazioni_audit_log oic on oic.`when` <= d.`when` and oic.action != 'delete'
+                            where
+                            oic.revision = (select max(oic2.revision) from opere_in_classificazioni_audit_log oic2 where oic2.id = oic.id and oic2.`when` <= d.`when`)
+                            ) oic where oic.id_classificazioni = c.id and oic.`when` = d.`when` and oic.`who` = d.`who`
+                                ), '') as opere
+                        from
+                            (
+                            select distinct `who`, `when` from classificazioni_audit_log
+                            union
+                            select distinct `who`, `when` from opere_in_classificazioni_audit_log
+                            ) d
+                            join 
+                            (select
+                                c.action, c.revision, d.`when`, d.`who`, c.id, c.parent_id, c.classificazione, c.descrizione, c.disabilitato,
+                                c.`when` as when_c, c.`who` as who_c
+                            from
+                                (
+                                select distinct `who`, `when` from classificazioni_audit_log
+                                union
+                                select distinct `who`, `when` from opere_in_classificazioni_audit_log
+                                ) d
+                                join classificazioni_audit_log c on c.`when` <= d.`when` and c.action != 'delete'
+                            where
+                                c.revision = (select max(c2.revision) from classificazioni_audit_log c2 where c2.id = c.id and c2.`when` <= d.`when`)
+                            ) c on c.`when` = d.`when` and c.`who` = d.`who`
+                            left outer join classificazioni cp on cp.id = c.parent_id
+                        ) c
+                        ) c
+                    group by 
+                        `when`, `who`
+                    ) a
+                    order by `when`, `who`
+
+                ";
+            try
+            {
+                Database.ExecuteSqlCommand("SET SESSION group_concat_max_len = 320000;");
+                var ret = new List<xwcs.core.db.ClassificazioniHistoryItem>();
+                ClassificazioniHistoryItem precelemento = null;
+                foreach (var elemento in Database.SqlQuery<ClassificazioniHistoryItem>(sql))
+                {
+                    if (!ReferenceEquals(null, precelemento))
+                    {
+                        elemento.CalcolaVariazione(precelemento);
+                    }
+
+                    ret.Add(elemento);
+                    precelemento = elemento;
+                }
+                return ret.OrderByDescending(d => d.Quando).ToList();
+            }
+            catch
+            {
+                return new List<ClassificazioniHistoryItem>();
+            }
+        }
+
         public DataTable EntityDataTableHistory(string e, string idpropertyname="id")
         {
+
             var ret = new DataTable();
             try
             {
