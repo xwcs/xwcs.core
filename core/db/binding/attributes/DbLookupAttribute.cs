@@ -7,6 +7,7 @@ using System.Linq;
 using DevExpress.XtraEditors.Filtering;
 using DevExpress.XtraGrid.Views.Base;
 using System.Drawing;
+using DevExpress.XtraEditors.Controls;
 
 namespace xwcs.core.db.binding.attributes
 {
@@ -15,7 +16,8 @@ namespace xwcs.core.db.binding.attributes
 	{
 		public string DisplayMember { set; get; }
 		public string ValueMember { set; get; }
-
+        private bool _AcceptNewValue = false;
+        public bool AcceptNewValue { get { return _AcceptNewValue; }  set { _AcceptNewValue = value; } }
 		private int _popUpWidth = 0;
 		private int _popUpHeight = 0;
         private bool _UseCtrlScroll = true;
@@ -98,7 +100,8 @@ namespace xwcs.core.db.binding.attributes
 			rle.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Near;
 			rle.DisplayMember = DisplayMember;
 			rle.ValueMember = ValueMember;
-            rle.AcceptEditorTextAsNewValue = DevExpress.Utils.DefaultBoolean.True;
+            rle.AcceptEditorTextAsNewValue = (AcceptNewValue ? DevExpress.Utils.DefaultBoolean.True: DevExpress.Utils.DefaultBoolean.False);
+            rle.TextEditStyle = TextEditStyles.Standard;
             rle.PopupFormMinSize = new Size(_popUpWidth, _popUpHeight);
             rle.View.OptionsView.ShowFilterPanelMode = ShowFilterPanelMode.Default;
             rle.View.OptionsView.ShowAutoFilterRow = true;
