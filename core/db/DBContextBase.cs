@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 
 namespace xwcs.core.db
 {
+    using binding.attributes;
     using cfg;
     using evt;
+    using System.Data;
     using System.Data.Entity;
     using System.Data.Entity.Core.Objects;
     using System.Data.Entity.Infrastructure;
@@ -48,6 +50,335 @@ namespace xwcs.core.db
             {
                 return string.Format("Impossibile completare l'operazione, alcuni reord sono già bloccati!");
             }
+        }
+    }
+    public class ClassificazioniHistoryItem
+    {
+        internal class ClassificazioniHistoryItemSubrow
+        {
+            internal int index;
+            internal string riga;
+            internal string id { get; set; }
+            internal string parent_id { get; set; }
+            internal string classificazione { get; set; }
+            internal string descrizione { get; set; }
+            internal string opere { get; set; }
+            internal bool disabilitato { get; set; }
+            internal ClassificazioniHistoryItemSubrow(string _riga, int _index)
+            {
+                //campi separati da tab (in alcuni casi paddato a dx con spazi)
+                //0 id
+                //1 classificazione (+ "*" se disabilitato)
+                //2 descrizione
+                //3 "[" + opere separate da ", " + "]"
+                //4 "{" + parent_id + "}"
+                index = _index;
+                riga = _riga;
+                string[] r = riga.Split('\t');
+                id = r[0];
+                classificazione = r[1].Trim();
+                if (classificazione.EndsWith("*"))
+                {
+                    disabilitato = true;
+                    classificazione = classificazione.Substring(0, classificazione.Length - 1);
+                } else {
+                    disabilitato = false;
+                }
+                descrizione = r[2];
+                if (r[3].Length > 0)
+                {
+                    opere = r[3].Substring(1, r[3].Length - 2);
+                } else
+                {
+                    opere = String.Empty;
+                }
+                parent_id = r[4];
+            }
+            internal string Diff(ClassificazioniHistoryItemSubrow c)
+            {
+                if (!c.id.Equals(id)) return "#";
+                string _c;
+                string _d;
+                string _o;
+                if (c.classificazione.Equals(this.classificazione)) {
+                    _c = this.classificazione;
+                } else
+                {
+                    _c = String.Format("\"{0}\"->\"{1}\"", c.classificazione, this.classificazione);
+                }
+                if (c.descrizione.Equals(this.descrizione))
+                {
+                    _d = "";
+                }
+                else
+                {
+                    _d = String.Format(", {0}->{1}", c.descrizione, this.descrizione);
+                }
+                if (c.opere.Equals(this.opere))
+                {
+                    _o = "";
+                }
+                else
+                {
+                    string[] currOp = this.opere.Split(new string[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] precOp = c.opere.Split(new string[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                    var diffOp = new List<string>();
+                    foreach(var op in currOp)
+                    {
+                        if (!precOp.Contains(op))
+                        {
+                            diffOp.Add("(+)" + op);
+                        }
+                    }
+                    foreach (var op in precOp)
+                    {
+                        if (!currOp.Contains(op))
+                        {
+                            diffOp.Add("(-)" + op);
+                        }
+                    }
+                    if (diffOp.Count==0)
+                    {
+                        _o = "";
+                    } else
+                    {
+                        _o = " " + string.Join("", diffOp);
+                    }
+                    
+                }
+                return String.Format("{0}{1}{2}",_c,_d,_o);
+            }
+
+        }
+        private Dictionary<String,ClassificazioniHistoryItemSubrow> _righe;
+        [System.ComponentModel.DataAnnotations.Display(Name = "Utente", ShortName = "Utente", Description = "utente che ha fatto l'intervento")]
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        public string Utente { get; set; }
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        [System.ComponentModel.DataAnnotations.DisplayFormat(DataFormatString = "G", ApplyFormatInEditMode = false)]
+        public DateTime Quando { get; set; }
+        string _Albero;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Albero", ShortName = "Albero", Description = "Albero di classificazone")]
+        public string Albero
+        {
+            get
+            {
+                return _Albero;
+                
+            }
+            set
+            {
+                _Albero = value;
+                _righe = null;
+                _Variazione = null;
+                _VariazioneCL = null;
+
+            }
+        }
+        private string _Variazione = null;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Modifiche Albero", ShortName = " Modifiche", Description = "Righe modificate nell'albero")]
+        public string Variazione
+        {
+            get
+            {
+                return _Variazione;
+            }
+        }
+        private string _VariazioneCL = null;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Text)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Classificazioni modificate", ShortName = "Cl. mod.", Description = "Elenco classificazioni modificate")]
+        public string VariazioneCL
+        {
+            get
+            {
+                return _VariazioneCL;
+            }
+        }
+
+        internal Dictionary<string,ClassificazioniHistoryItemSubrow> Righe()
+        {
+            if (ReferenceEquals(_righe,null)) {
+                int i=0;
+                _righe = _Albero.Split(new String[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(r => new ClassificazioniHistoryItemSubrow(r, i++)).ToDictionary(r => r.id);
+            }
+            return _righe;
+        }
+        internal void CalcolaVariazione(ClassificazioniHistoryItem c)
+        {
+            var diffCL = new List<String>();
+            var prec = c.Righe();
+            var curr = this.Righe();
+            var currL = curr.Select(i=>i.Value).OrderBy(v=>v.index).ToList();
+            var diff = new List<string>();
+            foreach(var r in currL)
+            {
+                if (prec.ContainsKey(r.id)) {
+                    var p = prec[r.id];
+                    if (!r.riga.Equals(p.riga))
+                    {
+                        diff.Add(" \t" + r.riga);
+                        diffCL.Add(r.classificazione);
+                    }
+                } else
+                {
+                    diff.Add("+\t" + r.riga);
+                    diffCL.Add(r.classificazione + "(+)");
+                }
+            }
+            foreach (var r in prec.Values)
+            {
+                if (!curr.ContainsKey(r.id))
+                {
+                    diff.Add("-\t" + r.riga);
+                    diffCL.Add(r.classificazione+"(-)");
+                }
+            }
+            _Variazione = String.Join("\r\n", diff);
+            _VariazioneCL= String.Join(", ", diffCL.OrderBy(s=>s).Distinct());
+            const int MAX_LEN_CLASSIFICAZIONI = 200;
+            if (_VariazioneCL.Length> MAX_LEN_CLASSIFICAZIONI)
+            {
+                _VariazioneCL = _VariazioneCL.Substring(0, MAX_LEN_CLASSIFICAZIONI-3) + "...";
+            }
+        }
+
+        
+
+    }
+    public class HistoryItem
+    {
+        [System.ComponentModel.DataAnnotations.Display(Name = "Utente", ShortName = "Utente", Description = "utente che ha fatto l'intervento")]
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        public string Utente { get; set; }
+        [ReadOnly]
+        [Style(HAlignment = HAlignment.Near, ColumnWidth = 300)]
+        [System.ComponentModel.DataAnnotations.DisplayFormat(DataFormatString = "G", ApplyFormatInEditMode = false)]
+        public DateTime Quando { get; set; }
+        private string _Obj_Json;
+        [ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Completo", ShortName = "JSON", Description = "Contenuto JSON completo")]
+        public string Obj_Json {
+            get
+            {
+                return _Obj_Json;
+            }
+            set
+            {
+                try
+                {
+                 _Obj_Json = Newtonsoft.Json.JsonConvert.SerializeObject(Newtonsoft.Json.JsonConvert.DeserializeObject(value),Newtonsoft.Json.Formatting.Indented);
+                } catch
+                {
+                    _Obj_Json = value;
+                }
+            }
+        }
+
+        string _Abstract;
+        [xwcs.core.db.binding.attributes.ReadOnly]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.MultilineText)]
+        public string Abstract { get
+            {
+                return _Abstract;
+            }
+            set {
+                _Abstract = value;
+                _AbstractFieldList = null;
+                _VariazioneA = null;
+            }
+        }
+        public override string ToString()
+        {
+            return string.Format("{0} {1}\r\n{2}", this.Utente, this.Quando, this.Abstract);
+        }
+        string _VariazioneA = null;
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Text)]
+        [System.ComponentModel.DataAnnotations.Display(Name = "Variazione abstract", ShortName = "variazione", Description = "Campi modificati")]
+        public string VariazioneAbstract {
+            get
+            {
+                return _VariazioneA;
+            }
+        }
+
+        public void CalcolaVariazioneAbstract(HistoryItem c)
+        {
+            var ret = new List<string>();
+            _VariazioneA = String.Join(",", AbstractFieldList());
+            var l = c.AbstractFieldList();
+            l.AddRange(this.AbstractFieldList());
+            l = l.Distinct().ToList().OrderBy(s => s).ToList();
+            foreach(var f in l)
+            {
+                if (!c.AbstractGetField(f).Equals(this.AbstractGetField(f)))
+                {
+                    ret.Add(f);
+                }
+            }
+            _VariazioneA = String.Join(", ", ret);
+        }
+
+        List<string> _AbstractFieldList = null;
+        public List<string> AbstractFieldList()
+        {
+            if (ReferenceEquals(_AbstractFieldList, null))
+            {
+                var vs = Abstract.Split(new string[1] { "\r\n" }, StringSplitOptions.None);
+                var ret = new List<string>();
+                String riga;
+                for (var i = 0; i < vs.Length; i++)
+                {
+                    riga = vs.ElementAt(i);
+                    if (riga.Length > 0 && !riga.StartsWith("\t"))
+                    {
+                        riga=riga.Split(new string[1] { ": " }, StringSplitOptions.None)[0];
+                        if (riga.Length > 0) ret.Add(riga);
+                    }
+                }
+                _AbstractFieldList = ret;
+            }
+            return _AbstractFieldList;
+        }
+
+        public string AbstractGetField(string FieldName)
+        {
+            var fn = FieldName + ": ";
+            bool dentro = false;
+            var ret = new List<string>();
+            var vs = Abstract.Split(new string[1] { "\r\n" }, StringSplitOptions.None);
+            for (var i = 0; i<vs.Length; i++)
+            {
+                string riga = vs.ElementAt(i);
+                if (riga.StartsWith(fn))
+                {
+                    dentro = true;
+                    riga = riga.Substring(fn.Length);
+                    ret.Add(riga);
+                } else
+                {
+                    if (dentro)
+                    {
+                        if (riga.StartsWith("\t"))
+                        {
+                            riga = riga.Substring(1);
+                            ret.Add(riga);
+                        } else
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            return string.Join("\r\n",ret);
         }
     }
 
@@ -390,6 +721,7 @@ namespace xwcs.core.db
             string ename = e.GetFieldName(); // name of table
             CheckLoginForConnection();
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}', {3});", _adminDb, eid, ename, (persistent ? '1' : '0'))).FirstOrDefault();
+            Database.Log?.Invoke(String.Format("entity entity_lock({0}, {1}, {2}) return {3}, '{4}'", eid, ename, persistent, lr.Id_lock, lr.Owner));
             if (lr.Id_lock == 0)
             {
                 throw new DBLockException(lr);
@@ -436,6 +768,7 @@ namespace xwcs.core.db
 
             return InternalUnlock(ld);
         }
+
         public LockResult EntityUnlock(EntityBase e)
         {
             if (_entityLockDisabled) return new LockResult() { Id_lock = 1 };
@@ -454,8 +787,7 @@ namespace xwcs.core.db
             }
         }
 
-
-
+        
         public LockState TableLockState(EntityBase e)
         {
             return InternalLockState(new LockData() { id = "-1", entity = e.GetFieldName() });
@@ -484,6 +816,7 @@ namespace xwcs.core.db
         {
             CheckLoginForConnection();
             LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock(-1, '{1}', {2});", _adminDb, ename, (persistent ? '1' : '0'))).FirstOrDefault();
+            Database.Log?.Invoke(String.Format("table entity_lock(-1, '{0}', {1}) return {2}, '{3}'", ename, persistent, lr.Id_lock, lr.Owner));
             if (lr.Id_lock == 0)
             {
                 throw new DBLockException(lr);
@@ -527,7 +860,11 @@ namespace xwcs.core.db
 
             if (_locks.Contains(ld))
             {
+                Database.Log?.Invoke(String.Format("remove local table lock for {0}", ename));
                 _locks.Remove(ld);
+            } else
+            {
+                Database.Log?.Invoke(String.Format("not present local table lock for {0}", ename));
             }
 
             return InternalUnlock(ld);
@@ -561,6 +898,7 @@ namespace xwcs.core.db
         {
             CheckLoginForConnection();
             UnlockResult ur = Database.SqlQuery<UnlockResult>(string.Format("call {0}.entity_unlock({1}, '{2}');", _adminDb, ld.id, ld.entity)).FirstOrDefault();
+            Database.Log?.Invoke(String.Format("entity_unlock({0}, '{1}') return {2}, '{3}'", ld.id, ld.entity, ur.Cnt, ur.Owner));
             return new LockResult() { Id_lock = ur.Cnt, Owner = ur.Owner }; // this should not be necessary if DB align lock and unlock result
         }
 
@@ -697,6 +1035,213 @@ namespace xwcs.core.db
             return ret;
         }
 
+        public DataTable ExecuteQuery(string e)
+        {
+            var ret = new DataTable();
+            var cmd = Database.Connection.CreateCommand();
+            cmd.Connection = Database.Connection;
+            var dbFactory = System.Data.Common.DbProviderFactories.GetFactory(Database.Connection);
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = e;
+            var adapter = dbFactory.CreateDataAdapter();
+            adapter.SelectCommand = cmd;
+            adapter.Fill(ret);
+            return ret;
+        }
+
+        public List<xwcs.core.db.ClassificazioniHistoryItem> ClassificazioniHistory()
+        {
+            string sql = @"
+
+                select
+                    `when` as Quando, `who` As Utente,
+                    (case when length(stato) != lunghezza then concat(substr(stato, 1, length(stato)-5), '\r\n...') else stato end) as Albero
+                from 
+                    (
+                    select 
+                        `when`, `who`,
+                        concat(group_concat(riga order by (case when c.classificazione <=> 'root' then 0 else 1 end), c.classificazione separator '\r\n')) as stato,
+                        sum(length(riga))+count(*)*2-2 as lunghezza
+                    from
+                        (
+                        select
+                        c.*,
+                        concat(
+                            substr(concat(c.id_mask, c.id), -length(c.id_mask)), 
+                            '\t',
+                            substr(
+                                concat(c.classificazione, (case when c.disabilitato then '*' else ' ' end) , classificazione_mask),
+                                1, length(classificazione_mask)+1), 
+                            '\t',
+                            c.descrizione,'\t',
+                            (case when c.opere is null or c.opere = '' then '' else Concat('[', c.opere, ']') end),
+                            '\t', (case when c.parent_id is null then '' else concat('{', c.parent_id, '}') end),
+                            '') as riga
+                        from
+                        (
+                        select
+                            d.`when`, d.who, 
+                            replace(space((select length(max(l.id)) from classificazioni_audit_log l)), ' ' , '0') as id_mask,
+                            space((select max(length(l.classificazione)) from classificazioni_audit_log l)) as classificazione_mask,
+                            c.classificazione as classificazione_parent,
+                            (case when c.parent_id is null then 0 else length(c.classificazione) - length(replace(c.classificazione, '.', '')) + 1 end) as livello,
+                            c.id, c.parent_id, c.classificazione, c.descrizione, c.disabilitato, c.revision, c.action, c.when_c, c.who_c,
+      
+                            ifnull((select group_concat(oic.opera order by oic.opera separator ', ' ) from
+                            (
+                            select
+                                oic.action, oic.revision, d.`when`, d.`who`, oic.id, oic.id_classificazioni, oic.id_opere,
+                                (select ifnull(o.dna_cod_articolo, o.descrizione) from opere_audit_log o where o.id = oic.id_opere and o.`when`<=oic.`when` order by oic.`when` desc limit 1) as opera, 
+                                oic.`when` as when_oic, oic.`who` as who_oic
+                            from
+                                (
+                                select distinct `who`, `when` from classificazioni_audit_log
+                                union
+                                select distinct `who`, `when` from opere_in_classificazioni_audit_log
+                                ) d
+                                join opere_in_classificazioni_audit_log oic on oic.`when` <= d.`when` and oic.action != 'delete'
+                            where
+                            oic.revision = (select max(oic2.revision) from opere_in_classificazioni_audit_log oic2 where oic2.id = oic.id and oic2.`when` <= d.`when`)
+                            ) oic where oic.id_classificazioni = c.id and oic.`when` = d.`when` and oic.`who` = d.`who`
+                                ), '') as opere
+                        from
+                            (
+                            select distinct `who`, `when` from classificazioni_audit_log
+                            union
+                            select distinct `who`, `when` from opere_in_classificazioni_audit_log
+                            ) d
+                            join 
+                            (select
+                                c.action, c.revision, d.`when`, d.`who`, c.id, c.parent_id, c.classificazione, c.descrizione, c.disabilitato,
+                                c.`when` as when_c, c.`who` as who_c
+                            from
+                                (
+                                select distinct `who`, `when` from classificazioni_audit_log
+                                union
+                                select distinct `who`, `when` from opere_in_classificazioni_audit_log
+                                ) d
+                                join classificazioni_audit_log c on c.`when` <= d.`when` and c.action != 'delete'
+                            where
+                                c.revision = (select max(c2.revision) from classificazioni_audit_log c2 where c2.id = c.id and c2.`when` <= d.`when`)
+                            ) c on c.`when` = d.`when` and c.`who` = d.`who`
+                            left outer join classificazioni cp on cp.id = c.parent_id
+                        ) c
+                        ) c
+                    group by 
+                        `when`, `who`
+                    ) a
+                    order by `when`, `who`
+
+                ";
+            try
+            {
+                Database.ExecuteSqlCommand("SET SESSION group_concat_max_len = 320000;");
+                var ret = new List<xwcs.core.db.ClassificazioniHistoryItem>();
+                ClassificazioniHistoryItem precelemento = null;
+                foreach (var elemento in Database.SqlQuery<ClassificazioniHistoryItem>(sql))
+                {
+                    if (!ReferenceEquals(null, precelemento))
+                    {
+                        elemento.CalcolaVariazione(precelemento);
+                    }
+
+                    ret.Add(elemento);
+                    precelemento = elemento;
+                }
+                return ret.OrderByDescending(d => d.Quando).ToList();
+            }
+            catch
+            {
+                return new List<ClassificazioniHistoryItem>();
+            }
+        }
+
+        public DataTable EntityDataTableHistory(string e, string idpropertyname="id")
+        {
+
+            var ret = new DataTable();
+            try
+            {
+                ret = ExecuteQuery(String.Format("select a.* from {0}_audit_log a order by (select max(b.`when`) from {1}_audit_log b where b.{2}=a.{3}) desc, a.{4}, a.revision desc", e, e, idpropertyname, idpropertyname, idpropertyname));
+
+                //ret = ExecuteQuery(String.Format("select * from {0}_audit_log order by `when` desc", e));
+                ret.Columns["who"].Caption = "Utente";
+                ret.Columns["when"].Caption = "Quando";
+                ret.Columns["action"].Caption = "Operazione";
+                ret.Columns["revision"].Caption = "Revisione";
+                return ret;
+            } catch (Exception ex) { 
+                ret = new DataTable();
+                var column = new DataColumn();
+                column.DataType = Type.GetType("System.String");
+                column.ColumnName = "Errore";
+                ret.Columns.Add(column);
+                DataRow row;
+                row = ret.NewRow();
+                row["Errore"] = ex.ToString();
+                ret.Rows.Add(row);
+                return ret;
+            }
+        }
+        public DataTable EntityDataTableHistory(xwcs.core.db.EntityBase e) {
+            string eid = e.GetLockId().ToString();
+            string ename = e.GetFieldName(); // name of table
+            string idname = e.GetLockIdPropertyName(); // name of table
+            try
+            {
+                var ret = ExecuteQuery(String.Format("select * from {0}_audit_log a where {1}='{2}' order by `when` desc, revision desc", ename, idname,eid));
+                ret.Columns["who"].Caption = "Utente";
+                ret.Columns["when"].Caption = "Quando";
+                ret.Columns["action"].Caption = "Operazione";
+                ret.Columns["revision"].Caption = "Revisione";
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                var ret = new DataTable();
+                var column = new DataColumn();
+                column.DataType = Type.GetType("System.String");
+                column.ColumnName = "Errore";
+                ret.Columns.Add(column);
+                DataRow row;
+                row = ret.NewRow();
+                row["Errore"] = ex.ToString();
+                ret.Rows.Add(row);
+                return ret;
+            }
+
+        }
+        public List<xwcs.core.db.HistoryItem> EntityHistory(xwcs.core.db.EntityBase e)
+        {
+            string eid = e.GetLockId().ToString();
+            string ename = e.GetFieldName(); // name of table
+            try
+            {
+                Database.ExecuteSqlCommand("SET SESSION group_concat_max_len = 320000;");
+                Database.ExecuteSqlCommand("SET SESSION max_sp_recursion_depth = 10;");
+                var ret = new List<xwcs.core.db.HistoryItem>();
+                HistoryItem precelemento=null;
+                foreach (var elemento in Database.SqlQuery<HistoryItem>(
+                    string.Format(
+                        "call {0}_history({1});", 
+                        ename, 
+                        eid.Replace("\\","\\\\").Replace("\"","\\\"")
+                        )).ToList().OrderBy(d=>d.Quando))
+                {
+                    if (!ReferenceEquals(null,precelemento))
+                    {
+                        elemento.CalcolaVariazioneAbstract(precelemento);
+                    }
+                    ret.Add(elemento);
+                    precelemento = elemento;
+                }
+                return ret.OrderByDescending(d => d.Quando).ToList();
+            }
+            catch
+            {
+                return new List<HistoryItem>();
+            }
+        }
 
         #region IDisposable Support
         private bool disposedValue = false;

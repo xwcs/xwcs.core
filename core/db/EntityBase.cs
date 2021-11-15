@@ -267,6 +267,16 @@ namespace xwcs.core.db
         /*
          * Overrides
          */
+        public override string ToString()
+        {
+            return String.Format("{0}", String.Join("\r\n", base.Items.Select(i => i.ToString().Replace("\r\n","\r\n ")).ToList()));
+        }
+
+        public string ToJsonString()
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(this.Items.ToList());
+        }
+
         protected override void InsertItem(int index, T item)
         {
             SetChaged();
@@ -553,9 +563,13 @@ namespace xwcs.core.db
             }
         }
 
-        public virtual int GetLockId()
+        public virtual string GetLockIdPropertyName()
         {
-            object idFiled = GetModelPropertyValueByName("id");
+            return "id";
+        }
+        public int GetLockId()
+        {
+            object idFiled = GetModelPropertyValueByName(GetLockIdPropertyName());
             return ReferenceEquals(idFiled, null) ? -1 : (int)idFiled;
         }
 
@@ -699,6 +713,11 @@ namespace xwcs.core.db
 
         public virtual void CompleteDelete(){ }
         */
+        public string ToJsonString()
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(this);
+        }
+
     }
 
 
@@ -932,7 +951,7 @@ namespace xwcs.core.db
         }
         #endregion
     }
-
+    
 
     
 
@@ -1025,7 +1044,7 @@ namespace xwcs.core.db
         protected override void SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
         {
             // skip if not changed
-            if (Equals(storage, value)) return;
+            if (!_attachedToDb && Equals(storage, value)) return;
 
 #if DEBUG_TRACE_LOG_ON
             _logger.Debug(string.Format("{0} -> {1}", xwcs.core.manager.SLogManager.DumpCallStack(1, 2), propertyName));
