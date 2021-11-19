@@ -496,9 +496,38 @@ namespace xwcs.core.db
         }
         public override int SaveChanges()
         {
+            return this.SaveChanges();
+        }
+        public int SaveChanges(Action<int, int> FeedbackAct = null)
+        {
             //CompleteEntity();
             CheckLoginForConnection();
-            return base.SaveChanges();
+            if (ReferenceEquals(FeedbackAct,null)) {
+                return base.SaveChanges();
+            } else
+            {
+                var tot = this.ChangeTracker.Entries().Where(e => e.State == EntityState.Modified || e.State == EntityState.Deleted || e.State == EntityState.Added).Select(ee => 1).Count();
+                var MyLog = this.Database.Log;
+                int curr = 0;
+                DateTime lastTimeUpdateSplash = DateTime.Today;
+                base.Database.Log = delegate (string l)
+                {
+                    MyLog?.Invoke(l);
+                    if (l.StartsWith("UPDATE") || l.StartsWith("DELETE") || l.StartsWith("INSERT"))
+                    {
+                        curr++;
+                    }
+                    if (curr>0 && (curr==1 || ((TimeSpan)(DateTime.Now - lastTimeUpdateSplash)).TotalSeconds >= 2)) //aggiornamento splash screen ogni 2 secondi
+                    {
+                        try { FeedbackAct.Invoke(curr, tot); } catch { }
+                        lastTimeUpdateSplash = DateTime.Now;
+                    }
+                };
+                var ret= base.SaveChanges();
+                this.Database.Log = MyLog;
+                return ret;
+            }
+            
         }
 
         /*
