@@ -419,6 +419,29 @@ namespace xwcs.core.db
 
     }
 
+    public class LockDataExt
+    {
+        public int id { get; set; }
+        public string entity { get; set; }
+        public int id_lock { get; set; }
+        public string owner { get; set; }
+        [System.ComponentModel.DataAnnotations.DisplayFormat(DataFormatString = "G", ApplyFormatInEditMode = false)]
+        public DateTime when { get; set; }
+        public bool persistent { get; set; }
+        public int? id_batch { get; set; }
+        public string descrizione {
+            get
+            {
+                return this.ToString();
+            }
+        }
+        public override string ToString()
+        {
+            return string.Format("{0} {1} ({2})", this.id_lock, this.entity, this.owner);
+        }
+
+    }
+
     public class DBContextBase : DbContext, IDisposable
     {
         private Config _cfg = new Config("MainAppConfig");
@@ -473,9 +496,38 @@ namespace xwcs.core.db
         }
         public override int SaveChanges()
         {
+            return this.SaveChanges();
+        }
+        public int SaveChanges(Action<int, int> FeedbackAct = null)
+        {
             //CompleteEntity();
             CheckLoginForConnection();
-            return base.SaveChanges();
+            if (ReferenceEquals(FeedbackAct,null)) {
+                return base.SaveChanges();
+            } else
+            {
+                var tot = this.ChangeTracker.Entries().Where(e => e.State == EntityState.Modified || e.State == EntityState.Deleted || e.State == EntityState.Added).Select(ee => 1).Count();
+                var MyLog = this.Database.Log;
+                int curr = 0;
+                DateTime lastTimeUpdateSplash = DateTime.Today;
+                base.Database.Log = delegate (string l)
+                {
+                    MyLog?.Invoke(l);
+                    if (l.StartsWith("UPDATE") || l.StartsWith("DELETE") || l.StartsWith("INSERT"))
+                    {
+                        curr++;
+                    }
+                    if (curr>0 && (curr==1 || ((TimeSpan)(DateTime.Now - lastTimeUpdateSplash)).TotalSeconds >= 2)) //aggiornamento splash screen ogni 2 secondi
+                    {
+                        try { FeedbackAct.Invoke(curr, tot); } catch { }
+                        lastTimeUpdateSplash = DateTime.Now;
+                    }
+                };
+                var ret= base.SaveChanges();
+                this.Database.Log = MyLog;
+                return ret;
+            }
+            
         }
 
         /*
@@ -706,6 +758,11 @@ namespace xwcs.core.db
             {
                 SEventProxy.AllowModelEvents();
             }
+        }
+
+        public List<xwcs.core.db.LockDataExt> Locks()
+        {
+            return Database.SqlQuery<LockDataExt>(string.Format("SELECT `id`, `id_lock`, `entity`, `owner`, `when`, `persistent`, `id_batch` FROM `{0}`.`table_locks`", _adminDb)).ToList<LockDataExt>();
         }
 
         public LockState EntityLockState(EntityBase e)
