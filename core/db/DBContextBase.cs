@@ -599,13 +599,18 @@ namespace xwcs.core.db
                 (e.Entity as IModelEntity).SetCtx(this);
             }
         }
-
+        private const int _CONNECTION_WAIT_TIMEOUT_SEC = 259200; //3 giorni=259200
         private void Connection_StateChange(object sender, System.Data.StateChangeEventArgs e)
         {
+            
+            this.Database.Log?.Invoke(String.Format("from state {0} to state {1}", e.OriginalState.ToString(), e.CurrentState.ToString()));
             if (e.CurrentState == System.Data.ConnectionState.Open)
             {
                 DoLoginForConnection();
+                Database.ExecuteSqlCommand(string.Format("SET SESSION wait_timeout = {0};", _CONNECTION_WAIT_TIMEOUT_SEC));
+                Database.ExecuteSqlCommand(string.Format("SET SESSION interactive_timeout = {0};", _CONNECTION_WAIT_TIMEOUT_SEC));
             }
+            
         }
 
         public string CurrentConnectedUser
@@ -1213,7 +1218,7 @@ namespace xwcs.core.db
             }
         }
 
-        public DataTable EntityDataTableHistory(string e, string idpropertyname="id")
+        public System.ComponentModel.IListSource EntityDataTableHistory(string e, string idpropertyname="id")
         {
 
             var ret = new DataTable();
