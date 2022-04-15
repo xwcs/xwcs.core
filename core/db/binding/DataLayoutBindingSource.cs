@@ -392,7 +392,7 @@ namespace xwcs.core.db.binding
                 return true;
             }
 
-            _logger.Warn("Missing layout file: " + filePath);
+            _logger.Info("Missing layout file: " + filePath);
             return false;           
         }
 
