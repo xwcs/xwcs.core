@@ -96,7 +96,241 @@ namespace xwcs.core.manager
 
         private Dictionary<string, ILogger> _loggers = new Dictionary<string, ILogger>();
 
+        private class LoggerIntervalDecorator : ILogger
+        {
 
+            private class LoggerIntervalDecoratorStackElement : Tuple<long, long, string, object[]>
+            {
+                public LoggerIntervalDecoratorStackElement(long startat, long elapsingalarm, string fmt, object[] values) : base(startat, elapsingalarm, fmt, values)
+                {
+                }
+
+                public long StartAt { get { return this.Item1; } }
+                public long ElapsingAlarm { get { return this.Item2; } }
+                public string Fmt { get { return this.Item3; } }
+                public object[] Values { get { return this.Item4; } }
+            }
+            private ILogger l;
+            private System.Diagnostics.Stopwatch stopwatch;
+            private const long ELAPSING_WARNING_DEFAULT = 2000;
+            private Stack<LoggerIntervalDecoratorStackElement> s;
+            public LoggerIntervalDecorator(ILogger l)
+            {
+                s = new Stack<LoggerIntervalDecoratorStackElement>();
+                this.l = l;
+
+            }
+
+            private void clearStack()
+            {
+                s.Clear();
+                if (!ReferenceEquals(stopwatch, null))
+                {
+                    if (stopwatch.IsRunning) stopwatch.Stop();
+                    stopwatch = null;
+                }
+
+            }
+            public void ClearQueue()
+            {
+                clearStack();
+                l.ClearQueue();
+
+            }
+
+            private void PushEvent(string fmt, params object[] values)
+            {
+                if (!_beginEvent) return;
+                _beginEvent = false;
+                if (ReferenceEquals(stopwatch, null)) stopwatch = new System.Diagnostics.Stopwatch();
+                if (!stopwatch.IsRunning) stopwatch.Start();
+                s.Push(new LoggerIntervalDecoratorStackElement(stopwatch.ElapsedMilliseconds, _ElapsingWarning < 0 ? 0 : _ElapsingWarning, fmt, values));
+
+            }
+
+            private void PushEvent(string msg)
+            {
+                if (!_beginEvent) return;
+                this.PushEvent("{0}", msg);
+            }
+
+            private void PopEvent(string fmt, params object[] values)
+            {
+                if (!_endEvent) return;
+                _endEvent = false;
+                int deep = s.Count();
+                if (deep == 0) return;
+                long fine;
+                if (!ReferenceEquals(stopwatch, null) && stopwatch.IsRunning)
+                {
+                    fine = stopwatch.ElapsedMilliseconds;
+                }
+                else
+                {
+                    fine = -1;
+                }
+                var e = s.Pop();
+                if (deep == 1)
+                {
+                    clearStack();
+                }
+                long durata;
+                if (fine >= 0)
+                {
+                    durata = fine - e.StartAt;
+                }
+                else
+                {
+                    fine = e.StartAt;
+                    durata = 0;
+                }
+                if (durata >= e.ElapsingAlarm)
+                {
+                    DateTime begin = DateTime.Now.AddMilliseconds(-1 * e.StartAt);
+                    DateTime end = DateTime.Now.AddMilliseconds(-1 * fine);
+                    this.Warn("Slowly event: {6}deep: {5}, elapsed: {0}, begin: {6}datetime: \"{1}\", msg: \"{2}\"{7}, end: {6}datetime: \"{3}\", msg: \"{4}\"{7}{7}", durata, begin, String.Format(e.Fmt, e.Values).Replace("\"", "\\\"").Replace("\n", "\\n"), end, String.Format(fmt, values).Replace("\"", "\\\"").Replace("\n", "\\n"), deep, "{", "}");
+                }
+
+            }
+
+            private void PopEvent(string msg)
+            {
+                if (!_endEvent) return;
+                this.PopEvent("{0}", msg);
+            }
+
+            private bool _beginEvent = false;
+            private long _ElapsingWarning = 0;
+            /// <summary>
+            /// Indica che il successivo log inviato sarà un messaggio di inizio di un evento di cui misurerò la durata
+            /// </summary>
+            private void BeginEvent(long millisecElapsingWarning = ELAPSING_WARNING_DEFAULT)
+            {
+                _beginEvent = true;
+                _ElapsingWarning = millisecElapsingWarning;
+            }
+            private void BeginEvent()
+            {
+                BeginEvent(ELAPSING_WARNING_DEFAULT);
+            }
+            public int CurrentDeep { get { return s.Count(); } }
+            public void ReturnToDeep(int deep)
+            {
+                while (CurrentDeep > (deep >= 0 ? deep : 0))
+                {
+                    s.Pop();
+                }
+                if (CurrentDeep == 0) clearStack();
+            }
+            private bool _endEvent = false;
+            /// <summary>
+            /// Indica che il successivo log inviato sarà un messaggio di fine di un evento di cui ho misurato la durata
+            /// </summary>
+            private void EndEvent()
+            {
+                _endEvent = true;
+            }
+            private void EndMessage(string msg)
+            {
+                if (msg.StartsWith(">>>")) EndEvent();
+            }
+            private void BeginMessage(string msg)
+            {
+                if (msg.StartsWith("<<<"))
+                {
+                    var m = System.Text.RegularExpressions.Regex.Matches(msg, "^<<<(\\d+)<<<");
+                    if (m.Count > 0)
+                    {
+                        BeginEvent(int.Parse(m[0].Captures[0].Value.Replace("<",""))*1000);
+                    }
+                    else
+                    {
+                        BeginEvent();
+                    }
+                }
+            }
+            private void preWorkMsg(string msg)
+            {
+                BeginMessage(msg);
+                EndMessage(msg);
+                if (_beginEvent) PushEvent(msg);
+                if (_endEvent) PopEvent(msg);
+            }
+            private void preWorkMsg(string fmt, params object[] values)
+            {
+                BeginMessage(fmt);
+                EndMessage(fmt);
+                if (_beginEvent) PushEvent(fmt, values);
+                if (_endEvent) PopEvent(fmt, values);
+            }
+
+            public void Debug(string msg)
+            {
+                preWorkMsg(msg);
+                l.Debug(msg);
+            }
+
+            public void Debug(string fmt, params object[] values)
+            {
+                preWorkMsg(fmt, values);
+                l.Debug(fmt, values);
+            }
+
+            public void Dispose()
+            {
+                clearStack();
+                l = null;
+                //l.Dispose();
+            }
+
+            public void Error(string msg)
+            {
+                preWorkMsg(msg);
+                l.Error(msg);
+            }
+
+            public void Error(string fmt, params object[] values)
+            {
+                preWorkMsg(fmt, values);
+                l.Error(fmt, values);
+            }
+
+            public void Fatal(string msg)
+            {
+                preWorkMsg(msg);
+                l.Fatal(msg);
+            }
+
+            public void Fatal(string fmt, params object[] values)
+            {
+                preWorkMsg(fmt, values);
+                l.Fatal(fmt, values);
+            }
+
+            public void Info(string msg)
+            {
+                preWorkMsg(msg);
+                l.Info(msg);
+            }
+
+            public void Info(string fmt, params object[] values)
+            {
+                preWorkMsg(fmt, values);
+                l.Info(fmt, values);
+            }
+
+            public void Warn(string msg)
+            {
+                preWorkMsg(msg);
+                l.Warn(msg);
+            }
+
+            public void Warn(string fmt, params object[] values)
+            {
+                preWorkMsg(fmt, values);
+                l.Warn(fmt, values);
+            }
+        }
 
         private class SimpleLogger : ILogger
 		{
@@ -369,7 +603,7 @@ namespace xwcs.core.manager
 		public ILogger getClassLogger(Type t) {
             if (!_loggers.ContainsKey(t.ToString()))
             {
-                _loggers[t.ToString()] = new SimpleLogger(t.ToString());
+                _loggers[t.ToString()] = new LoggerIntervalDecorator(new SimpleLogger(t.ToString()));
             }
             return _loggers[t.ToString()];
 
