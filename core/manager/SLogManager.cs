@@ -113,17 +113,36 @@ namespace xwcs.core.manager
             private ILogger l;
             private System.Diagnostics.Stopwatch stopwatch;
             private const long ELAPSING_WARNING_DEFAULT = 2000;
-            private Stack<LoggerIntervalDecoratorStackElement> s;
+            private System.Collections.Concurrent.ConcurrentDictionary<int, Stack<LoggerIntervalDecoratorStackElement>> _dic_stackOfInterval;
             public LoggerIntervalDecorator(ILogger l)
             {
-                s = new Stack<LoggerIntervalDecoratorStackElement>();
+                _dic_stackOfInterval = new System.Collections.Concurrent.ConcurrentDictionary<int, Stack<LoggerIntervalDecoratorStackElement>>();
+                //stackOfInterval = new Stack<LoggerIntervalDecoratorStackElement>();
                 this.l = l;
 
             }
-
+            private Stack<LoggerIntervalDecoratorStackElement> stackOfInterval
+            {
+                get
+                {
+                    if (!_dic_stackOfInterval.ContainsKey(Thread.CurrentThread.ManagedThreadId))
+                    {
+                        _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId] = new Stack<LoggerIntervalDecoratorStackElement>();
+                    }
+                    return _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId];
+                }
+                set
+                {
+                    _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId] = value;
+                }
+            }
             private void clearStack()
             {
-                s.Clear();
+                foreach(var d in _dic_stackOfInterval)
+                {
+                    d.Value.Clear();
+                }
+                _dic_stackOfInterval.Clear();
                 if (!ReferenceEquals(stopwatch, null))
                 {
                     if (stopwatch.IsRunning) stopwatch.Stop();
@@ -131,11 +150,23 @@ namespace xwcs.core.manager
                 }
 
             }
+            private void clearThreadStack()
+            {
+                if (_dic_stackOfInterval.ContainsKey(Thread.CurrentThread.ManagedThreadId))
+                {
+                    Stack<LoggerIntervalDecoratorStackElement> v;
+                    if (_dic_stackOfInterval.TryRemove(Thread.CurrentThread.ManagedThreadId, out v))
+                    {
+                        v?.Clear();
+                    }
+                    
+                }
+                if (_dic_stackOfInterval.Count==0) clearStack();
+            }
             public void ClearQueue()
             {
                 clearStack();
                 l.ClearQueue();
-
             }
 
             private void PushEvent(string fmt, params object[] values)
@@ -144,7 +175,7 @@ namespace xwcs.core.manager
                 _beginEvent = false;
                 if (ReferenceEquals(stopwatch, null)) stopwatch = new System.Diagnostics.Stopwatch();
                 if (!stopwatch.IsRunning) stopwatch.Start();
-                s.Push(new LoggerIntervalDecoratorStackElement(stopwatch.ElapsedMilliseconds, _ElapsingWarning < 0 ? 0 : _ElapsingWarning, fmt, values));
+                stackOfInterval.Push(new LoggerIntervalDecoratorStackElement(stopwatch.ElapsedMilliseconds, _ElapsingWarning < 0 ? 0 : _ElapsingWarning, fmt, values));
 
             }
 
@@ -158,7 +189,7 @@ namespace xwcs.core.manager
             {
                 if (!_endEvent) return;
                 _endEvent = false;
-                int deep = s.Count();
+                int deep = stackOfInterval.Count();
                 if (deep == 0) return;
                 long fine;
                 if (!ReferenceEquals(stopwatch, null) && stopwatch.IsRunning)
@@ -169,10 +200,10 @@ namespace xwcs.core.manager
                 {
                     fine = -1;
                 }
-                var e = s.Pop();
+                var e = stackOfInterval.Pop();
                 if (deep == 1)
                 {
-                    clearStack();
+                    clearThreadStack();
                 }
                 long durata;
                 if (fine >= 0)
@@ -188,7 +219,7 @@ namespace xwcs.core.manager
                 {
                     DateTime begin = DateTime.Now.AddMilliseconds(-1 * e.StartAt);
                     DateTime end = DateTime.Now.AddMilliseconds(-1 * fine);
-                    this.Warn("Slowly event: {6}deep: {5}, elapsed: {0}, begin: {6}datetime: \"{1}\", msg: \"{2}\"{7}, end: {6}datetime: \"{3}\", msg: \"{4}\"{7}{7}", durata, begin, String.Format(e.Fmt, e.Values).Replace("\"", "\\\"").Replace("\n", "\\n"), end, String.Format(fmt, values).Replace("\"", "\\\"").Replace("\n", "\\n"), deep, "{", "}");
+                    this.Warn(Newtonsoft.Json.JsonConvert.SerializeObject(new { slow = new { deep = deep, elapsed = durata, thread = Thread.CurrentThread.ManagedThreadId }, begin = new { datetime = begin, msg = String.Format(e.Fmt, e.Values) }, end = new { datetime = end, msg = String.Format(fmt, values) } }));
                 }
 
             }
@@ -213,14 +244,14 @@ namespace xwcs.core.manager
             {
                 BeginEvent(ELAPSING_WARNING_DEFAULT);
             }
-            public int CurrentDeep { get { return s.Count(); } }
+            public int CurrentDeep { get { return stackOfInterval.Count(); } }
             public void ReturnToDeep(int deep)
             {
                 while (CurrentDeep > (deep >= 0 ? deep : 0))
                 {
-                    s.Pop();
+                    stackOfInterval.Pop();
                 }
-                if (CurrentDeep == 0) clearStack();
+                if (CurrentDeep == 0) clearThreadStack();
             }
             private bool _endEvent = false;
             /// <summary>
@@ -230,11 +261,16 @@ namespace xwcs.core.manager
             {
                 _endEvent = true;
             }
-            private void EndMessage(string msg)
+            private string EndMessage(string msg)
             {
-                if (msg.StartsWith(">>>")) EndEvent();
+                if (msg.StartsWith(">>>"))
+                {
+                    EndEvent();
+                    return msg.Substring(3);
+                }
+                return msg;
             }
-            private void BeginMessage(string msg)
+            private string BeginMessage(string msg)
             {
                 if (msg.StartsWith("<<<"))
                 {
@@ -242,93 +278,93 @@ namespace xwcs.core.manager
                     if (m.Count > 0)
                     {
                         BeginEvent(int.Parse(m[0].Captures[0].Value.Replace("<",""))*1000);
+                        return msg.Substring(m[0].Length);
                     }
                     else
                     {
                         BeginEvent();
+                        return msg.Substring(3);
                     }
                 }
+                return msg;
             }
-            private void preWorkMsg(string msg)
+            private string autoStartStop(string msg)
             {
-                BeginMessage(msg);
-                EndMessage(msg);
-                if (_beginEvent) PushEvent(msg);
-                if (_endEvent) PopEvent(msg);
+                string m = BeginMessage(msg);
+                if (m.Equals(msg)) m = EndMessage(msg);
+                return m;
             }
-            private void preWorkMsg(string fmt, params object[] values)
+            private string preWorkMsg(string msg)
             {
-                BeginMessage(fmt);
-                EndMessage(fmt);
-                if (_beginEvent) PushEvent(fmt, values);
-                if (_endEvent) PopEvent(fmt, values);
+                string m = autoStartStop(msg);
+                if (_beginEvent) PushEvent(m);
+                if (_endEvent) PopEvent(m);
+                return m;
+            }
+            private string preWorkMsg(string fmt, params object[] values)
+            {
+                string m = autoStartStop(fmt);
+                if (_beginEvent) PushEvent(m, values);
+                if (_endEvent) PopEvent(m, values);
+                return m;
             }
 
             public void Debug(string msg)
             {
-                preWorkMsg(msg);
-                l.Debug(msg);
+                l?.Debug(preWorkMsg(msg));
             }
 
             public void Debug(string fmt, params object[] values)
             {
-                preWorkMsg(fmt, values);
-                l.Debug(fmt, values);
+                l?.Debug(preWorkMsg(fmt, values), values);
             }
 
             public void Dispose()
             {
                 clearStack();
+                l?.Dispose();
                 l = null;
-                //l.Dispose();
+                
             }
 
             public void Error(string msg)
             {
-                preWorkMsg(msg);
-                l.Error(msg);
+                l?.Error(preWorkMsg(msg));
             }
 
             public void Error(string fmt, params object[] values)
             {
-                preWorkMsg(fmt, values);
-                l.Error(fmt, values);
+                l?.Error(preWorkMsg(fmt, values), values);
             }
 
             public void Fatal(string msg)
             {
-                preWorkMsg(msg);
-                l.Fatal(msg);
+                l?.Fatal(preWorkMsg(msg));
             }
 
             public void Fatal(string fmt, params object[] values)
             {
-                preWorkMsg(fmt, values);
-                l.Fatal(fmt, values);
+                l?.Fatal(preWorkMsg(fmt, values), values);
             }
 
             public void Info(string msg)
             {
-                preWorkMsg(msg);
-                l.Info(msg);
+                l?.Info(preWorkMsg(msg));
             }
 
             public void Info(string fmt, params object[] values)
             {
-                preWorkMsg(fmt, values);
-                l.Info(fmt, values);
+                l?.Info(preWorkMsg(fmt, values), values);
             }
 
             public void Warn(string msg)
             {
-                preWorkMsg(msg);
-                l.Warn(msg);
+                l?.Warn(preWorkMsg(msg));
             }
 
             public void Warn(string fmt, params object[] values)
             {
-                preWorkMsg(fmt, values);
-                l.Warn(fmt, values);
+                l?.Warn(preWorkMsg(fmt, values), values);
             }
         }
 
