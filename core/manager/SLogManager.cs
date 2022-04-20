@@ -91,6 +91,7 @@ namespace xwcs.core.manager
     {
 
         private bool _fastClose = false;
+        private bool _intervalLog = false;
         private static SLogManager instance;
 		private ILogger global = null;
 
@@ -645,6 +646,7 @@ namespace xwcs.core.manager
         {
 			global = new SimpleLogger();
             _fastClose = getCfgParam("SLogManager/FastClose", "No") == "Yes";
+            _intervalLog = getCfgParam("SLogManager/IntervalLog", "No") == "Yes";
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -660,8 +662,15 @@ namespace xwcs.core.manager
 		public ILogger getClassLogger(Type t) {
             if (!_loggers.ContainsKey(t.ToString()))
             {
-                //per disabilitare le operazioni relative alla issue 290 togliere LoggerIntervalDecorator da qui
-                _loggers[t.ToString()] = new LoggerIntervalDecorator(new SimpleLogger(t.ToString()));
+                
+                if (_intervalLog)
+                {
+                    //per disabilitare le operazioni relative alla issue 290 togliere LoggerIntervalDecorator da qui
+                    _loggers[t.ToString()] = new LoggerIntervalDecorator(new SimpleLogger(t.ToString()));
+                } else
+                {
+                    _loggers[t.ToString()] = new SimpleLogger(t.ToString());
+                }
             }
             return _loggers[t.ToString()];
 
