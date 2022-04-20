@@ -112,7 +112,7 @@ namespace xwcs.core.manager
             }
             private ILogger l;
             private System.Diagnostics.Stopwatch stopwatch;
-            private const long ELAPSING_WARNING_DEFAULT = 2000;
+            private const long ELAPSING_WARNING_DEFAULT = 10000;
             private System.Collections.Concurrent.ConcurrentDictionary<int, Stack<LoggerIntervalDecoratorStackElement>> _dic_stackOfInterval;
             public LoggerIntervalDecorator(ILogger l)
             {
@@ -184,7 +184,28 @@ namespace xwcs.core.manager
                 if (!_beginEvent) return;
                 this.PushEvent("{0}", msg);
             }
+            private object tryJsonDeserialize(string par)
+            {
+                if (
+                    (par.IndexOf('[') > 0 && par.IndexOf(']') > 0)
+                    ||
+                    (par.IndexOf('{') > 0 && par.IndexOf('}') > 0)
+                    ) {
+                    try
+                    {
+                        var o = Newtonsoft.Json.JsonConvert.DeserializeObject(par);
+                        return o;
+                    }
+                    catch
+                    {
+                        return par;
+                    }
+                } else
+                {
+                    return par;
+                }
 
+            }
             private void PopEvent(string fmt, params object[] values)
             {
                 if (!_endEvent) return;
@@ -219,7 +240,7 @@ namespace xwcs.core.manager
                 {
                     DateTime begin = DateTime.Now.AddMilliseconds(-1 * e.StartAt);
                     DateTime end = DateTime.Now.AddMilliseconds(-1 * fine);
-                    this.Warn(Newtonsoft.Json.JsonConvert.SerializeObject(new { slow = new { deep = deep, elapsed = durata, thread = Thread.CurrentThread.ManagedThreadId }, begin = new { datetime = begin, msg = String.Format(e.Fmt, e.Values) }, end = new { datetime = end, msg = String.Format(fmt, values) } }));
+                    this.Warn(Newtonsoft.Json.JsonConvert.SerializeObject(new { slow = new { deep = deep, elapsed = durata, thread = Thread.CurrentThread.ManagedThreadId }, begin = new { datetime = begin, msg = tryJsonDeserialize(String.Format(e.Fmt, e.Values)) }, end = new { datetime = end, msg = tryJsonDeserialize(String.Format(fmt, values)) } }));
                 }
 
             }
