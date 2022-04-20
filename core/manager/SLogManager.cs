@@ -91,12 +91,304 @@ namespace xwcs.core.manager
     {
 
         private bool _fastClose = false;
+        private bool _intervalLog = false;
         private static SLogManager instance;
 		private ILogger global = null;
 
         private Dictionary<string, ILogger> _loggers = new Dictionary<string, ILogger>();
 
+        private class LoggerIntervalDecorator : ILogger
+        {
 
+            private class LoggerIntervalDecoratorStackElement : Tuple<long, long, string, object[]>
+            {
+                public LoggerIntervalDecoratorStackElement(long startat, long elapsingalarm, string fmt, object[] values) : base(startat, elapsingalarm, fmt, values)
+                {
+                }
+
+                public long StartAt { get { return this.Item1; } }
+                public long ElapsingAlarm { get { return this.Item2; } }
+                public string Fmt { get { return this.Item3; } }
+                public object[] Values { get { return this.Item4; } }
+            }
+            private ILogger l;
+            private System.Diagnostics.Stopwatch stopwatch;
+            private const long ELAPSING_WARNING_DEFAULT = 10000;
+            private System.Collections.Concurrent.ConcurrentDictionary<int, Stack<LoggerIntervalDecoratorStackElement>> _dic_stackOfInterval;
+            public LoggerIntervalDecorator(ILogger l)
+            {
+                _dic_stackOfInterval = new System.Collections.Concurrent.ConcurrentDictionary<int, Stack<LoggerIntervalDecoratorStackElement>>();
+                //stackOfInterval = new Stack<LoggerIntervalDecoratorStackElement>();
+                this.l = l;
+
+            }
+            private Stack<LoggerIntervalDecoratorStackElement> stackOfInterval
+            {
+                get
+                {
+                    if (!_dic_stackOfInterval.ContainsKey(Thread.CurrentThread.ManagedThreadId))
+                    {
+                        _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId] = new Stack<LoggerIntervalDecoratorStackElement>();
+                    }
+                    return _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId];
+                }
+                set
+                {
+                    _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId] = value;
+                }
+            }
+            private void clearStack()
+            {
+                foreach(var d in _dic_stackOfInterval)
+                {
+                    d.Value.Clear();
+                }
+                _dic_stackOfInterval.Clear();
+                if (!ReferenceEquals(stopwatch, null))
+                {
+                    if (stopwatch.IsRunning) stopwatch.Stop();
+                    stopwatch = null;
+                }
+
+            }
+            private void clearThreadStack()
+            {
+                if (_dic_stackOfInterval.ContainsKey(Thread.CurrentThread.ManagedThreadId))
+                {
+                    Stack<LoggerIntervalDecoratorStackElement> v;
+                    if (_dic_stackOfInterval.TryRemove(Thread.CurrentThread.ManagedThreadId, out v))
+                    {
+                        v?.Clear();
+                    }
+                    
+                }
+                if (_dic_stackOfInterval.Count==0) clearStack();
+            }
+            public void ClearQueue()
+            {
+                clearStack();
+                l.ClearQueue();
+            }
+
+            private void PushEvent(string fmt, params object[] values)
+            {
+                if (!_beginEvent) return;
+                _beginEvent = false;
+                if (ReferenceEquals(stopwatch, null)) stopwatch = new System.Diagnostics.Stopwatch();
+                if (!stopwatch.IsRunning) stopwatch.Start();
+                stackOfInterval.Push(new LoggerIntervalDecoratorStackElement(stopwatch.ElapsedMilliseconds, _ElapsingWarning < 0 ? 0 : _ElapsingWarning, fmt, values));
+
+            }
+
+            private void PushEvent(string msg)
+            {
+                if (!_beginEvent) return;
+                this.PushEvent("{0}", msg);
+            }
+            private object tryJsonDeserialize(string par)
+            {
+                if (
+                    (par.IndexOf('[') >= 0 && par.IndexOf(']') > 0)
+                    ||
+                    (par.IndexOf('{') >= 0 && par.IndexOf('}') > 0)
+                    ) {
+                    try
+                    {
+                        var o = Newtonsoft.Json.JsonConvert.DeserializeObject(par);
+                        return o;
+                    }
+                    catch
+                    {
+                        return par;
+                    }
+                } else
+                {
+                    return par;
+                }
+
+            }
+            private void PopEvent(string fmt, params object[] values)
+            {
+                if (!_endEvent) return;
+                _endEvent = false;
+                int deep = stackOfInterval.Count();
+                if (deep == 0) return;
+                long fine;
+                if (!ReferenceEquals(stopwatch, null) && stopwatch.IsRunning)
+                {
+                    fine = stopwatch.ElapsedMilliseconds;
+                }
+                else
+                {
+                    fine = -1;
+                }
+                var e = stackOfInterval.Pop();
+                if (deep == 1)
+                {
+                    clearThreadStack();
+                }
+                long durata;
+                if (fine >= 0)
+                {
+                    durata = fine - e.StartAt;
+                }
+                else
+                {
+                    fine = e.StartAt;
+                    durata = 0;
+                }
+                if (durata >= e.ElapsingAlarm)
+                {
+                    DateTime begin = DateTime.Now.AddMilliseconds(-1 * e.StartAt);
+                    DateTime end = DateTime.Now.AddMilliseconds(-1 * fine);
+                    this.Warn(Newtonsoft.Json.JsonConvert.SerializeObject(new { slow = new { deep = deep, elapsed = durata, thread = Thread.CurrentThread.ManagedThreadId }, begin = new { datetime = begin, msg = tryJsonDeserialize(String.Format(e.Fmt, e.Values)) }, end = new { datetime = end, msg = tryJsonDeserialize(String.Format(fmt, values)) } }));
+                }
+
+            }
+
+            private void PopEvent(string msg)
+            {
+                if (!_endEvent) return;
+                this.PopEvent("{0}", msg);
+            }
+
+            private bool _beginEvent = false;
+            private long _ElapsingWarning = 0;
+            /// <summary>
+            /// Indica che il successivo log inviato sarà un messaggio di inizio di un evento di cui misurerò la durata
+            /// </summary>
+            private void BeginEvent(long millisecElapsingWarning = ELAPSING_WARNING_DEFAULT)
+            {
+                _beginEvent = true;
+                _ElapsingWarning = millisecElapsingWarning;
+            }
+            private void BeginEvent()
+            {
+                BeginEvent(ELAPSING_WARNING_DEFAULT);
+            }
+            public int CurrentDeep { get { return stackOfInterval.Count(); } }
+            public void ReturnToDeep(int deep)
+            {
+                while (CurrentDeep > (deep >= 0 ? deep : 0))
+                {
+                    stackOfInterval.Pop();
+                }
+                if (CurrentDeep == 0) clearThreadStack();
+            }
+            private bool _endEvent = false;
+            /// <summary>
+            /// Indica che il successivo log inviato sarà un messaggio di fine di un evento di cui ho misurato la durata
+            /// </summary>
+            private void EndEvent()
+            {
+                _endEvent = true;
+            }
+            private string EndMessage(string msg)
+            {
+                if (msg.StartsWith(">>>"))
+                {
+                    EndEvent();
+                    return msg.Substring(3);
+                }
+                return msg;
+            }
+            private string BeginMessage(string msg)
+            {
+                if (msg.StartsWith("<<<"))
+                {
+                    var m = System.Text.RegularExpressions.Regex.Matches(msg, "^<<<(\\d+)<<<");
+                    if (m.Count > 0)
+                    {
+                        BeginEvent(int.Parse(m[0].Captures[0].Value.Replace("<",""))*1000);
+                        return msg.Substring(m[0].Length);
+                    }
+                    else
+                    {
+                        BeginEvent();
+                        return msg.Substring(3);
+                    }
+                }
+                return msg;
+            }
+            private string autoStartStop(string msg)
+            {
+                string m = BeginMessage(msg);
+                if (m.Equals(msg)) m = EndMessage(msg);
+                return m;
+            }
+            private string preWorkMsg(string msg)
+            {
+                string m = autoStartStop(msg);
+                if (_beginEvent) PushEvent(m);
+                if (_endEvent) PopEvent(m);
+                return m;
+            }
+            private string preWorkMsg(string fmt, params object[] values)
+            {
+                string m = autoStartStop(fmt);
+                if (_beginEvent) PushEvent(m, values);
+                if (_endEvent) PopEvent(m, values);
+                return m;
+            }
+
+            public void Debug(string msg)
+            {
+                l?.Debug(preWorkMsg(msg));
+            }
+
+            public void Debug(string fmt, params object[] values)
+            {
+                l?.Debug(preWorkMsg(fmt, values), values);
+            }
+
+            public void Dispose()
+            {
+                clearStack();
+                l?.Dispose();
+                l = null;
+                
+            }
+
+            public void Error(string msg)
+            {
+                l?.Error(preWorkMsg(msg));
+            }
+
+            public void Error(string fmt, params object[] values)
+            {
+                l?.Error(preWorkMsg(fmt, values), values);
+            }
+
+            public void Fatal(string msg)
+            {
+                l?.Fatal(preWorkMsg(msg));
+            }
+
+            public void Fatal(string fmt, params object[] values)
+            {
+                l?.Fatal(preWorkMsg(fmt, values), values);
+            }
+
+            public void Info(string msg)
+            {
+                l?.Info(preWorkMsg(msg));
+            }
+
+            public void Info(string fmt, params object[] values)
+            {
+                l?.Info(preWorkMsg(fmt, values), values);
+            }
+
+            public void Warn(string msg)
+            {
+                l?.Warn(preWorkMsg(msg));
+            }
+
+            public void Warn(string fmt, params object[] values)
+            {
+                l?.Warn(preWorkMsg(fmt, values), values);
+            }
+        }
 
         private class SimpleLogger : ILogger
 		{
@@ -354,6 +646,7 @@ namespace xwcs.core.manager
         {
 			global = new SimpleLogger();
             _fastClose = getCfgParam("SLogManager/FastClose", "No") == "Yes";
+            _intervalLog = getCfgParam("SLogManager/IntervalLog", "No") == "Yes";
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -369,7 +662,15 @@ namespace xwcs.core.manager
 		public ILogger getClassLogger(Type t) {
             if (!_loggers.ContainsKey(t.ToString()))
             {
-                _loggers[t.ToString()] = new SimpleLogger(t.ToString());
+                
+                if (_intervalLog)
+                {
+                    //per disabilitare le operazioni relative alla issue 290 togliere LoggerIntervalDecorator da qui
+                    _loggers[t.ToString()] = new LoggerIntervalDecorator(new SimpleLogger(t.ToString()));
+                } else
+                {
+                    _loggers[t.ToString()] = new SimpleLogger(t.ToString());
+                }
             }
             return _loggers[t.ToString()];
 
