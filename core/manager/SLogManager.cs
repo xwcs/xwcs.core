@@ -188,9 +188,9 @@ namespace xwcs.core.manager
             private object tryJsonDeserialize(string par)
             {
                 if (
-                    (par.IndexOf('[') > 0 && par.IndexOf(']') > 0)
+                    (par.IndexOf('[') >= 0 && par.IndexOf(']') > 0)
                     ||
-                    (par.IndexOf('{') > 0 && par.IndexOf('}') > 0)
+                    (par.IndexOf('{') >= 0 && par.IndexOf('}') > 0)
                     ) {
                     try
                     {
