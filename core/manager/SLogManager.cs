@@ -85,10 +85,78 @@ namespace xwcs.core.manager
         public string Method;
         public int Line;
     }
-	
+    public static class IntervalLogAction
+    {
+        public static void Invoke(Action action, ILogger logger, string LogFmt, params object[] values)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{LogFmt}", values);
+            try
+            {
+                action.Invoke();
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+
+        public static void Invoke(Action action, ILogger logger, byte warnSecs, string LogFmt, params object[] values)
+        {
+
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{LogFmt}", values);
+            try
+            {
+                action.Invoke();
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{0}", ex);
+                throw ex;
+            }
+        }
+    }
+    public static class IntervalLogFunction<T>
+    {
+
+        public static T Invoke(Func<T> action, ILogger logger, string LogMsg, params object[] values)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{LogMsg}", values);
+            try
+            {
+                T ret = action.Invoke();
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG);
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{0}", ex);
+                throw ex;
+            }
+        }
+        public static T Invoke(Func<T> action, ILogger logger, byte warnSecs, string LogMsg, params object[] values)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{LogMsg}", values);
+            try
+            {
+                T ret = action.Invoke();
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG);
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{0}", ex);
+                throw ex;
+            }
+        }
+    }
     [cfg.attr.Config("MainAppConfig")]
     public class SLogManager : cfg.Configurable, ILogger, IDisposable
     {
+        internal const string OPEN_INTERVAL_LOG = "<<<";
+        internal const string CLOSE_INTERVAL_LOG = ">>>";
 
         private bool _fastClose = false;
         private bool _intervalLog = false;
@@ -99,7 +167,6 @@ namespace xwcs.core.manager
 
         private class LoggerIntervalDecorator : ILogger
         {
-
             private class LoggerIntervalDecoratorStackElement : Tuple<long, long, string, object[]>
             {
                 public LoggerIntervalDecoratorStackElement(long startat, long elapsingalarm, string fmt, object[] values) : base(startat, elapsingalarm, fmt, values)
@@ -285,7 +352,7 @@ namespace xwcs.core.manager
             }
             private string EndMessage(string msg)
             {
-                if (msg.StartsWith(">>>"))
+                if (msg.StartsWith(SLogManager.CLOSE_INTERVAL_LOG))
                 {
                     EndEvent();
                     return msg.Substring(3);
@@ -294,12 +361,12 @@ namespace xwcs.core.manager
             }
             private string BeginMessage(string msg)
             {
-                if (msg.StartsWith("<<<"))
+                if (msg.StartsWith(OPEN_INTERVAL_LOG))
                 {
-                    var m = System.Text.RegularExpressions.Regex.Matches(msg, "^<<<(\\d+)<<<");
+                    var m = System.Text.RegularExpressions.Regex.Matches(msg, $"^{OPEN_INTERVAL_LOG}(\\d+){OPEN_INTERVAL_LOG}");
                     if (m.Count > 0)
                     {
-                        BeginEvent(int.Parse(m[0].Captures[0].Value.Replace("<",""))*1000);
+                        BeginEvent(int.Parse(m[0].Captures[0].Value.Replace(OPEN_INTERVAL_LOG,""))*1000);
                         return msg.Substring(m[0].Length);
                     }
                     else
