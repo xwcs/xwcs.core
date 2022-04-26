@@ -85,10 +85,79 @@ namespace xwcs.core.manager
         public string Method;
         public int Line;
     }
-	
+    public static class IntervalLogAction
+    {
+        public static void Invoke(Action action, ILogger logger, string LogFmt, params object[] values)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{LogFmt}", values);
+            try
+            {
+                action.Invoke();
+                
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+
+        public static void Invoke(Action action, ILogger logger, byte warnSecs, string LogFmt, params object[] values)
+        {
+
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{LogFmt}", values);
+            try
+            {
+                action.Invoke();
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+    }
+    public static class IntervalLogFunction<T>
+    {
+
+        public static T Invoke(Func<T> action, ILogger logger, string LogMsg, params object[] values)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{LogMsg}", values);
+            try
+            {
+                T ret = action.Invoke();
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+        public static T Invoke(Func<T> action, ILogger logger, byte warnSecs, string LogMsg, params object[] values)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{LogMsg}", values);
+            try
+            {
+                T ret = action.Invoke();
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+    }
     [cfg.attr.Config("MainAppConfig")]
     public class SLogManager : cfg.Configurable, ILogger, IDisposable
     {
+        public const string OPEN_INTERVAL_LOG = "<<<";
+        public const string CLOSE_INTERVAL_LOG = ">>>";
 
         private bool _fastClose = false;
         private bool _intervalLog = false;
@@ -99,10 +168,9 @@ namespace xwcs.core.manager
 
         private class LoggerIntervalDecorator : ILogger
         {
-
-            private class LoggerIntervalDecoratorStackElement : Tuple<long, long, string, object[]>
+            private class LoggerIntervalDecoratorStackElement : Tuple<long, long, string, object[], int>
             {
-                public LoggerIntervalDecoratorStackElement(long startat, long elapsingalarm, string fmt, object[] values) : base(startat, elapsingalarm, fmt, values)
+                public LoggerIntervalDecoratorStackElement(long startat, long elapsingalarm, string fmt, object[] values, int firstmsgindex) : base(startat, elapsingalarm, fmt, values, firstmsgindex)
                 {
                 }
 
@@ -110,38 +178,53 @@ namespace xwcs.core.manager
                 public long ElapsingAlarm { get { return this.Item2; } }
                 public string Fmt { get { return this.Item3; } }
                 public object[] Values { get { return this.Item4; } }
+                public int FirstMsgIndex { get { return this.Item5; } }
             }
             private ILogger l;
             private System.Diagnostics.Stopwatch stopwatch;
             private const long ELAPSING_WARNING_DEFAULT = 10000;
-            private System.Collections.Concurrent.ConcurrentDictionary<int, Stack<LoggerIntervalDecoratorStackElement>> _dic_stackOfInterval;
+            private System.Collections.Concurrent.ConcurrentDictionary<int, Tuple<List<String>, Stack<LoggerIntervalDecoratorStackElement>>> _dic_stackOfInterval;
             public LoggerIntervalDecorator(ILogger l)
             {
-                _dic_stackOfInterval = new System.Collections.Concurrent.ConcurrentDictionary<int, Stack<LoggerIntervalDecoratorStackElement>>();
+                _dic_stackOfInterval = new System.Collections.Concurrent.ConcurrentDictionary<int, Tuple<List<String>, Stack<LoggerIntervalDecoratorStackElement>>>();
                 //stackOfInterval = new Stack<LoggerIntervalDecoratorStackElement>();
                 this.l = l;
 
+            }
+            private bool existsThreadData()
+            {
+                return _dic_stackOfInterval.ContainsKey(Thread.CurrentThread.ManagedThreadId);
+            }
+            private Tuple<List<String>, Stack<LoggerIntervalDecoratorStackElement>> threadData
+            {
+                get
+                {
+                    if (!existsThreadData())
+                    {
+                        _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId] = new Tuple<List<String>, Stack<LoggerIntervalDecoratorStackElement>>(new List<String>(), new Stack<LoggerIntervalDecoratorStackElement>());
+                    }
+                    return _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId];
+                }
+            }
+
+            private List<String> stackLogList {
+                get {
+                    return threadData.Item1;
+                }
             }
             private Stack<LoggerIntervalDecoratorStackElement> stackOfInterval
             {
                 get
                 {
-                    if (!_dic_stackOfInterval.ContainsKey(Thread.CurrentThread.ManagedThreadId))
-                    {
-                        _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId] = new Stack<LoggerIntervalDecoratorStackElement>();
-                    }
-                    return _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId];
-                }
-                set
-                {
-                    _dic_stackOfInterval[Thread.CurrentThread.ManagedThreadId] = value;
+                    return threadData.Item2;
                 }
             }
             private void clearStack()
             {
                 foreach(var d in _dic_stackOfInterval)
                 {
-                    d.Value.Clear();
+                    d.Value.Item1.Clear();
+                    d.Value.Item2.Clear();
                 }
                 _dic_stackOfInterval.Clear();
                 if (!ReferenceEquals(stopwatch, null))
@@ -153,12 +236,13 @@ namespace xwcs.core.manager
             }
             private void clearThreadStack()
             {
-                if (_dic_stackOfInterval.ContainsKey(Thread.CurrentThread.ManagedThreadId))
+                if (existsThreadData())
                 {
-                    Stack<LoggerIntervalDecoratorStackElement> v;
+                    Tuple<List<String>, Stack<LoggerIntervalDecoratorStackElement>> v;
                     if (_dic_stackOfInterval.TryRemove(Thread.CurrentThread.ManagedThreadId, out v))
                     {
-                        v?.Clear();
+                        v?.Item1.Clear();
+                        v?.Item2.Clear();
                     }
                     
                 }
@@ -176,7 +260,11 @@ namespace xwcs.core.manager
                 _beginEvent = false;
                 if (ReferenceEquals(stopwatch, null)) stopwatch = new System.Diagnostics.Stopwatch();
                 if (!stopwatch.IsRunning) stopwatch.Start();
-                stackOfInterval.Push(new LoggerIntervalDecoratorStackElement(stopwatch.ElapsedMilliseconds, _ElapsingWarning < 0 ? 0 : _ElapsingWarning, fmt, values));
+                stackOfInterval.Push(new LoggerIntervalDecoratorStackElement(stopwatch.ElapsedMilliseconds, _ElapsingWarning < 0 ? 0 : _ElapsingWarning, fmt, values, threadData.Item1.Count));
+                if (this.CurrentDeep > 1)
+                {
+                    this.addLogTostackLogList(String.Format(fmt, values));
+                }
 
             }
 
@@ -211,7 +299,7 @@ namespace xwcs.core.manager
             {
                 if (!_endEvent) return;
                 _endEvent = false;
-                int deep = stackOfInterval.Count();
+                int deep = CurrentDeep;
                 if (deep == 0) return;
                 long fine;
                 if (!ReferenceEquals(stopwatch, null) && stopwatch.IsRunning)
@@ -223,6 +311,38 @@ namespace xwcs.core.manager
                     fine = -1;
                 }
                 var e = stackOfInterval.Pop();
+                object m;
+                var l = this.stackLogList;
+                if (l.Count > e.FirstMsgIndex + 1)
+                {
+
+                    var ml = new List<object>();
+                    for (var i = e.FirstMsgIndex+1; i < l.Count; i++)
+                    {
+                        String item = l[i];
+                        if (item.Length > 0)
+                        {
+                            ml.Add(tryJsonDeserialize(item));
+                        }
+                    }
+                    string s = String.Format(fmt, values);
+                    if (s.Length > 0) {
+                        ml.Add(tryJsonDeserialize(s));
+                    }
+                    if (ml.Count>1) {
+                        m = ml.ToArray();
+                    } else if (ml.Count==0) {
+                        m = "";
+                    } else {
+                        m = ml[0];
+                    }
+                    
+                }
+                else
+                {
+                    m = tryJsonDeserialize(String.Format(fmt, values));
+                }
+
                 if (deep == 1)
                 {
                     clearThreadStack();
@@ -237,13 +357,17 @@ namespace xwcs.core.manager
                     fine = e.StartAt;
                     durata = 0;
                 }
+                if (deep > 1) {
+                    this.addLogTostackLogList(String.Format(e.Fmt, e.Values));
+                    this.addLogTostackLogList(String.Format(fmt, values));
+                }
                 if (durata >= e.ElapsingAlarm)
                 {
                     DateTime begin = DateTime.Now.AddMilliseconds(-1 * e.StartAt);
                     DateTime end = DateTime.Now.AddMilliseconds(-1 * fine);
-                    this.Warn(Newtonsoft.Json.JsonConvert.SerializeObject(new { slow = new { deep = deep, elapsed = durata, thread = Thread.CurrentThread.ManagedThreadId }, begin = new { datetime = begin, msg = tryJsonDeserialize(String.Format(e.Fmt, e.Values)) }, end = new { datetime = end, msg = tryJsonDeserialize(String.Format(fmt, values)) } }));
+                    var messaggio = Newtonsoft.Json.JsonConvert.SerializeObject(new { slow = new { deep = deep, elapsed = durata, thread = Thread.CurrentThread.ManagedThreadId }, begin = new { datetime = begin, msg = tryJsonDeserialize(String.Format(e.Fmt, e.Values)) }, end = new { datetime = end, msg = m } });
+                    this.Warn(messaggio);
                 }
-
             }
 
             private void PopEvent(string msg)
@@ -266,8 +390,13 @@ namespace xwcs.core.manager
             {
                 BeginEvent(ELAPSING_WARNING_DEFAULT);
             }
-            public int CurrentDeep { get { return stackOfInterval.Count(); } }
-            public void ReturnToDeep(int deep)
+            private int CurrentDeep {
+                get {
+                    if (!existsThreadData()) return 0;
+                    return stackOfInterval.Count();
+                }
+            }
+            private void ReturnToDeep(int deep)
             {
                 while (CurrentDeep > (deep >= 0 ? deep : 0))
                 {
@@ -285,7 +414,7 @@ namespace xwcs.core.manager
             }
             private string EndMessage(string msg)
             {
-                if (msg.StartsWith(">>>"))
+                if (msg.StartsWith(SLogManager.CLOSE_INTERVAL_LOG))
                 {
                     EndEvent();
                     return msg.Substring(3);
@@ -294,12 +423,12 @@ namespace xwcs.core.manager
             }
             private string BeginMessage(string msg)
             {
-                if (msg.StartsWith("<<<"))
+                if (msg.StartsWith(OPEN_INTERVAL_LOG))
                 {
-                    var m = System.Text.RegularExpressions.Regex.Matches(msg, "^<<<(\\d+)<<<");
+                    var m = System.Text.RegularExpressions.Regex.Matches(msg, $"^{OPEN_INTERVAL_LOG}(\\d+){OPEN_INTERVAL_LOG}");
                     if (m.Count > 0)
                     {
-                        BeginEvent(int.Parse(m[0].Captures[0].Value.Replace("<",""))*1000);
+                        BeginEvent(int.Parse(m[0].Captures[0].Value.Replace(OPEN_INTERVAL_LOG,""))*1000);
                         return msg.Substring(m[0].Length);
                     }
                     else
@@ -316,19 +445,32 @@ namespace xwcs.core.manager
                 if (m.Equals(msg)) m = EndMessage(msg);
                 return m;
             }
+
+            private void addLogTostackLogList(string msg)
+            {
+                if (existsThreadData())
+                {
+                    if (!(ReferenceEquals(msg, null) || msg.Length == 0))
+                    {
+                        this.threadData.Item1.Add(msg);
+                    }
+                }
+
+            }
             private string preWorkMsg(string msg)
             {
                 string m = autoStartStop(msg);
                 if (_beginEvent) PushEvent(m);
                 if (_endEvent) PopEvent(m);
-                return m;
+                return msg;
             }
             private string preWorkMsg(string fmt, params object[] values)
             {
                 string m = autoStartStop(fmt);
                 if (_beginEvent) PushEvent(m, values);
                 if (_endEvent) PopEvent(m, values);
-                return m;
+                
+                return fmt;
             }
 
             public void Debug(string msg)
