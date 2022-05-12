@@ -643,7 +643,8 @@ namespace xwcs.core.db.binding
                     _view.RestoreLayoutFromStream(rr);
                 } else
                 {
-                    SLogManager.getInstance().getClassLogger(GetType()).Warn($"Grid layout: {descr.CombinePath()} NOT FOUND!");
+                    //WARNING Grid layout: grid\* NOT FOUND! (https://github.com/EgafEdizioni/app.cedEgaf/issues/294)
+                    SLogManager.getInstance().getClassLogger(GetType()).Info($"Grid layout: {descr.CombinePath()} NOT FOUND!");
                 }
             }
         }
