@@ -242,7 +242,8 @@ namespace xwcs.core.manager
             }
             catch (Exception e)
             {
-                SLogManager.getInstance().Error(e.Message);
+                // ERROR C:\ProgramData\EgafBOiter\assets\img\plugin.pubblicazione\iter_h16_bordo.png - GetBitmapFromFile(0) #293
+                SLogManager.getInstance().Info(e.Message);
                 return null;
             }
             return bitmap;
