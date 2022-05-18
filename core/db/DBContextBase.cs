@@ -787,7 +787,7 @@ namespace xwcs.core.db
             try
             {
                 lr = Database.SqlQuery<LockResult>(sql).FirstOrDefault();
-                Database.Log?.Invoke(String.Format("{1} return {2}, '{3}'", sql, lr.Id_lock, lr.Owner));
+                Database.Log?.Invoke(String.Format("{0} return {1}, '{2}'", sql, lr.Id_lock, lr.Owner));
                 if (lr.Id_lock == 0)
                 {
                     throw new DBLockException(lr);
@@ -797,7 +797,7 @@ namespace xwcs.core.db
                 if (!(persistent)) _locks.Add(new LockData() { id = eid, entity = ename });
             } catch (Exception ex)
             {
-                Database.Log?.Invoke(String.Format("{1} error {2}", sql, ex));
+                Database.Log?.Invoke(String.Format("{0} error {1}", sql, ex));
                 lr = new LockResult();
                 lr.Id_lock = 0;
                 lr.Owner = "??";
