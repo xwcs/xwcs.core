@@ -782,16 +782,27 @@ namespace xwcs.core.db
             string eid = e.GetLockId().ToString();
             string ename = e.GetFieldName(); // name of table
             CheckLoginForConnection();
-            LockResult lr = Database.SqlQuery<LockResult>(string.Format("call {0}.entity_lock({1}, '{2}', {3});", _adminDb, eid, ename, (persistent ? '1' : '0'))).FirstOrDefault();
-            Database.Log?.Invoke(String.Format("entity entity_lock({0}, {1}, {2}) return {3}, '{4}'", eid, ename, persistent, lr.Id_lock, lr.Owner));
-            if (lr.Id_lock == 0)
+            string sql = string.Format("call {0}.entity_lock({1}, '{2}', {3});", _adminDb, eid, ename, (persistent ? '1' : '0'));
+            LockResult lr;
+            try
             {
+                lr = Database.SqlQuery<LockResult>(sql).FirstOrDefault();
+                Database.Log?.Invoke(String.Format("{1} return {2}, '{3}'", sql, lr.Id_lock, lr.Owner));
+                if (lr.Id_lock == 0)
+                {
+                    throw new DBLockException(lr);
+                }
+
+                // save lock internally
+                if (!(persistent)) _locks.Add(new LockData() { id = eid, entity = ename });
+            } catch (Exception ex)
+            {
+                Database.Log?.Invoke(String.Format("{1} error {2}", sql, ex));
+                lr = new LockResult();
+                lr.Id_lock = 0;
+                lr.Owner = "??";
                 throw new DBLockException(lr);
             }
-
-            // save lock internally
-            if (!(persistent)) _locks.Add(new LockData() { id = eid, entity = ename });
-
             return lr;
         }
 
