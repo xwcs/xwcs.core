@@ -797,11 +797,20 @@ namespace xwcs.core.db
                 if (!(persistent)) _locks.Add(new LockData() { id = eid, entity = ename });
             } catch (Exception ex)
             {
-                Database.Log?.Invoke(String.Format("{0} error {1}", sql, ex));
-                lr = new LockResult();
-                lr.Id_lock = 0;
-                lr.Owner = "??";
-                throw new DBLockException(lr);
+                DBLockException ddd;
+                if (ex is DBLockException)
+                {
+                    ddd = (DBLockException)ex;
+                }
+                else
+                {
+                    Database.Log?.Invoke(String.Format("{0} error {1}", sql, ex));
+                    lr = new LockResult();
+                    lr.Id_lock = 0;
+                    lr.Owner = "??";
+                    ddd = new DBLockException(lr);
+                }
+                throw ddd;
             }
             return lr;
         }
