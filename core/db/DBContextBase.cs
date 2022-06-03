@@ -502,32 +502,44 @@ namespace xwcs.core.db
         {
             //CompleteEntity();
             CheckLoginForConnection();
-            if (ReferenceEquals(FeedbackAct,null)) {
-                return base.SaveChanges();
-            } else
+            int ret;
+            base.Database.Log?.Invoke(String.Format("<<<{0}.SaveChanges", this.GetType().Name));
+            try
             {
-                var tot = this.ChangeTracker.Entries().Where(e => e.State == EntityState.Modified || e.State == EntityState.Deleted || e.State == EntityState.Added).Select(ee => 1).Count();
-                var MyLog = this.Database.Log;
-                int curr = 0;
-                DateTime lastTimeUpdateSplash = DateTime.Today;
-                base.Database.Log = delegate (string l)
+                if (ReferenceEquals(FeedbackAct, null))
                 {
-                    MyLog?.Invoke(l);
-                    if (l.StartsWith("UPDATE") || l.StartsWith("DELETE") || l.StartsWith("INSERT"))
+                    ret = base.SaveChanges();
+                }
+                else
+                {
+                    var tot = this.ChangeTracker.Entries().Where(e => e.State == EntityState.Modified || e.State == EntityState.Deleted || e.State == EntityState.Added).Select(ee => 1).Count();
+                    var MyLog = this.Database.Log;
+                    int curr = 0;
+                    DateTime lastTimeUpdateSplash = DateTime.Today;
+                    base.Database.Log = delegate (string l)
                     {
-                        curr++;
-                    }
-                    if (curr>0 && (curr==1 || ((TimeSpan)(DateTime.Now - lastTimeUpdateSplash)).TotalSeconds >= 2)) //aggiornamento splash screen ogni 2 secondi
-                    {
-                        try { FeedbackAct.Invoke(curr, tot); } catch { }
-                        lastTimeUpdateSplash = DateTime.Now;
-                    }
-                };
-                var ret= base.SaveChanges();
-                this.Database.Log = MyLog;
+                        MyLog?.Invoke(l);
+                        if (l.StartsWith("UPDATE") || l.StartsWith("DELETE") || l.StartsWith("INSERT"))
+                        {
+                            curr++;
+                        }
+                        if (curr > 0 && (curr == 1 || ((TimeSpan)(DateTime.Now - lastTimeUpdateSplash)).TotalSeconds >= 2)) //aggiornamento splash screen ogni 2 secondi
+                        {
+                            try { FeedbackAct.Invoke(curr, tot); } catch { }
+                            lastTimeUpdateSplash = DateTime.Now;
+                        }
+                    };
+                    ret = base.SaveChanges();
+                    this.Database.Log = MyLog;
+                }
+                base.Database.Log?.Invoke(">>>");
                 return ret;
+            } catch(Exception ex)
+            {
+                base.Database.Log?.Invoke(String.Format(">>>Exception {0}", ex));
+                throw;
             }
-            
+
         }
 
         /*
