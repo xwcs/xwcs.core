@@ -84,6 +84,7 @@ namespace xwcs.core.manager
         public string Message;
         public string Method;
         public int Line;
+        public System.DateTime dateTime;
     }
     public static class IntervalLogAction
     {
@@ -534,7 +535,6 @@ namespace xwcs.core.manager
 
         private class SimpleLogger : ILogger
 		{
-            
 			private static SEventProxy _proxy;
             private ILog logger = null;
 
@@ -575,7 +575,7 @@ namespace xwcs.core.manager
                 while (WaitHandle.WaitAny(_syncEvents.EventArray) != 1 && !disposedValue)
                 {
                     bool GoWait = false;
-                    LogMessage t = new LogMessage() { Kind = LogKind.N, Message = "", Method = "", Line = 0 };
+                    LogMessage t = new LogMessage() { Kind = LogKind.N, Message = "", Method = "", Line = 0, dateTime=DateTime.Now};
 
                     while (!GoWait && !disposedValue)
                     {
@@ -613,7 +613,7 @@ namespace xwcs.core.manager
                         // now log if there is something
                         if(!GoWait && !disposedValue)
                         {
-                            
+                            t.Message = t.dateTime.ToString("HH:mm:ss,fff") + " - " +  t.Message.Replace("\\", "\\\\").Replace("\n", "\\n").Replace("\r", "\\r");
                             switch (t.Kind)
                             {
                                 case LogKind.D:
@@ -666,7 +666,7 @@ namespace xwcs.core.manager
 				if (!logger.IsDebugEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind= LogKind.D, Message= msg});
+                    _queue.Enqueue(new LogMessage() { Kind= LogKind.D, Message= msg, dateTime = DateTime.Now });
                 }
                 _syncEvents.NewTransitionEvent.Set();
             }
@@ -676,7 +676,7 @@ namespace xwcs.core.manager
                 if (!logger.IsInfoEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.I, Message = msg });
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.I, Message = msg, dateTime = DateTime.Now });
                 }
                 _syncEvents.NewTransitionEvent.Set();
 
@@ -687,7 +687,7 @@ namespace xwcs.core.manager
                 if (!logger.IsWarnEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.W, Message = msg });
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.W, Message = msg, dateTime = DateTime.Now });
                 }
                 _syncEvents.NewTransitionEvent.Set();
 
@@ -701,7 +701,7 @@ namespace xwcs.core.manager
 
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.E, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber() });
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.E, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber(), dateTime = DateTime.Now });
                 }
                 _syncEvents.NewTransitionEvent.Set();
 
@@ -715,7 +715,7 @@ namespace xwcs.core.manager
 
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.F, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber() });
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.F, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber(), dateTime = DateTime.Now });
                 }
                 _syncEvents.NewTransitionEvent.Set();
             }
