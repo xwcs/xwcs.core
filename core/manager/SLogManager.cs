@@ -88,9 +88,9 @@ namespace xwcs.core.manager
     }
     public static class IntervalLogAction
     {
-        public static void Invoke(Action action, ILogger logger, string LogFmt, params object[] values)
+        public static void Invoke(Action action, ILogger logger, string logFmt, params object[] values)
         {
-            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{LogFmt}", values);
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{logFmt}", values);
             try
             {
                 action.Invoke();
@@ -104,10 +104,41 @@ namespace xwcs.core.manager
             }
         }
 
-        public static void Invoke(Action action, ILogger logger, byte warnSecs, string LogFmt, params object[] values)
+        public static void Invoke(Action action, ILogger logger, byte warnSecs, string logFmt, params object[] values)
         {
 
-            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{LogFmt}", values);
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{logFmt}", values);
+            try
+            {
+                action.Invoke();
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+        public static void Invoke(Action action, ILogger logger, string logMsg)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{logMsg}");
+            try
+            {
+                action.Invoke();
+
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+
+        public static void Invoke(Action action, ILogger logger, byte warnSecs, string logMsg)
+        {
+
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{logMsg}");
             try
             {
                 action.Invoke();
@@ -123,9 +154,9 @@ namespace xwcs.core.manager
     public static class IntervalLogFunction<T>
     {
 
-        public static T Invoke(Func<T> action, ILogger logger, string LogMsg, params object[] values)
+        public static T Invoke(Func<T> action, ILogger logger, string logFmt, params object[] values)
         {
-            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{LogMsg}", values);
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{logFmt}", values);
             try
             {
                 T ret = action.Invoke();
@@ -138,9 +169,40 @@ namespace xwcs.core.manager
                 throw ex;
             }
         }
-        public static T Invoke(Func<T> action, ILogger logger, byte warnSecs, string LogMsg, params object[] values)
+        public static T Invoke(Func<T> action, ILogger logger, byte warnSecs, string logFmt, params object[] values)
         {
-            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{LogMsg}", values);
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{logFmt}", values);
+            try
+            {
+                T ret = action.Invoke();
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+
+        public static T Invoke(Func<T> action, ILogger logger, string logMsg)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{logMsg}");
+            try
+            {
+                T ret = action.Invoke();
+                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"{SLogManager.CLOSE_INTERVAL_LOG}{SLogManager.CLOSE_INTERVAL_LOG}{ex}");
+                throw ex;
+            }
+        }
+        public static T Invoke(Func<T> action, ILogger logger, byte warnSecs, string logMsg)
+        {
+            logger.Debug($"{SLogManager.OPEN_INTERVAL_LOG}{warnSecs}{SLogManager.OPEN_INTERVAL_LOG}{logMsg}");
             try
             {
                 T ret = action.Invoke();
