@@ -119,7 +119,8 @@ namespace xwcs.core.manager
         public string Path;
         public int Line;
         public System.DateTime dateTime;
-        
+        public int Thread;
+
     }
     public static class IntervalLogAction
     {
@@ -731,7 +732,7 @@ namespace xwcs.core.manager
                 while (WaitHandle.WaitAny(_syncEvents.EventArray) != 1 && !disposedValue)
                 {
                     bool GoWait = false;
-                    LogMessage t = new LogMessage() { Kind = LogKind.N, Message = "", Method = "", Line = 0, dateTime = DateTime.Now, Path = ""};
+                    LogMessage t = new LogMessage() { Kind = LogKind.N, Message = "", Method = "", Line = 0, dateTime = DateTime.Now, Path = "", Thread = 0};
 
                     while (!GoWait && !disposedValue)
                     {
@@ -770,7 +771,32 @@ namespace xwcs.core.manager
                         if(!GoWait && !disposedValue)
                         {
                             StringBuilder sb = new StringBuilder();
-                            sb.Append(String.Concat("\"D\":\"", t.dateTime.ToString("HH:mm:ss,fff"), "\""));
+                            sb.Append(String.Concat("\"D\":\"", t.dateTime.ToString("yyyy-MM-dd HH:mm:ss,fff"), "\""));
+                            sb.Append($",\"T\":{t.Thread}");
+                            string lev;
+                            switch (t.Kind) {
+                                case LogKind.D:
+                                    lev = "DEBUG";
+                                    break;
+                                case LogKind.E:
+                                    lev = "ERROR";
+                                    break;
+                                case LogKind.F:
+                                    lev = "FATAL";
+                                    break;
+                                case LogKind.I:
+                                    lev = "INFO";
+                                    break;
+                                case LogKind.W:
+                                    lev = "WARN";
+                                    break;
+                                default:
+                                    lev = t.Kind.ToString();
+                                    break;
+                            }
+                            sb.Append($",\"L\":\"{lev}\"");
+                            sb.Append($",\"G\":\"{logger.Logger.Name}\"");
+                            
                             //sb.Append(t.Message.Substring(1,t.Message.Length-2));
                             sb.Append(",");
                             try
@@ -804,7 +830,7 @@ namespace xwcs.core.manager
                             if (!ReferenceEquals(t.Path, null) && !t.Path.Equals(""))
                             {
                                 sb.Append(",\"P\":");
-                                sb.Append(Newtonsoft.Json.JsonConvert.SerializeObject(t.Path));
+                                sb.Append(Newtonsoft.Json.JsonConvert.SerializeObject(t.Path.Substring(_RootProjectPathLength)));
                             }
                             if (t.Line > 0)
                             {
@@ -824,23 +850,23 @@ namespace xwcs.core.manager
                             {
                                 case LogKind.D:
                                     _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("[{2}]{0} - {1}", logger.Logger.Name, t.Message, t.Kind.ToString()) }));
-                                    logger.Debug($"{m}");
+                                    logger.Debug(m);
                                     break;
                                 case LogKind.E:
                                     _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("[{3}]{0} - {1} - {2}({4})", logger.Logger.Name, t.Message, t.Method, t.Kind.ToString(), t.Line) }));
-                                    logger.Error($"{m}");
+                                    logger.Error(m);
                                     break;
                                 case LogKind.F:
                                     _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("[{3}]{0} - {1} - {2}({4})", logger.Logger.Name, t.Message, t.Method, t.Kind.ToString(), t.Line) }));
-                                    logger.Fatal($"{m}");
+                                    logger.Fatal(m);
                                     break;
                                 case LogKind.I:
                                     _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("[{2}]{0} - {1}", logger.Logger.Name, t.Message, t.Kind.ToString()) }));
-                                    logger.Info($"{m}");
+                                    logger.Info(m);
                                     break;
                                 case LogKind.W:
                                     _proxy.fireEvent(new OutputMessageEvent(this, new OutputMessage { Message = string.Format("[{2}]{0} - {1}", logger.Logger.Name, t.Message, t.Kind.ToString()) }));
-                                    logger.Warn($"{m}");
+                                    logger.Warn(m);
                                     break;
                             }
                         }
@@ -880,7 +906,7 @@ namespace xwcs.core.manager
 				if (!logger.IsDebugEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind= LogKind.D, Message= msg, dateTime = DateTime.Now, Line=line, Method = method, Path = path});
+                    _queue.Enqueue(new LogMessage() { Kind= LogKind.D, Message= msg, dateTime = DateTime.Now, Line=line, Method = method, Path = path, Thread = Thread.CurrentThread.ManagedThreadId});
                 }
                 _syncEvents.NewTransitionEvent.Set();
             }
@@ -893,7 +919,7 @@ namespace xwcs.core.manager
                 if (!logger.IsInfoEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.I, Message = msg, dateTime = DateTime.Now, Line = line, Path = path, Method = method});
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.I, Message = msg, dateTime = DateTime.Now, Line = line, Path = path, Method = method, Thread = Thread.CurrentThread.ManagedThreadId });
                 }
                 _syncEvents.NewTransitionEvent.Set();
 
@@ -907,7 +933,7 @@ namespace xwcs.core.manager
                 if (!logger.IsWarnEnabled) return;
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.W, Message = msg, dateTime = DateTime.Now, Line = line, Path = path, Method = method});
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.W, Message = msg, dateTime = DateTime.Now, Line = line, Path = path, Method = method, Thread = Thread.CurrentThread.ManagedThreadId });
                 }
                 _syncEvents.NewTransitionEvent.Set();
 
@@ -923,7 +949,7 @@ namespace xwcs.core.manager
                 StackFrame sf = new StackFrame(1);
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.E, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber(), dateTime = DateTime.Now, Path = sf.GetFileName()});
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.E, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber(), dateTime = DateTime.Now, Path = sf.GetFileName(), Thread = Thread.CurrentThread.ManagedThreadId });
                 }
                 _syncEvents.NewTransitionEvent.Set();
 
@@ -940,7 +966,7 @@ namespace xwcs.core.manager
 
                 lock (((ICollection)_queue).SyncRoot)
                 {
-                    _queue.Enqueue(new LogMessage() { Kind = LogKind.F, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber(), dateTime = DateTime.Now, Path = sf.GetFileName()});
+                    _queue.Enqueue(new LogMessage() { Kind = LogKind.F, Message = msg, Method = sf.GetMethod().Name, Line = sf.GetFileLineNumber(), dateTime = DateTime.Now, Path = sf.GetFileName(), Thread = Thread.CurrentThread.ManagedThreadId });
                 }
                 _syncEvents.NewTransitionEvent.Set();
             }
@@ -1027,10 +1053,15 @@ namespace xwcs.core.manager
 		private SLogManager()
         {
 			global = new SimpleLogger();
+            _RootProjectPathLength = RootProjectPath().Length;
             _fastClose = getCfgParam("SLogManager/FastClose", "No") == "Yes";
             _intervalLog = getCfgParam("SLogManager/IntervalLog", "No") == "Yes";
         }
-
+        private static int _RootProjectPathLength=0;
+        private static string RootProjectPath([CallerFilePath] string path = "")
+        {
+            return path.Substring(0, path.LastIndexOf("xwcs.core\\"));
+        }
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static SLogManager getInstance()
         {
