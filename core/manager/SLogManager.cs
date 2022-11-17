@@ -135,7 +135,7 @@ namespace xwcs.core.manager
             {
                 action.Invoke();
                 
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}", line, path, method);
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG, line, path, method);
             }
             catch (Exception ex)
             {
@@ -155,7 +155,7 @@ namespace xwcs.core.manager
             try
             {
                 action.Invoke();
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}", line, path, method);
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG, line, path, method);
             }
             catch (Exception ex)
             {
@@ -175,7 +175,7 @@ namespace xwcs.core.manager
             {
                 action.Invoke();
 
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}", line, path, method);
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG, line, path, method);
             }
             catch (Exception ex)
             {
@@ -194,7 +194,7 @@ namespace xwcs.core.manager
             try
             {
                 action.Invoke();
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}", line, path, method);
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG, line, path, method);
             }
             catch (Exception ex)
             {
@@ -215,7 +215,7 @@ namespace xwcs.core.manager
             try
             {
                 T ret = action.Invoke();
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}", line, path, method);
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG, line, path, method);
                 return ret;
             }
             catch (Exception ex)
@@ -233,7 +233,7 @@ namespace xwcs.core.manager
             try
             {
                 T ret = action.Invoke();
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}", line, path, method);
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG, line, path, method);
                 return ret;
             }
             catch (Exception ex)
@@ -249,7 +249,7 @@ namespace xwcs.core.manager
             try
             {
                 T ret = action.Invoke();
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG);
                 return ret;
             }
             catch (Exception ex)
@@ -264,7 +264,7 @@ namespace xwcs.core.manager
             try
             {
                 T ret = action.Invoke();
-                logger.Debug($"{SLogManager.CLOSE_INTERVAL_LOG}");
+                logger.Debug(SLogManager.CLOSE_INTERVAL_LOG);
                 return ret;
             }
             catch (Exception ex)
@@ -969,7 +969,7 @@ namespace xwcs.core.manager
             {
                 Dispose(true);
             }
-
+            /*
             public void Debug([CallerLineNumber] int line = 0,
                     [CallerFilePath] string path = "",
                     [CallerMemberName] string method = "",
@@ -1014,7 +1014,7 @@ namespace xwcs.core.manager
                 if (!logger.IsFatalEnabled) return;
                 Fatal(msg:string.Format(fmt, values),line:line,path:path,method:method);
             }
-
+            */
             ~SimpleLogger()
             {
                 Dispose(false);
