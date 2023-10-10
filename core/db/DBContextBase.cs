@@ -534,7 +534,24 @@ namespace xwcs.core.db
                 }
                 base.Database.Log?.Invoke(">>>");
                 return ret;
-            } catch(Exception ex)
+            }
+            catch (System.Data.Entity.Validation.DbEntityValidationException ex)
+            {
+                var s = String.Join("\r\n",
+                        ex.EntityValidationErrors.Select(e =>
+                            e.Entry.Entity.ToString() + ": " +
+                            String.Join(", ", e.ValidationErrors.Select(v => v.ErrorMessage))
+                          )
+                        );
+                base.Database.Log?.Invoke(String.Format(
+                    ">>>Exception {0}\r\n{1}", 
+                    ex, 
+                    s
+                      )
+                    );
+                throw new System.Data.Entity.Validation.DbEntityValidationException(s , ex);
+            }
+            catch (Exception ex)
             {
                 base.Database.Log?.Invoke(String.Format(">>>Exception {0}", ex));
                 throw;
