@@ -519,7 +519,14 @@ namespace xwcs.core.db
                     base.Database.Log = delegate (string l)
                     {
                         MyLog?.Invoke(l);
-                        if (l.StartsWith("UPDATE") || l.StartsWith("DELETE") || l.StartsWith("INSERT"))
+                        if (
+                            l.StartsWith("UPDATE", StringComparison.CurrentCultureIgnoreCase)
+                            || l.StartsWith("DELETE", StringComparison.CurrentCultureIgnoreCase)
+                            || l.StartsWith("INSERT", StringComparison.CurrentCultureIgnoreCase)
+                            || l.IndexOf(";UPDATE", StringComparison.CurrentCultureIgnoreCase) > 0
+                            || l.IndexOf(";DELETE", StringComparison.CurrentCultureIgnoreCase) > 0
+                            || l.IndexOf(";INSERT", StringComparison.CurrentCultureIgnoreCase) > 0
+                            )
                         {
                             curr++;
                         }
