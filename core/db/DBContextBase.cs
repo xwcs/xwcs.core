@@ -529,12 +529,13 @@ namespace xwcs.core.db
                             )
                         {
                             curr++;
+                            if (curr > 0 && (curr == 1 || curr == tot || ((TimeSpan)(DateTime.Now - lastTimeUpdateSplash)).TotalSeconds >= 2)) //aggiornamento splash screen ogni 2 secondi
+                            {
+                                try { FeedbackAct.Invoke(curr, tot); } catch { }
+                                lastTimeUpdateSplash = DateTime.Now;
+                            }
                         }
-                        if (curr > 0 && (curr == 1 || ((TimeSpan)(DateTime.Now - lastTimeUpdateSplash)).TotalSeconds >= 2)) //aggiornamento splash screen ogni 2 secondi
-                        {
-                            try { FeedbackAct.Invoke(curr, tot); } catch { }
-                            lastTimeUpdateSplash = DateTime.Now;
-                        }
+                        
                     };
                     ret = base.SaveChanges();
                     this.Database.Log = MyLog;
